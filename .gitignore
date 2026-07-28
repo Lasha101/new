@@ -1,0 +1,43 @@
+node_modules/
+dist/
+__pycache__/
+venv/
+.env
+.env.local
+
+# Python virtual environments
+newvenv/
+.venv/
+env/
+
+# Python bytecode / caches
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Environment files (all variants)
+.env.*
+!.env.example
+
+# Runtime uploads / generated static files
+backend/static/
+
+# Credentials
+*service-account*.json
+gcp-creds*.json
+
+# Logs
+*.log
+logs/
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Build outputs
+dist-ssr/
+build/
+coverage/
