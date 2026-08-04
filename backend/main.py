@@ -21,16 +21,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
-import google.cloud.firestore as firestore  # type: ignore
 from jose import jwt, JWTError
+from sqlalchemy import update as sa_update
+from sqlalchemy.orm import Session
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-import crud, schemas, auth
+import crud, models, schemas, auth
 import ocr_service
-from database import get_db, db_client
+from database import get_db, engine, SessionLocal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -101,13 +102,28 @@ async def run_ocr_extraction_task(
     destination: Optional[str],
     user_id: str
 ):
-    """Runs the full OCR extraction in the background, persisting progress and
-    results on the job document."""
-    db = db_client
-
+    """Entry point: owns the task's database session (the background task
+    outlives the request, so it cannot reuse the request-scoped session)."""
+    db = SessionLocal()
     try:
-        crud.update_ocr_job_progress(db, job_id, 10)
-        crud.update_ocr_job_progress(db, job_id, 20)
+        await _run_ocr_extraction_job(db, job_id, file_content, content_type, destination, user_id)
+    finally:
+        await asyncio.to_thread(db.close)
+
+
+async def _run_ocr_extraction_job(
+    db: Session,
+    job_id: str,
+    file_content: bytes,
+    content_type: str,
+    destination: Optional[str],
+    user_id: str
+):
+    """Runs the full OCR extraction in the background, persisting progress and
+    results on the job record. The session is used strictly sequentially."""
+    try:
+        await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, 10)
+        await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, 20)
 
         extraction_results = await ocr_service.extract_data_page_by_page(
             file_content=file_content,
@@ -117,6 +133,8 @@ async def run_ocr_extraction_task(
         await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, 80)
     except Exception as e:
         logger.error(f"Error during extraction for job {job_id}: {e}", exc_info=True)
+        # A failed flush leaves the session unusable until rolled back.
+        await asyncio.to_thread(db.rollback)
         await asyncio.to_thread(crud.update_ocr_job_complete, db, job_id, [], [{"page_number": 0, "detail": f"Traitement global échoué: {str(e)}"}])
         return
 
@@ -145,7 +163,7 @@ async def run_ocr_extraction_task(
                     db=db, passport=passport_create_schema, user_id=user_id
                 )
                 if created_passport_data:
-                    logger.info(f"💾 Saved document {created_passport_data.get('id')} to collection 'passports' (Project: {db.project})")
+                    logger.info(f"💾 Saved document {created_passport_data.get('id')} to table 'passports'")
 
                     created_passport_schema = schemas.Passport.model_validate(created_passport_data)
                     # mode='json' converts dates to ISO strings so the job
@@ -159,9 +177,13 @@ async def run_ocr_extraction_task(
                 logger.warning(f"[Job {job_id}] Page {page_number} non extraite : {error_message}")
                 failures.append({"page_number": page_number, "detail": error_message})
             except HTTPException as e:
+                await asyncio.to_thread(db.rollback)
                 logger.warning(f"[Job {job_id}] Page {page_number} non extraite : {e.detail}")
                 failures.append({"page_number": page_number, "detail": e.detail})
             except Exception as e:
+                # Roll back so a failed page save cannot poison the session
+                # for the remaining pages of the job.
+                await asyncio.to_thread(db.rollback)
                 detail = getattr(e, 'detail', f"A database error occurred: {str(e)}")
                 logger.warning(f"[Job {job_id}] Page {page_number} non extraite : {detail}")
                 failures.append({"page_number": page_number, "detail": detail})
@@ -174,17 +196,25 @@ async def run_ocr_extraction_task(
     page_count = len(extraction_results)
     if page_count > 0:
         try:
-            user_ref = db.collection("users").document(str(user_id))
-            await asyncio.to_thread(user_ref.update, {
-                "page_credits": firestore.Increment(-page_count),
-                "uploaded_pages_count": firestore.Increment(page_count)
-            })
+            def _charge_credits():
+                # One atomic UPDATE — the SQL equivalent of firestore.Increment.
+                db.execute(
+                    sa_update(models.User)
+                    .where(models.User.id == str(user_id))
+                    .values(
+                        page_credits=models.User.page_credits - page_count,
+                        uploaded_pages_count=models.User.uploaded_pages_count + page_count,
+                    )
+                )
+                db.commit()
 
-            updated_user_doc = await asyncio.to_thread(user_ref.get)
-            updated_user = updated_user_doc.to_dict() or {}
+            await asyncio.to_thread(_charge_credits)
+
+            updated_user = await asyncio.to_thread(crud.get_user, db, str(user_id)) or {}
             new_credits = updated_user.get("page_credits", 0)
             await manager.send_update(user_id, {"type": "credit_update", "credits": new_credits})
         except Exception as e:
+            await asyncio.to_thread(db.rollback)
             logger.error(f"Failed to update page count/credits: {e}")
 
     await asyncio.to_thread(crud.update_ocr_job_complete, db, job_id, successes, failures)
@@ -194,12 +224,14 @@ async def run_ocr_extraction_task(
 # --- Lifespan for application startup/shutdown ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db = SessionLocal()
     try:
-        db = db_client
-        logger.info(f"🚀 Backend starting up. Target Project: {db.project}")
+        logger.info("🚀 Backend starting up (PostgreSQL).")
+        # Create any missing tables on boot (idempotent), then look up the admin.
+        await asyncio.to_thread(models.Base.metadata.create_all, engine)
         admin_user = await asyncio.to_thread(crud.get_user_by_username, db, username="admin")
     except Exception as e:
-        logger.error(f"🔴 Firestore startup check failed: {e}")
+        logger.error(f"🔴 Database startup check failed: {e}")
         admin_user = None
 
     if not admin_user:
@@ -218,6 +250,8 @@ async def lifespan(app: FastAPI):
             )
             await asyncio.to_thread(crud.create_user, db=db, user=admin, role="admin")
 
+    await asyncio.to_thread(db.close)
+
     yield
 
     logger.info("Lifespan shutdown: Cleaning up resources...")
@@ -225,10 +259,10 @@ async def lifespan(app: FastAPI):
     await manager.shutdown()
 
     try:
-        await asyncio.to_thread(db_client.close)
-        logger.info("✅ Firestore client closed.")
+        await asyncio.to_thread(engine.dispose)
+        logger.info("✅ PostgreSQL engine disposed.")
     except Exception as e:
-        logger.error(f"🔴 Error closing Firestore client: {e}")
+        logger.error(f"🔴 Error disposing PostgreSQL engine: {e}")
 
     if ocr_service.vision_client:
         try:
@@ -318,7 +352,7 @@ def _export_rows_for_preview(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 # --- Authentication Routes ---
 @app.post("/token", response_model=schemas.Token)
 @limiter.limit("5/minute")
-def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: firestore.Client = Depends(get_db)):
+def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -332,7 +366,7 @@ def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestFor
 
 # --- SSE ROUTE FOR REAL-TIME UPDATES ---
 @app.get("/events")
-async def events(request: Request, token: str = Query(...), db: firestore.Client = Depends(get_db)):
+async def events(request: Request, token: str = Query(...), db: Session = Depends(get_db)):
     """Server-Sent Events endpoint. Gracefully handles disconnection and
     server shutdown."""
     try:
@@ -378,7 +412,7 @@ async def events(request: Request, token: str = Query(...), db: firestore.Client
 # --- User Routes ---
 @app.post("/users/register", response_model=schemas.User)
 @limiter.limit("5/minute")
-def self_register_user(request: Request, user: schemas.UserRegister, db: firestore.Client = Depends(get_db)):
+def self_register_user(request: Request, user: schemas.UserRegister, db: Session = Depends(get_db)):
     """Autonomous self-registration: no invitation needed, and the account
     starts with exactly SIGNUP_PAGE_CREDITS page credits."""
     if crud.get_user_by_email(db, email=user.email):
@@ -396,7 +430,7 @@ def read_users_me(current_user: Dict[str, Any] = Depends(auth.get_current_active
 
 
 @app.put("/users/me", response_model=schemas.User)
-def update_user_me(user_update: schemas.UserUpdate, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     if current_user.get("role") != "admin":
         # Non-admin users cannot update their own page count, credits, login
         # name or role: those fields are dropped entirely so they are never
@@ -410,12 +444,12 @@ def update_user_me(user_update: schemas.UserUpdate, db: firestore.Client = Depen
 
 # --- Admin User Management Routes ---
 @app.get("/admin/users/", response_model=list[schemas.User], dependencies=[Depends(auth.require_admin)])
-def read_users(skip: int = 0, limit: int = 100, name_filter: Optional[str] = Query(None), db: firestore.Client = Depends(get_db)):
+def read_users(skip: int = 0, limit: int = 100, name_filter: Optional[str] = Query(None), db: Session = Depends(get_db)):
     return crud.get_users(db, skip=skip, limit=limit, name_filter=name_filter)
 
 
 @app.delete("/admin/users/{user_id}", response_model=schemas.User, dependencies=[Depends(auth.require_admin)])
-def delete_user(user_id: str, db: firestore.Client = Depends(get_db)):
+def delete_user(user_id: str, db: Session = Depends(get_db)):
     db_user = crud.delete_user(db=db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
@@ -423,7 +457,7 @@ def delete_user(user_id: str, db: firestore.Client = Depends(get_db)):
 
 
 @app.get("/admin/users/{user_id}", response_model=schemas.User, dependencies=[Depends(auth.require_admin)])
-def read_user(user_id: str, db: firestore.Client = Depends(get_db)):
+def read_user(user_id: str, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
@@ -431,7 +465,7 @@ def read_user(user_id: str, db: firestore.Client = Depends(get_db)):
 
 
 @app.put("/admin/users/{user_id}", response_model=schemas.User, dependencies=[Depends(auth.require_admin)])
-async def update_user_admin(user_id: str, user_update: schemas.UserUpdate, db: firestore.Client = Depends(get_db)):
+async def update_user_admin(user_id: str, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
     db_user = crud.update_user(db=db, user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
@@ -442,7 +476,7 @@ async def update_user_admin(user_id: str, user_update: schemas.UserUpdate, db: f
 
 
 @app.post("/admin/users/", response_model=schemas.User, dependencies=[Depends(auth.require_admin)])
-def create_user_by_admin(user: schemas.UserCreate, db: firestore.Client = Depends(get_db)):
+def create_user_by_admin(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if crud.get_user_by_email(db, email=user.email):
         raise HTTPException(status_code=400, detail="Email déjà enregistré")
     if crud.get_user_by_username(db, username=user.user_name):
@@ -451,13 +485,13 @@ def create_user_by_admin(user: schemas.UserCreate, db: firestore.Client = Depend
 
 
 @app.get("/admin/filterable-users", response_model=list[schemas.User], dependencies=[Depends(auth.require_admin)])
-def read_filterable_users(db: firestore.Client = Depends(get_db)):
+def read_filterable_users(db: Session = Depends(get_db)):
     return crud.get_all_users_for_filtering(db)
 
 
 # --- Passport / Identity Document Routes ---
 @app.post("/passports/", response_model=schemas.Passport)
-def create_passport(passport: schemas.PassportCreate, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def create_passport(passport: schemas.PassportCreate, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     return crud.create_user_passport(db=db, passport=passport, user_id=current_user["id"])
 
 
@@ -466,7 +500,7 @@ async def upload_and_extract_passport(
     background_tasks: BackgroundTasks,
     destination: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     if current_user.get("page_credits", 0) <= 0:
@@ -495,7 +529,7 @@ async def upload_and_extract_passport(
 
 @app.get("/ocr/jobs/", response_model=List[schemas.OcrJob])
 async def get_ocr_jobs(
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Get all OCR jobs for the current user."""
@@ -505,7 +539,7 @@ async def get_ocr_jobs(
 @app.get("/ocr/jobs/{job_id}", response_model=schemas.OcrJob)
 async def get_ocr_job(
     job_id: str,
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Get the status of a single OCR job."""
@@ -520,7 +554,7 @@ async def get_ocr_job(
 @app.delete("/ocr/jobs/{job_id}", response_model=schemas.OcrJob)
 async def delete_ocr_job(
     job_id: str,
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Deletes a job notification."""
@@ -539,7 +573,7 @@ def export_data(
     destination: Optional[str] = None, user_id: Optional[str] = None,
     first_name: Optional[str] = None, last_name: Optional[str] = None,
     preview: bool = False,
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Exports the filtered documents as an Excel (.xlsx) file, or as JSON rows
@@ -589,7 +623,7 @@ SELECTION_EXPORT_HEADERS = {
 @app.post("/export/data/selection")
 def export_selected_data(
     payload: schemas.PassportExportSelection,
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Exports the explicitly selected documents as an Excel (.xlsx) file."""
@@ -608,7 +642,7 @@ def export_selected_data(
 
 @app.get("/passports/", response_model=list[schemas.Passport])
 def read_passports(
-    db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user),
     user_filter: Optional[str] = Query(None),
     voyage_filter: Optional[str] = Query(None),
     destination_filter: Optional[str] = Query(None)
@@ -622,7 +656,7 @@ def read_passports(
 
 
 @app.put("/passports/{passport_id}", response_model=schemas.Passport)
-def update_passport(passport_id: str, passport_update: schemas.PassportCreate, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def update_passport(passport_id: str, passport_update: schemas.PassportCreate, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     db_passport = crud.get_passport(db, passport_id=passport_id)
     if db_passport is None:
         raise HTTPException(status_code=404, detail="Passeport non trouvé")
@@ -632,7 +666,7 @@ def update_passport(passport_id: str, passport_update: schemas.PassportCreate, d
 
 
 @app.delete("/passports/{passport_id}", response_model=schemas.Passport)
-def delete_passport(passport_id: str, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def delete_passport(passport_id: str, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     db_passport = crud.get_passport(db, passport_id=passport_id)
     if db_passport is None:
         raise HTTPException(status_code=404, detail="Passeport non trouvé")
@@ -644,7 +678,7 @@ def delete_passport(passport_id: str, db: firestore.Client = Depends(get_db), cu
 @app.post("/passports/delete-multiple", response_model=dict)
 def delete_multiple_passports(
     payload: schemas.PassportDeleteMultiple,
-    db: firestore.Client = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     if not payload.passport_ids:
@@ -661,19 +695,19 @@ def delete_multiple_passports(
 
 # --- Voyage and Destination Routes ---
 @app.post("/voyages/", response_model=schemas.Voyage)
-def create_voyage(voyage: schemas.VoyageCreate, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def create_voyage(voyage: schemas.VoyageCreate, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     return crud.create_user_voyage(db=db, voyage=voyage, user_id=current_user["id"], passport_ids=[str(pid) for pid in voyage.passport_ids])
 
 
 @app.get("/voyages/", response_model=list[schemas.Voyage])
-def read_voyages(db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user), user_filter: Optional[str] = None):
+def read_voyages(db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user), user_filter: Optional[str] = None):
     if current_user.get("role") == "admin":
         return crud.get_voyages(db=db, user_filter=user_filter)
     return crud.get_voyages_by_user(db=db, user_id=str(current_user["id"]))
 
 
 @app.put("/voyages/{voyage_id}", response_model=schemas.Voyage)
-def update_voyage(voyage_id: str, voyage_update: schemas.VoyageCreate, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def update_voyage(voyage_id: str, voyage_update: schemas.VoyageCreate, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     db_voyage = crud.get_voyage(db, voyage_id=voyage_id)
     if db_voyage is None:
         raise HTTPException(status_code=404, detail="Voyage non trouvé")
@@ -683,7 +717,7 @@ def update_voyage(voyage_id: str, voyage_update: schemas.VoyageCreate, db: fires
 
 
 @app.delete("/voyages/{voyage_id}", response_model=schemas.Voyage)
-def delete_voyage(voyage_id: str, db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def delete_voyage(voyage_id: str, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     db_voyage = crud.get_voyage(db, voyage_id=voyage_id)
     if db_voyage is None:
         raise HTTPException(status_code=404, detail="Voyage non trouvé")
@@ -693,7 +727,7 @@ def delete_voyage(voyage_id: str, db: firestore.Client = Depends(get_db), curren
 
 
 @app.get("/destinations/", response_model=List[str])
-def get_unique_destinations(user_id: Optional[str] = Query(None), db: firestore.Client = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+def get_unique_destinations(user_id: Optional[str] = Query(None), db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
     target_user_id = current_user.get("id")
     if current_user.get("role") == "admin" and user_id:
         target_user_id = user_id

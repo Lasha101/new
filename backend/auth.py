@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-import google.cloud.firestore as firestore  # type: ignore
+from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 
@@ -29,7 +29,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: firestore.Client, username: str, password: str) -> Any:
+def authenticate_user(db: Session, username: str, password: str) -> Any:
     import crud
     user = crud.get_user_by_username(db, username=username)
     if not user or not verify_password(password, str(user.get("hashed_password"))):
@@ -44,7 +44,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: firestore.Client = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Impossible de valider les informations d'identification",

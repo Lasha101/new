@@ -1,7 +1,7 @@
 # Passport & Travel Management Platform — v2
 
 Reimplementation of the travel document management app (React + FastAPI +
-Firestore + Google Cloud Vision OCR). The user experience is identical to the
+PostgreSQL + Google Cloud Vision OCR). The user experience is identical to the
 original implementation, with these changes:
 
 1. **Excel export** — data exports download as `.xlsx` (Excel) instead of `.csv`
@@ -25,19 +25,25 @@ original implementation, with these changes:
    Passport parsing logic is unchanged from the original, so passport pages
    produce identical results. Every non-extracted page gets an explicit
    technical diagnostic in the job's failure list.
+5. **PostgreSQL storage** — the data layer was migrated from Google Firestore
+   to PostgreSQL (SQLAlchemy). API behavior was verified identical with a full
+   before/after end-to-end test (same OCR extraction, credits, exports and
+   error messages); Google Cloud is now used only for the Vision OCR API.
 
 ## Architecture
 - **Frontend:** React (Vite) — `frontend/`
 - **Backend:** Python (FastAPI) — `backend/`
-- **Database:** Google Firestore (emulator for local development, data
-  partition `travel-app-new`)
+- **Database:** PostgreSQL (SQLAlchemy 2.0 + psycopg2; tables and the default
+  `admin` user are created automatically at startup)
 - **OCR:** Google Cloud Vision API
 
 ## Local Development
 
-### 1. Start the Firestore emulator (shared with the original app)
-```bash
-gcloud beta emulators firestore start --host-port=127.0.0.1:8080
+### 1. Start PostgreSQL and create the database
+Any PostgreSQL ≥ 13 works. Create an empty database and point the backend at
+it via `DATABASE_URL` in `backend/.env`, e.g.:
+```
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/travelapp
 ```
 
 ### 2. Backend (port 8001, so it can run beside the original on 8000)
@@ -48,12 +54,8 @@ uvicorn main:app --port 8001
 ```
 Configuration lives in `backend/.env` (secret key, admin password — the default
 `admin` user is created at startup —, Vision service-account credentials,
-emulator host).
-
-**Data partition:** `GOOGLE_CLOUD_PROJECT` defaults to `travel-app-new`, an
-isolated emulator partition, so this app runs side-by-side with the original
-without mixing data. To operate on the original app's data, set it to the
-original project id in `backend/.env`.
+`DATABASE_URL`). Using a dedicated database keeps this app fully isolated from
+the original, so both can run side-by-side.
 
 ### 3. Frontend (port 5174)
 ```bash
@@ -82,8 +84,13 @@ npm run dev -- --port 5174 --strictPort
   before parsing. The correction only applies in contexts that anchor the token
   as a passport number (MRZ line 2, or the 9-character visual-zone shape with
   at least one real letter).
+- **User uniqueness is database-enforced** — `users.email` and
+  `users.user_name` carry unique constraints, so the original's
+  check-then-create race (a perfectly concurrent duplicate signup slipping
+  through) is closed; the loser of the race gets the same French 400 error as
+  the normal duplicate case.
 - **Editing works end-to-end** — passport and user « Edit » forms save
-  correctly: date fields are converted before the Firestore write (the original
+  correctly: date fields are converted before the database write (the original
   raised a 500 on every passport update), the stored `destination` is returned
   by the API so it can be displayed and changed (single and bulk edit), and
   `user_name`/`role` are updatable by admins (with uniqueness/validity checks;
@@ -97,7 +104,7 @@ npm run dev -- --port 5174 --strictPort
   original capped it at 1200px), while the login form stays centered.
 
 ## Known MVP limitations (shared with the original design)
-- User uniqueness (email / username) is enforced by check-then-create without a
-  transaction; a perfectly concurrent duplicate signup could slip through.
 - Self-registration is protected only by a per-IP rate limit (5/minute), like
   the login endpoint.
+- Schema management is `create_all`-based (no migration tool); a future model
+  change on an existing database will need Alembic or a manual `ALTER`.
