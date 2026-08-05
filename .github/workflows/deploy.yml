@@ -29,8 +29,8 @@ name: Deploy
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [master]
+  push:
+    branches: [master]
 
 concurrency:
   group: production-deploy
