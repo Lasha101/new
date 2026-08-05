@@ -1,0 +1,94 @@
+# Deploys the app to the production VPS over SSH.
+#
+# DISABLED UNTIL THE VPS EXISTS: this workflow only runs when triggered
+# manually (Actions tab -> Deploy -> Run workflow). Once the server is
+# provisioned, deployment on every push to master can be enabled by
+# uncommenting the `push:` trigger below.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   VPS_HOST             server IP or hostname
+#   VPS_USER             SSH user (e.g. deploy)
+#   VPS_SSH_PRIVATE_KEY  private key whose public half is in the server's
+#                        ~/.ssh/authorized_keys
+#
+# One-time server provisioning this workflow expects (done once, by hand):
+#   - PostgreSQL running locally with the app database created
+#   - /opt/travelapp/backend/.env with the production values
+#     (SECRET_KEY, ADMIN_PASSWORD, GCP_CREDS_JSON, DATABASE_URL)
+#   - a systemd unit `travelapp.service` running:
+#     /opt/travelapp/venv/bin/python -m uvicorn main:app --port 8001
+#     (WorkingDirectory=/opt/travelapp/backend)
+#   - nginx serving /opt/travelapp/frontend-dist as the site root and
+#     proxying /api/* to 127.0.0.1:8001 WITH the /api prefix stripped —
+#     backend routes have no /api prefix, so the trailing slash matters:
+#       location /api/ { proxy_pass http://127.0.0.1:8001/; }
+#     (also add proxy_buffering off; for the /events SSE endpoint)
+#   - sudoers entry allowing the deploy user to restart travelapp.service
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [master]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Set up SSH
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload backend and frontend build
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude '.env' --exclude '__pycache__' \
+            backend/ "$VPS_USER@$VPS_HOST:/opt/travelapp/backend/"
+          rsync -az --delete \
+            frontend/dist/ "$VPS_USER@$VPS_HOST:/opt/travelapp/frontend-dist/"
+
+      - name: Install backend dependencies and restart service
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "$VPS_USER@$VPS_HOST" '
+            set -e
+            cd /opt/travelapp
+            [ -d venv ] || python3 -m venv venv
+            venv/bin/pip install --quiet -r backend/requirements.txt
+            sudo systemctl restart travelapp.service
+            sleep 3
+            curl -sf http://127.0.0.1:8001/docs >/dev/null
+            curl -sf http://127.0.0.1/api/openapi.json >/dev/null
+            echo "Deployed; service and nginx routing are answering."
+          '
