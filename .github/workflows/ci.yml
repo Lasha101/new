@@ -38,6 +38,14 @@ jobs:
         working-directory: backend
         run: python -m py_compile *.py
 
+      - name: Run backend test suite (pytest, in-memory SQLite)
+        working-directory: backend
+        env:
+          SECRET_KEY: ci-only-secret-key
+        run: |
+          pip install -r requirements-dev.txt
+          python -m pytest -q
+
       - name: Boot app against PostgreSQL and smoke-test
         working-directory: backend
         env:
@@ -77,3 +85,7 @@ jobs:
       - name: Build production bundle
         working-directory: frontend
         run: npm run build
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: npm test

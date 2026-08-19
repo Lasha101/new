@@ -20,8 +20,10 @@ technically explicit diagnostic; callers surface it per page.
 """
 import re
 import asyncio
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import Any, List, Dict, Optional
+from typing import Any, Awaitable, Callable, List, Dict, Optional
 from google.cloud import vision
 from fastapi import HTTPException
 import logging
@@ -36,6 +38,13 @@ try:
 except Exception as e:
     logger.error(f"🔴 Failed to initialize Google Vision client: {e}")
     vision_client = None
+
+# Pages are OCR'd concurrently, bounded by this many in-flight Vision calls.
+# A dedicated executor is required: the event loop's default executor is
+# capped at min(32, cpu+4) threads (6 on a 2-vCPU host), which would silently
+# throttle the fan-out below that bound.
+_OCR_MAX_CONCURRENCY = 8
+_ocr_executor = ThreadPoolExecutor(max_workers=_OCR_MAX_CONCURRENCY, thread_name_prefix="ocr")
 
 
 # --- Shared helpers ---
@@ -434,7 +443,7 @@ def _parse_cni_new_visual(full_text: str) -> Optional[dict]:
 
 # --- Page-level extraction ---
 
-def _extract_document_data_from_image_bytes(image_bytes: bytes) -> dict:
+def _extract_document_data_from_image_bytes(image_bytes: bytes, retry_empty: bool = True) -> dict:
     """Runs Vision OCR on one page image and parses it as a French passport or
     a French national identity card. Raises HTTPException with an explicit
     diagnostic when no supported document can be extracted."""
@@ -446,14 +455,21 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes) -> dict:
     image_context = vision.ImageContext(language_hints=['fr'])
     request = vision.AnnotateImageRequest(image=image, features=[feature], image_context=image_context)
 
-    # One retry absorbs transient Vision API errors, which otherwise surface
-    # as a spurious "no text detected" failure on a perfectly readable page.
+    # One retry absorbs transient Vision API errors and — where no render
+    # fallback exists (retry_empty=True) — transient empty annotations too.
+    # On the embedded fast path the caller passes retry_empty=False: its
+    # 300-dpi render retry already provides the second attempt, so genuinely
+    # blank pages are no longer billed twice there.
     response = None
     for attempt in (1, 2):
         response = vision_client.annotate_image(request=request)
-        if not response.error.message and response.full_text_annotation and response.full_text_annotation.pages:
-            break
-        logger.warning(f"Réponse Vision incomplète (tentative {attempt}) : {response.error.message or 'aucun texte'}")
+        if response.error.message:
+            logger.warning(f"Erreur de l'API Vision (tentative {attempt}) : {response.error.message}")
+            continue
+        if retry_empty and not (response.full_text_annotation and response.full_text_annotation.pages):
+            logger.warning(f"Réponse Vision sans texte (tentative {attempt}).")
+            continue
+        break
 
     if response.error.message:
         raise HTTPException(status_code=400, detail=f"L'API Google Vision a renvoyé une erreur : {response.error.message}")
@@ -478,6 +494,12 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes) -> dict:
         data = _parse_cni_old_mrz(raw_text, full_text)
     if data is None:
         data = _parse_cni_new_visual(full_text)
+        if data is not None:
+            # Pure visual-zone parse (no MRZ anywhere on the page): the only
+            # parser whose output is sensitive to which image bytes Vision
+            # saw. The caller uses this marker to re-check such pages on a
+            # 300-dpi render when the fast embedded-image path was used.
+            data["_visual_only"] = True
     if data is None:
         raise HTTPException(
             status_code=422,
@@ -491,18 +513,77 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes) -> dict:
     return data
 
 
-async def extract_data_page_by_page(file_content: bytes, content_type: str) -> List[Dict[str, Any]]:
+def _render_page_png(pdf_document, page_num: int, fitz_lock: threading.Lock) -> bytes:
+    """300-dpi PNG render of one page. PyMuPDF is not thread-safe, so all
+    document access is serialized behind fitz_lock."""
+    with fitz_lock:
+        pdf_page: Any = pdf_document[page_num]
+        pix = pdf_page.get_pixmap(dpi=300)
+        return pix.tobytes("png")
+
+
+def _page_source_image_bytes(pdf_document, page_num: int, fitz_lock: threading.Lock) -> tuple[bytes, bool]:
+    """(bytes, used_embedded) to OCR for one page. When the page is exactly
+    one safe full-page scan (the common case for scanned documents), the
+    original embedded image is reused as-is: no render/encode CPU and ~10x
+    smaller Vision upload. Anything else falls back to the 300-dpi render.
+    used_embedded tells the caller a render retry is still available: on small
+    visual-zone print, the upsampled render can OCR better than the native
+    scan, so pages that fail on embedded bytes are retried on a render."""
+    try:
+        with fitz_lock:
+            pdf_page: Any = pdf_document[page_num]
+            images = pdf_page.get_images(full=True)
+            if (len(images) == 1
+                    and images[0][1] == 0            # no soft mask
+                    and pdf_page.rotation == 0
+                    and not pdf_page.get_text().strip()):  # no text/vector overlay to lose
+                info = pdf_document.extract_image(images[0][0])
+                if (info.get("ext") in ("jpeg", "jpg", "png")
+                        and info.get("width", 0) >= 1000
+                        and info.get("colorspace", 3) != 4):  # CMYK JPEGs render unreliably
+                    return info["image"], True
+    except Exception as e:
+        logger.warning(f"Extraction de l'image intégrée impossible (page {page_num + 1}), rendu 300 dpi utilisé : {e}")
+    return _render_page_png(pdf_document, page_num, fitz_lock), False
+
+
+async def extract_data_page_by_page(
+    file_content: Optional[bytes] = None,
+    content_type: str = "",
+    file_path: Optional[str] = None,
+    progress_callback: Optional[Callable[[int, int], Awaitable[None]]] = None,
+) -> List[Dict[str, Any]]:
     """Splits the upload into pages and extracts one document per page.
+    The file is taken either from file_path (preferred: nothing held in RAM)
+    or from file_content bytes. Pages are OCR'd concurrently (bounded by
+    _OCR_MAX_CONCURRENCY); progress_callback(done, total) is awaited after
+    each page completes.
     Each page yields either {'page_number', 'data'} or {'page_number', 'error'}."""
     results: List[Dict[str, Any]] = []
     loop = asyncio.get_event_loop()
 
+    async def _report(done: int, total: int):
+        if progress_callback is not None:
+            try:
+                await progress_callback(done, total)
+            except Exception as e:
+                logger.warning(f"Échec du rappel de progression : {e}")
+
     if content_type.startswith("image/"):
         logger.info("Traitement en tant que fichier image unique.")
         try:
+            if file_content is None:
+                if file_path is None:
+                    raise ValueError("file_path ou file_content est requis.")
+                with open(file_path, "rb") as f:
+                    file_content = f.read()
+            image_bytes = file_content
             extracted_data = await loop.run_in_executor(
-                None, lambda: _extract_document_data_from_image_bytes(file_content)
+                _ocr_executor, _extract_document_data_from_image_bytes, image_bytes
             )
+            # No render alternative exists for a plain image upload.
+            extracted_data.pop("_visual_only", None)
             results.append({"page_number": 1, "data": extracted_data})
         except HTTPException as e:
             logger.warning(f"Échec de l'extraction de l'image : {e.detail}")
@@ -510,33 +591,97 @@ async def extract_data_page_by_page(file_content: bytes, content_type: str) -> L
         except Exception as e:
             logger.error(f"Erreur inattendue lors du traitement de l'image : {e}")
             results.append({"page_number": 1, "error": "Une erreur serveur inattendue est survenue lors du traitement."})
+        await _report(1, 1)
 
     elif content_type == "application/pdf":
         logger.info("Traitement en tant que fichier PDF.")
         try:
-            pdf_document = fitz.open(stream=file_content, filetype="pdf")
-            for page_num in range(len(pdf_document)):
-                if not loop.is_running():
-                    break
+            def _open_pdf():
+                if file_path is not None:
+                    return fitz.open(file_path)
+                return fitz.open(stream=file_content, filetype="pdf")
 
-                page_index = page_num + 1
-                logger.info(f"--- Traitement de la page PDF {page_index} ---")
+            pdf_document = await loop.run_in_executor(_ocr_executor, _open_pdf)
+            # PyMuPDF is not thread-safe: every access to the document is
+            # serialized behind fitz_lock. Page images are harvested one at a
+            # time (fast — usually just the embedded scan bytes); only the
+            # Vision calls fan out concurrently. The document stays open until
+            # the fan-out ends so failed fast-path pages can be re-rendered.
+            fitz_lock = threading.Lock()
+            try:
+                total_pages = len(pdf_document)
+                semaphore = asyncio.Semaphore(_OCR_MAX_CONCURRENCY)
+
+                async def _ocr_page(page_index: int) -> Dict[str, Any]:
+                    async with semaphore:
+                        logger.info(f"--- Traitement de la page PDF {page_index} ---")
+                        try:
+                            # Harvested lazily inside the semaphore so at most
+                            # _OCR_MAX_CONCURRENCY page images exist at once:
+                            # render-path pages are 10-25MB PNGs each, so
+                            # pre-collecting a whole large PDF could OOM the
+                            # single uvicorn process.
+                            image_bytes, used_embedded = await loop.run_in_executor(
+                                _ocr_executor, _page_source_image_bytes, pdf_document, page_index - 1, fitz_lock
+                            )
+                            try:
+                                # retry_empty=False on the embedded fast path:
+                                # the render retry below is the second attempt.
+                                extracted_data = await loop.run_in_executor(
+                                    _ocr_executor, _extract_document_data_from_image_bytes, image_bytes, not used_embedded
+                                )
+                                # Pages parsed purely from the visual zone are
+                                # image-sensitive: re-read them on the render
+                                # so their fields match the render-only path.
+                                if used_embedded and extracted_data.get("_visual_only"):
+                                    raise HTTPException(status_code=422, detail="revérification sur rendu")
+                            except HTTPException:
+                                # The upsampled render sometimes OCRs small
+                                # visual-zone print better than the native
+                                # scan: redo such pages on a 300-dpi render,
+                                # so results never regress versus the
+                                # render-only path.
+                                if not used_embedded:
+                                    raise
+                                logger.info(f"Nouvelle tentative de la page {page_index} sur un rendu 300 dpi.")
+                                rendered = await loop.run_in_executor(
+                                    _ocr_executor, _render_page_png, pdf_document, page_index - 1, fitz_lock
+                                )
+                                extracted_data = await loop.run_in_executor(
+                                    _ocr_executor, _extract_document_data_from_image_bytes, rendered
+                                )
+                            extracted_data.pop("_visual_only", None)
+                            logger.info(f"Données extraites avec succès de la page {page_index}.")
+                            return {"page_number": page_index, "data": extracted_data}
+                        except HTTPException as e:
+                            logger.warning(f"Échec de l'extraction des données de la page {page_index}: {e.detail}")
+                            return {"page_number": page_index, "error": e.detail}
+                        except Exception as e:
+                            logger.error(f"Erreur inattendue sur la page {page_index}: {e}")
+                            return {"page_number": page_index, "error": "Une erreur serveur inattendue est survenue."}
+
+                tasks = [asyncio.ensure_future(_ocr_page(i + 1)) for i in range(total_pages)]
                 try:
-                    pdf_page: Any = pdf_document[page_num]
-                    pix = await loop.run_in_executor(None, lambda: pdf_page.get_pixmap(dpi=300))
-                    image_bytes = await loop.run_in_executor(None, lambda: pix.tobytes("png"))
-                    extracted_data = await loop.run_in_executor(
-                        None, lambda: _extract_document_data_from_image_bytes(image_bytes)
-                    )
-                    results.append({"page_number": page_index, "data": extracted_data})
-                    logger.info(f"Données extraites avec succès de la page {page_index}.")
-                except HTTPException as e:
-                    logger.warning(f"Échec de l'extraction des données de la page {page_index}: {e.detail}")
-                    results.append({"page_number": page_index, "error": e.detail})
-                except Exception as e:
-                    logger.error(f"Erreur inattendue sur la page {page_index}: {e}")
-                    results.append({"page_number": page_index, "error": "Une erreur serveur inattendue est survenue."})
-            pdf_document.close()
+                    done_count = 0
+                    for future in asyncio.as_completed(tasks):
+                        results.append(await future)
+                        done_count += 1
+                        await _report(done_count, total_pages)
+                except BaseException:
+                    for task in tasks:
+                        task.cancel()
+                    raise
+            finally:
+                # Close under the lock: a cancelled task's executor thread may
+                # still be inside a fitz call; closing concurrently would be a
+                # native use-after-free.
+                with fitz_lock:
+                    pdf_document.close()
+            # Pages finish out of order; restore document order for the
+            # per-page result list and the credit accounting downstream.
+            results.sort(key=lambda r: r.get("page_number", 0))
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Échec de l'ouverture ou de la lecture du fichier PDF : {e}")
             raise HTTPException(status_code=500, detail=f"Erreur lors de la lecture du fichier PDF : {e}")

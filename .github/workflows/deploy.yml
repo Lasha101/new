@@ -75,6 +75,8 @@ jobs:
             backend/ "$VPS_USER@$VPS_HOST:/opt/travelapp/backend/"
           rsync -az --delete \
             frontend/dist/ "$VPS_USER@$VPS_HOST:/opt/travelapp/frontend-dist/"
+          rsync -az --delete \
+            deploy/ "$VPS_USER@$VPS_HOST:/opt/travelapp/deploy/"
 
       - name: Install backend dependencies and restart service
         env:
@@ -87,6 +89,22 @@ jobs:
             [ -d venv ] || python3 -m venv venv
             venv/bin/pip install --quiet -r backend/requirements.txt
             sudo systemctl restart travelapp.service
+            # Reload nginx so the synced deploy/nginx-travelapp.conf takes
+            # effect. Three outcomes are kept distinct: a missing sudo
+            # permission is a NOTE (deploy stays green), but a FAILING config
+            # test must fail the deploy loudly — the broken file is already
+            # synced to disk and would silently arm itself on the next reload.
+            nginx_test_output=$(sudo -n /usr/sbin/nginx -t 2>&1) && nginx_test_rc=0 || nginx_test_rc=$?
+            if [ "$nginx_test_rc" -eq 0 ]; then
+              sudo -n /bin/systemctl reload nginx
+              echo "nginx config tested and reloaded."
+            elif echo "$nginx_test_output" | grep -qi "password is required"; then
+              echo "NOTE: nginx not reloaded (no passwordless sudo); reload manually if deploy/nginx-travelapp.conf changed."
+            else
+              echo "ERROR: nginx config test failed:"
+              echo "$nginx_test_output"
+              exit 1
+            fi
             sleep 3
             curl -sf http://127.0.0.1:8001/docs >/dev/null
             curl -sf http://127.0.0.1/api/openapi.json >/dev/null

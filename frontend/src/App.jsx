@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, DOC_TYPE_FILTER_OPTIONS } from './resultsHelpers.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -356,6 +357,7 @@ const GlobalStyles = () => (
 );
 
 const columnTranslations = {
+    document_type: 'Type', // PP = passeport, PI = pièce d'identité (derived, see resultsHelpers.js)
     first_name: 'Prénom',
     last_name: 'Nom de famille',
     birth_date: 'Date de Naissance',
@@ -588,6 +590,10 @@ function Dashboard({ user, token, fetchUser }) {
                 // On credit_update, refresh user data
                 if (data.type === 'credit_update') {
                     fetchUser();
+                } else if (data.type === 'job_progress' || data.type === 'job_update') {
+                    // Forward job events to the job monitor without threading
+                    // props through the whole component tree.
+                    window.dispatchEvent(new CustomEvent('ocr-job-event', { detail: data }));
                 }
             } catch (err) {
                 console.error("Error parsing SSE message:", err);
@@ -780,7 +786,7 @@ function AccountEditor({ user, token, fetchUser }) {
     );
 }
 
-function OcrUploader({ token, onUpload }) {
+function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
     const [file, setFile] = useState(null);
     const [error, setError] = useState('');
     const [destination, setDestination] = useState('');
@@ -846,26 +852,35 @@ function OcrUploader({ token, onUpload }) {
                     </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-                    <button type="button" onClick={handleReset} className="btn" style={{ backgroundColor: '#f3f4f6', color: '#374151' }}>Annuler</button>
-                    <button type="submit" className="btn btn-primary" disabled={!file}>Lancer l'analyse</button>
+                    <button type="button" onClick={isUploading ? onCancelUpload : handleReset} className="btn" style={{ backgroundColor: '#f3f4f6', color: '#374151' }}>{isUploading ? "Annuler l'envoi" : 'Annuler'}</button>
+                    {/* Disabled while uploading: a double-click used to create two jobs and burn double credits. */}
+                    <button type="submit" className="btn btn-primary" disabled={!file || isUploading}>{isUploading ? 'Envoi en cours…' : "Lancer l'analyse"}</button>
                 </div>
             </form>
         </div>
     );
 }
 
-function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, fetchUser, containerRef }) {
+function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, uploadProgress, fetchUser, containerRef }) {
     const [jobs, setJobs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const knownCompletedRef = useRef(new Set());
+    const jobsRef = useRef([]);
+    useEffect(() => { jobsRef.current = jobs; }, [jobs]);
 
     const fetchJobs = useCallback(async () => {
         try {
             const response = await fetch(`${API_URL}/ocr/jobs/`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (response.ok) {
                 const data = await response.json();
-                setJobs(data);
+                // Merge monotonically: an in-flight poll response must not
+                // roll back a fresher SSE job_progress patch.
+                setJobs(prevJobs => data.map(job => {
+                    const prev = prevJobs.find(p => p.id === job.id);
+                    return (prev && job.status === 'processing' && (prev.progress || 0) > (job.progress || 0))
+                        ? { ...job, progress: prev.progress } : job;
+                }));
                 let hasNewCompletion = false;
                 data.forEach(job => {
                     if (job.status === 'complete' || job.status === 'failed') {
@@ -875,16 +890,51 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, fe
                         }
                     }
                 });
-                if (hasNewCompletion) { 
-                    onJobComplete(); 
+                if (hasNewCompletion) {
+                    onJobComplete();
                     if (fetchUser) fetchUser(); // Update credits async when job finishes!
                 }
+                return data;
             } else { console.error('Échec de la récupération des jobs OCR.'); }
         } catch (err) { console.error('Une erreur est survenue lors de la récupération des jobs.', err); } finally { setIsLoading(false); }
+        return null;
     }, [token, onJobComplete, fetchUser]);
     
-    useEffect(() => { fetchJobs(); const interval = setInterval(fetchJobs, 2000); return () => clearInterval(interval); }, [fetchJobs]);
+    // Adaptive polling: 2s while a job is active (or an upload is in flight),
+    // 15s when idle — an idle dashboard no longer hammers the same process
+    // that runs the OCR jobs.
+    useEffect(() => {
+        let cancelled = false;
+        let timer = null;
+        const tick = async () => {
+            // Decide the next interval from the list this tick just fetched —
+            // jobsRef alone would be one render stale.
+            const data = await fetchJobs();
+            if (cancelled) return;
+            const list = data || jobsRef.current;
+            const active = !!uploadingFile || list.some(job => job.status === 'processing');
+            timer = setTimeout(tick, active ? 2000 : 15000);
+        };
+        tick();
+        return () => { cancelled = true; if (timer) clearTimeout(timer); };
+    }, [fetchJobs, uploadingFile]);
     useEffect(() => { if (refreshTrigger > 0) { fetchJobs(); } }, [refreshTrigger, fetchJobs]);
+
+    // Live job updates pushed over SSE: progress patches the job row directly
+    // (no poll lag); completion triggers an immediate refetch. Polling above
+    // stays as fallback if the SSE connection is down.
+    useEffect(() => {
+        const onJobEvent = (event) => {
+            const data = event.detail || {};
+            if (data.type === 'job_progress' && data.job_id) {
+                setJobs(prevJobs => prevJobs.map(job => job.id === data.job_id ? { ...job, progress: data.progress } : job));
+            } else if (data.type === 'job_update') {
+                fetchJobs();
+            }
+        };
+        window.addEventListener('ocr-job-event', onJobEvent);
+        return () => window.removeEventListener('ocr-job-event', onJobEvent);
+    }, [fetchJobs]);
 
     const handleRemoveJob = async (jobIdToRemove) => {
         if (!window.confirm("Voulez-vous vraiment supprimer ce job ?")) return;
@@ -903,7 +953,9 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, fe
     if (uploadingFile) {
         const isRealJobPresent = jobs.length > 0 && jobs[0].file_name === uploadingFile.name;
         if (!isRealJobPresent) {
-            displayJobs.unshift({ id: 'temp-virtual-id', file_name: uploadingFile.name, created_at: new Date().toISOString(), status: 'processing', progress: 0, successes: [], failures: [] });
+            // Real upload progress (0-100% of bytes sent) mapped onto the 0-14%
+            // "Upload" segment of the bar, instead of a frozen 0%.
+            displayJobs.unshift({ id: 'temp-virtual-id', file_name: uploadingFile.name, created_at: new Date().toISOString(), status: 'processing', progress: Math.min(14, Math.round((uploadProgress || 0) * 0.14)), successes: [], failures: [] });
         }
     }
 
@@ -1029,13 +1081,22 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const [editingItem, setEditingItem] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
     const [filters, setFilters] = useState({});
+    // Type filter of the results table ('' = Tous, 'PP', 'PI'); shared with
+    // the export panel so the downloads contain exactly the rows on screen.
+    const [docTypeFilter, setDocTypeFilter] = useState('');
     const [dynamicDestinations, setDynamicDestinations] = useState([]);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isBulkEditingDest, setIsBulkEditingDest] = useState(false);
     const [bulkDestination, setBulkDestination] = useState('');
     const [refreshJobsTrigger, setRefreshJobsTrigger] = useState(0);
     const [uploadingFile, setUploadingFile] = useState(null);
-    
+    const [uploadProgress, setUploadProgress] = useState(0);
+    // True only while the XHR is actually in flight — uploadingFile lingers
+    // 2s after success for the placeholder card, during which cancelling or
+    // blocking the submit button would be dishonest.
+    const [isUploadInFlight, setIsUploadInFlight] = useState(false);
+    const uploadXhrRef = useRef(null);
+
     // --- SCROLL REF ---
     const jobMonitorRef = useRef(null);
     
@@ -1060,7 +1121,18 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         const newFilters = { ...filters, [filterName]: value };
         if (user.role === 'admin' && filterName === 'user_filter') { fetchDestinationsForUser(value || null); newFilters.voyage_filter = ''; }
         setFilters(newFilters);
+        // The table filters also narrow the export, so a preview of the previous rows is stale.
+        setPreviewData(null);
     };
+    const handleDocTypeFilterChange = (value) => {
+        setDocTypeFilter(value);
+        // Hidden rows must not stay selected, and a preview of the previous
+        // filter must not be mistaken for the current export.
+        setSelectedIds(new Set()); setIsBulkEditingDest(false); setBulkDestination('');
+        setPreviewData(null);
+    };
+    // Rows currently displayed: the fetched rows narrowed by the type filter.
+    const visibleItems = useMemo(() => (endpoint === 'passports' ? filterByDocumentType(items, docTypeFilter) : items), [items, docTypeFilter, endpoint]);
 
     const fetchData = useCallback(async () => {
         const activeFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
@@ -1083,23 +1155,49 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     };
     
     const handleSave = () => { setEditingItem(null); setIsCreating(false); setSelectedIds(new Set()); fetchData(); };
-    const handleUpload = async (formData, fileObj) => {
-        setUploadingFile(fileObj); setSelectedIds(new Set());
-        try {
-            const response = await fetch(`${API_URL}/passports/upload-and-extract/`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData, });
-            if (!response.ok) { const data = await response.json(); alert(`Erreur de téléchargement: ${data.detail || 'Erreur inconnue'}`); setUploadingFile(null); } 
-            else { 
-                setRefreshJobsTrigger(prev => prev + 1); 
+    const handleUpload = (formData, fileObj) => {
+        setUploadingFile(fileObj); setSelectedIds(new Set()); setUploadProgress(0); setIsUploadInFlight(true);
+        // XMLHttpRequest instead of fetch: fetch cannot report upload progress.
+        const xhr = new XMLHttpRequest();
+        uploadXhrRef.current = xhr;
+        xhr.open('POST', `${API_URL}/passports/upload-and-extract/`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        // Stall watchdog instead of a flat total timeout: a slow-but-moving
+        // large upload must never be aborted, only one with no bytes moving.
+        let lastProgressAt = Date.now();
+        const stallWatchdog = setInterval(() => {
+            if (Date.now() - lastProgressAt > 60000) {
+                clearInterval(stallWatchdog);
+                alert('Le téléchargement semble bloqué et a été annulé. Vérifiez votre connexion et réessayez.');
+                xhr.abort();
+            }
+        }, 5000);
+        xhr.upload.onprogress = (e) => { lastProgressAt = Date.now(); if (e.lengthComputable) { setUploadProgress(Math.round((e.loaded / e.total) * 100)); } };
+        xhr.onload = () => {
+            clearInterval(stallWatchdog);
+            uploadXhrRef.current = null;
+            setIsUploadInFlight(false);
+            if (xhr.status >= 200 && xhr.status < 300) {
+                setRefreshJobsTrigger(prev => prev + 1);
                 // --- SCROLL TO JOB MONITOR ---
                 setTimeout(() => {
                     if (jobMonitorRef.current) {
                         jobMonitorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }, 100);
-                setTimeout(() => { setUploadingFile(null); }, 2000); 
+                setTimeout(() => { setUploadingFile(null); }, 2000);
+            } else {
+                let detail = 'Erreur inconnue';
+                try { detail = JSON.parse(xhr.responseText).detail || detail; } catch { /* non-JSON error body */ }
+                alert(`Erreur de téléchargement: ${detail}`);
+                setUploadingFile(null);
             }
-        } catch (err) { alert('Une erreur inattendue est survenue lors du téléchargement.'); setUploadingFile(null); }
+        };
+        xhr.onerror = () => { clearInterval(stallWatchdog); uploadXhrRef.current = null; setIsUploadInFlight(false); alert('Une erreur inattendue est survenue lors du téléchargement.'); setUploadingFile(null); };
+        xhr.onabort = () => { clearInterval(stallWatchdog); uploadXhrRef.current = null; setIsUploadInFlight(false); setUploadingFile(null); };
+        xhr.send(formData);
     };
+    const handleCancelUpload = () => { if (uploadXhrRef.current) { uploadXhrRef.current.abort(); } };
     const handleJobComplete = useCallback(() => { fetchData(); }, [fetchData]);
     const handleCancel = () => { setEditingItem(null); setIsCreating(false); setSelectedIds(new Set()); }
     const startCreating = () => {
@@ -1108,7 +1206,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         setEditingItem(newItem); setIsCreating(true);
     };
     const handleToggleSelect = (id) => { setSelectedIds(prev => { const newSet = new Set(prev); if (newSet.has(id)) { newSet.delete(id); } else { newSet.add(id); } return newSet; }); };
-    const handleToggleSelectAll = () => { if (selectedIds.size === items.length) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(items.map(i => i.id))); } };
+    const handleToggleSelectAll = () => { if (selectedIds.size === visibleItems.length) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(visibleItems.map(i => i.id))); } };
     const handleMultiDelete = async () => {
         if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedIds.size} passeports ?`)) {
             const payload = { passport_ids: Array.from(selectedIds) };
@@ -1122,11 +1220,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     // --- INTEGRATED EXPORT LOGIC ---
     const handleExportFilterChange = (name, value) => { setExportFilters(prev => ({ ...prev, [name]: value })); setPreviewData(null); };
     
-    const getServerExportData = async (preview = false) => {
-        const activeFilters = Object.fromEntries(Object.entries(exportFilters).filter(([, v]) => v));
-        if (user.role !== 'admin') { delete activeFilters.user_id; }
-        if (preview) { activeFilters.preview = 'true'; }
-        const query = new URLSearchParams(activeFilters).toString();
+    const getServerExportData = async (preview = false, format = 'xlsx') => {
+        const query = buildExportQuery({ exportFilters, tableFilters: filters, role: user.role, docTypeFilter, format, preview });
         try {
             const response = await fetch(`${API_URL}/export/data?${query}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) { const err = await response.json(); alert(`Échec de la récupération des données: ${err.detail}`); return null; }
@@ -1141,24 +1236,23 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         }
     };
 
-    const handleUnifiedExport = async () => {
+    const handleUnifiedExport = async (format = 'xlsx') => {
         if (selectedIds.size > 0) {
-            // -- EXPORT SELECTION (Excel built server-side) --
+            // -- EXPORT SELECTION (file built server-side, CSV or Excel) --
             try {
-                const response = await fetch(`${API_URL}/export/data/selection`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ passport_ids: Array.from(selectedIds) }) });
+                const response = await fetch(`${API_URL}/export/data/selection?format=${format}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ passport_ids: Array.from(selectedIds) }) });
                 if (!response.ok) { const err = await response.json(); alert(`Échec de l'exportation: ${err.detail}`); return; }
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
-                const link = document.createElement('a'); link.href = url; link.setAttribute('download', 'selection_passeports.xlsx');
+                const link = document.createElement('a'); link.href = url; link.setAttribute('download', downloadFilename(response.headers.get('content-disposition'), 'selection_passeports', format));
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
             } catch (err) { alert("Une erreur est survenue lors de l'exportation."); }
         } else {
-            // -- EXPORT FILTERED (Server-Side) --
-            const response = await getServerExportData();
+            // -- EXPORT FILTERED (Server-Side, CSV or Excel; honours the type filter) --
+            const response = await getServerExportData(false, format);
             if (response) {
                 const blob = await response.blob();
-                const contentDisposition = response.headers.get('content-disposition');
-                const filename = contentDisposition?.match(/filename="?(.+)"?/)?.[1] || 'passports_export.xlsx';
+                const filename = downloadFilename(response.headers.get('content-disposition'), 'passports_export', format);
                 const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
                 setPreviewData(null);
             }
@@ -1212,15 +1306,15 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     };
 
     const sortedItems = useMemo(() => {
-        let sortableItems = [...items];
+        let sortableItems = [...visibleItems];
         if (sortConfig.length > 0) {
             sortableItems.sort((a, b) => {
                 for (const sort of sortConfig) {
                     const key = sort.key;
                     const direction = sort.direction;
                     
-                    let aValue = a[key];
-                    let bValue = b[key];
+                    let aValue = key === 'document_type' ? getDocumentType(a) : a[key];
+                    let bValue = key === 'document_type' ? getDocumentType(b) : b[key];
 
                     if (aValue === bValue) continue; 
                     if (aValue === null || aValue === undefined || aValue === '') return 1;
@@ -1248,20 +1342,22 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             });
         }
         return sortableItems;
-    }, [items, sortConfig, fields]);
+    }, [visibleItems, sortConfig, fields]);
 
     if (editingItem) return <CrudForm item={editingItem} isCreating={isCreating} onSave={handleSave} onCancel={handleCancel} fields={fields} endpoint={endpoint} token={token} />;
 
     const displayFields = { ...fields };
     if (endpoint === 'admin/users') delete displayFields.password;
     if (endpoint === 'passports') delete displayFields.destination;
+    // The derived Type column (PP/PI) opens the passports table.
+    const displayColumns = endpoint === 'passports' ? ['document_type', ...Object.keys(displayFields)] : Object.keys(displayFields);
 
     // Use dynamic destinations (if admin looking at a user) or generic user destinations for the bulk list
     const availableBulkDestinations = (user.role === 'admin' && dynamicDestinations.length > 0) ? dynamicDestinations : userDestinations;
 
     return (
         <div>
-            {endpoint === 'passports' && ( <> <OcrUploader token={token} onUpload={handleUpload} /> <OcrJobMonitor token={token} refreshTrigger={refreshJobsTrigger} onJobComplete={handleJobComplete} uploadingFile={uploadingFile} fetchUser={fetchUser} containerRef={jobMonitorRef} /> </> )}
+            {endpoint === 'passports' && ( <> <OcrUploader token={token} onUpload={handleUpload} isUploading={isUploadInFlight} onCancelUpload={handleCancelUpload} /> <OcrJobMonitor token={token} refreshTrigger={refreshJobsTrigger} onJobComplete={handleJobComplete} uploadingFile={uploadingFile} uploadProgress={uploadProgress} fetchUser={fetchUser} containerRef={jobMonitorRef} /> </> )}
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="mb-2">
                 <h2>{title}</h2>
@@ -1283,8 +1379,11 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                     </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                          <button onClick={handlePreview} className="btn btn-primary" disabled={selectedIds.size > 0} style={{ backgroundColor: '#fff', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', opacity: selectedIds.size > 0 ? 0.5 : 1 }}>Aperçu</button>
-                         <button onClick={handleUnifiedExport} className="btn btn-primary">
-                             {selectedIds.size > 0 ? `Exporter Sélection (${selectedIds.size})` : 'Télécharger Excel'}
+                         <button onClick={() => handleUnifiedExport('csv')} className="btn btn-primary">
+                             {selectedIds.size > 0 ? `Exporter Sélection CSV (${selectedIds.size})` : 'Télécharger CSV'}
+                         </button>
+                         <button onClick={() => handleUnifiedExport('xlsx')} className="btn btn-primary">
+                             {selectedIds.size > 0 ? `Exporter Sélection Excel (${selectedIds.size})` : 'Télécharger Excel'}
                          </button>
                     </div>
                     {previewData && selectedIds.size === 0 && ( <PreviewTable data={previewData} /> )}
@@ -1293,13 +1392,13 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             {/* --- END EXPORT PANEL --- */}
 
             {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-2"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, Email...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="form-input" autoComplete="off"/></div></div> )}
-            {filterConfig && ( <div className="filter-bar mb-2">{filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} </div> )}
+            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-2">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontWeight: 600, color: '#374151' }}>Type<select name="document_type_filter" value={docTypeFilter} onChange={(e) => handleDocTypeFilterChange(e.target.value)} className="form-input" style={{ width: 'auto', minWidth: '110px' }} title="Filtrer par type de document (PP = passeport, PI = pièce d'identité)">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <option key={option.value} value={option.value}>{option.label}</option> ))}</select></label> )} </div> )}
             <div className="table-container">
                 <table className="table">
                     <thead>
                         <tr>
-                            {endpoint === 'passports' && ( <th className="checkbox-cell"><input type="checkbox" className="form-checkbox" onChange={handleToggleSelectAll} checked={items.length > 0 && selectedIds.size === items.length} aria-label="Sélectionner tout" /></th> )}
-                            {Object.keys(displayFields).map(field => {
+                            {endpoint === 'passports' && ( <th className="checkbox-cell"><input type="checkbox" className="form-checkbox" onChange={handleToggleSelectAll} checked={visibleItems.length > 0 && selectedIds.size === visibleItems.length} aria-label="Sélectionner tout" /></th> )}
+                            {displayColumns.map(field => {
                                 const sortState = sortConfig.find(s => s.key === field);
                                 const sortIndex = sortConfig.findIndex(s => s.key === field);
                                 const isChecked = !!sortState;
@@ -1338,15 +1437,16 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedItems.length === 0 ? ( <tr><td colSpan={Object.keys(displayFields).length + 2} style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>Aucune donnée trouvée.</td></tr> ) : sortedItems.map(item => (
+                        {sortedItems.length === 0 ? ( <tr><td colSpan={displayColumns.length + 2} style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>Aucune donnée trouvée.</td></tr> ) : sortedItems.map(item => (
                             <tr key={item.id} className={selectedIds.has(item.id) ? 'selected-row' : ''}>
                                 {endpoint === 'passports' && ( <td className="checkbox-cell"><input type="checkbox" className="form-checkbox" onChange={() => handleToggleSelect(item.id)} checked={selectedIds.has(item.id)} aria-label={`Sélectionner ${item.first_name} ${item.last_name}`} /></td> )}
-                                {Object.keys(displayFields).map(field => {
-                                    let cellValue = item[field];
+                                {displayColumns.map(field => {
+                                    let cellValue = field === 'document_type' ? getDocumentType(item) : item[field];
                                     if (field === 'confidence_score' && typeof cellValue === 'number') { cellValue = `${(cellValue * 100).toFixed(0)}%`; }
-                                    return <td key={field}>{String(cellValue)}</td>
+                                    // Missing values render as an empty cell, never as the text "null".
+                                    return <td key={field}>{cellValue == null ? '' : String(cellValue)}</td>
                                 })}
-                                <td><div style={{ display: 'flex', gap: '0.5rem' }}><button onClick={() => setEditingItem(item)} className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', backgroundColor: '#e0e7ff', color: '#4338ca' }}>Edit</button>{endpoint !== 'passports' && ( <button onClick={() => handleDelete(item.id)} className="btn btn-danger" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Suppr</button> )}</div></td>
+                                <td><div style={{ display: 'flex', gap: '0.5rem' }}><button onClick={() => setEditingItem(item)} className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', backgroundColor: '#e0e7ff', color: '#4338ca' }}>Modifier</button>{endpoint !== 'passports' && ( <button onClick={() => handleDelete(item.id)} className="btn btn-danger" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Suppr</button> )}</div></td>
                             </tr>
                         ))}
                     </tbody>

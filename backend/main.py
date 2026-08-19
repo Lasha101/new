@@ -6,15 +6,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import asyncio
+import codecs
+import csv
 import io
 import json
 import logging
+import re
+import tempfile
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import Optional, Dict, List, Any
+from datetime import date, datetime
+from typing import Optional, Dict, List, Any, Literal
 
 import pandas as pd
+from openpyxl.styles import Alignment
+from openpyxl.utils import get_column_letter
 from pydantic import ValidationError
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query, Form, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,6 +49,42 @@ limiter = Limiter(key_func=get_remote_address)
 SIGNUP_PAGE_CREDITS = 5
 
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+CSV_MEDIA_TYPE = "text/csv"
+# French Excel splits a double-clicked CSV on the Windows list separator,
+# which is ';' in a French locale (a ',' file lands in a single column).
+CSV_DELIMITER = ";"
+
+# --- Document type (PP = passeport, PI = pièce d'identité / CNI) ---
+# The passports table has no document-type column, so the type is derived
+# from the document number: a French passport number is always 2 digits +
+# 2 letters + 5 digits, while a CNI number is 12 digits (old format) or 9
+# alphanumeric characters (new format, never in the passport shape). The
+# frontend applies exactly the same rule (frontend/src/resultsHelpers.js).
+DOC_TYPE_PASSPORT = "PP"
+DOC_TYPE_ID_CARD = "PI"
+DocumentType = Literal["PP", "PI"]
+ExportFormat = Literal["xlsx", "csv"]
+# ASCII digit class on purpose: the frontend regex (JS \d) is ASCII-only, and
+# both sides must classify every value identically.
+_PASSPORT_NUMBER_RE = re.compile(r"^[0-9]{2}[A-Z]{2}[0-9]{5}$")
+
+
+def document_type_of(passport_number: Any) -> str:
+    """'PP' for a French passport number, 'PI' for any other document number."""
+    number = str(passport_number or "").strip().upper()
+    return DOC_TYPE_PASSPORT if _PASSPORT_NUMBER_RE.match(number) else DOC_TYPE_ID_CARD
+
+
+# Exported columns, in order, with the French headers of the on-screen results
+# table (columnTranslations in the frontend). Internal ids are never exported.
+EXPORT_COLUMNS = ["document_type", "first_name", "last_name", "birth_date", "expiration_date",
+                  "nationality", "passport_number", "destination", "confidence_score"]
+EXPORT_HEADERS = {
+    "document_type": "Type", "first_name": "Prénom", "last_name": "Nom de famille",
+    "birth_date": "Date de Naissance", "expiration_date": "Date d'Expiration",
+    "nationality": "Nationalité", "passport_number": "Numéro de Passeport",
+    "destination": "Destination", "confidence_score": "Score de Confiance",
+}
 
 
 # --- SSE CONNECTION MANAGER ---
@@ -97,24 +139,31 @@ manager = ConnectionManager()
 # --- Background OCR task ---
 async def run_ocr_extraction_task(
     job_id: str,
-    file_content: bytes,
+    file_path: str,
     content_type: str,
     destination: Optional[str],
     user_id: str
 ):
     """Entry point: owns the task's database session (the background task
-    outlives the request, so it cannot reuse the request-scoped session)."""
+    outlives the request, so it cannot reuse the request-scoped session) and
+    the spooled upload file, which is deleted when the job ends."""
     db = SessionLocal()
     try:
-        await _run_ocr_extraction_job(db, job_id, file_content, content_type, destination, user_id)
+        await _run_ocr_extraction_job(db, job_id, file_path, content_type, destination, user_id)
     finally:
+        # Unlink first: it cannot raise past the except, while db.close (an
+        # awaitable) could — the spool file must be reclaimed regardless.
+        try:
+            os.unlink(file_path)
+        except OSError:
+            pass
         await asyncio.to_thread(db.close)
 
 
 async def _run_ocr_extraction_job(
     db: Session,
     job_id: str,
-    file_content: bytes,
+    file_path: str,
     content_type: str,
     destination: Optional[str],
     user_id: str
@@ -125,9 +174,17 @@ async def _run_ocr_extraction_job(
         await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, 10)
         await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, 20)
 
+        async def report_page_progress(done: int, total: int):
+            # Map page completion onto the 20→80 segment of the progress bar,
+            # and push it over SSE so the bar moves without waiting for a poll.
+            progress = 20 + int((done / total) * 60) if total > 0 else 20
+            await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, progress)
+            await manager.send_update(user_id, {"type": "job_progress", "job_id": job_id, "progress": progress})
+
         extraction_results = await ocr_service.extract_data_page_by_page(
-            file_content=file_content,
-            content_type=content_type
+            file_path=file_path,
+            content_type=content_type,
+            progress_callback=report_page_progress
         )
 
         await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, 80)
@@ -218,6 +275,8 @@ async def _run_ocr_extraction_job(
             logger.error(f"Failed to update page count/credits: {e}")
 
     await asyncio.to_thread(crud.update_ocr_job_complete, db, job_id, successes, failures)
+    # Push completion over SSE so the dashboard refreshes without poll lag.
+    await manager.send_update(user_id, {"type": "job_update", "job_id": job_id})
     logger.info(f"Job {job_id} completed. Saved to DB.")
 
 
@@ -314,24 +373,128 @@ def _safe_excel_value(value: Any) -> Any:
     return value
 
 
-def _excel_response(rows: List[Dict[str, Any]], filename: str, columns: Optional[List[str]] = None,
-                    header_labels: Optional[Dict[str, str]] = None) -> StreamingResponse:
-    """Builds an .xlsx download from a list of row dicts."""
-    df = pd.DataFrame(rows)
-    if columns:
-        df = df.reindex(columns=columns)
-    for column in df.columns:
-        df[column] = df[column].map(_safe_excel_value)
-    if header_labels:
-        df = df.rename(columns=header_labels)
+def _export_cell_value(value: Any) -> Any:
+    """Export cell value: Excel-safe, and every text value in UPPERCASE."""
+    value = _safe_excel_value(value)
+    if isinstance(value, str):
+        return value.upper()
+    return value
+
+
+def _filter_by_document_type(rows: List[Dict[str, Any]], document_type: Optional[str]) -> List[Dict[str, Any]]:
+    """Keeps only the rows of the given document type; no type = all rows."""
+    if not document_type:
+        return rows
+    return [row for row in rows if document_type_of(row.get("passport_number")) == document_type]
+
+
+def _build_export_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Export rows in EXPORT_COLUMNS order: the derived Type column first,
+    internal ids (id, owner_id) dropped, text values uppercased."""
+    export_rows = []
+    for row in rows:
+        export_row = {"document_type": document_type_of(row.get("passport_number"))}
+        for column in EXPORT_COLUMNS[1:]:
+            export_row[column] = _export_cell_value(row.get(column))
+        export_rows.append(export_row)
+    return export_rows
+
+
+def _displayed_length(value: Any) -> int:
+    """Number of characters Excel displays for a cell value (dates render as
+    YYYY-MM-DD, empty cells as nothing)."""
+    if value is None:
+        return 0
+    if isinstance(value, (datetime, date)):
+        return 10
+    return len(str(value))
+
+
+def _format_export_worksheet(worksheet) -> None:
+    """Centers every cell and auto-fits each column to its longest displayed
+    value (header included) so nothing is ever truncated in Excel."""
+    center = Alignment(horizontal="center", vertical="center")
+    for column_cells in worksheet.columns:
+        longest = 0
+        for cell in column_cells:
+            cell.alignment = center
+            longest = max(longest, _displayed_length(cell.value))
+        # Excel width units are ~one digit wide; uppercase letters and the bold
+        # header are wider than digits, hence the factor and the padding. 255
+        # is Excel's hard maximum column width.
+        width = min(255, max(8, longest * 1.25 + 3))
+        worksheet.column_dimensions[get_column_letter(column_cells[0].column)].width = width
+
+    # Hide every grid column after the last data column (one <col> range up to
+    # XFD, Excel's last column): the sheet then ends visually at the table
+    # instead of showing an endless empty grid to the right.
+    first_unused = worksheet.max_column + 1
+    if first_unused <= 16384:
+        trailing = worksheet.column_dimensions[get_column_letter(first_unused)]
+        trailing.min = first_unused
+        trailing.max = 16384
+        trailing.hidden = True
+
+
+def _excel_response(export_rows: List[Dict[str, Any]], filename: str) -> StreamingResponse:
+    """Builds an .xlsx download from export rows (see _build_export_rows)."""
+    df = pd.DataFrame(export_rows, columns=EXPORT_COLUMNS).rename(columns=EXPORT_HEADERS)
 
     stream = io.BytesIO()
-    df.to_excel(stream, index=False, sheet_name="Passeports")
+    with pd.ExcelWriter(stream, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Passeports")
+        _format_export_worksheet(writer.sheets["Passeports"])
     stream.seek(0)
 
     response = StreamingResponse(stream, media_type=XLSX_MEDIA_TYPE)
     response.headers["Content-Disposition"] = f"attachment; filename={filename}"
     return response
+
+
+# CSV cells Excel would evaluate as formulas (OWASP CSV-injection set); the
+# '=' case is already neutralised upstream by _safe_excel_value.
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+_ALL_DIGITS_RE = re.compile(r"^[0-9]+$")
+
+
+def _csv_cell(value: Any) -> str:
+    """CSV cell text: dates as YYYY-MM-DD, None as empty, formula-like text
+    neutralised, and all-digit text (12-digit CNI numbers) wrapped as ="…" so
+    that Excel keeps it as text instead of re-typing it as a number (which
+    drops leading zeros and displays 1.23457E+11)."""
+    if value is None:
+        return ""
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()[:10]
+    if isinstance(value, str):
+        if _ALL_DIGITS_RE.match(value):
+            return f'="{value}"'
+        if value.startswith(_CSV_FORMULA_PREFIXES):
+            return "'" + value
+    return str(value)
+
+
+def _csv_response(export_rows: List[Dict[str, Any]], filename: str) -> StreamingResponse:
+    """Builds a UTF-8 (with BOM, so Excel shows accents correctly) .csv
+    download from export rows (see _build_export_rows)."""
+    text = io.StringIO()
+    writer = csv.writer(text, delimiter=CSV_DELIMITER, lineterminator="\r\n")
+    writer.writerow([EXPORT_HEADERS[column] for column in EXPORT_COLUMNS])
+    for row in export_rows:
+        writer.writerow([_csv_cell(row.get(column)) for column in EXPORT_COLUMNS])
+    payload = codecs.BOM_UTF8 + text.getvalue().encode("utf-8")
+
+    response = StreamingResponse(io.BytesIO(payload), media_type=CSV_MEDIA_TYPE)
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
+
+
+def _export_file_response(rows: List[Dict[str, Any]], filename_stem: str, export_format: str) -> StreamingResponse:
+    """Builds the download for the requested format from raw passport rows."""
+    export_rows = _build_export_rows(rows)
+    if export_format == "csv":
+        return _csv_response(export_rows, f"{filename_stem}.csv")
+    return _excel_response(export_rows, f"{filename_stem}.xlsx")
 
 
 def _preview_value(value: Any) -> Any:
@@ -506,19 +669,35 @@ async def upload_and_extract_passport(
     if current_user.get("page_credits", 0) <= 0:
         raise HTTPException(status_code=403, detail="Crédits insuffisants. Veuillez contacter l'administrateur.")
 
-    file_content = await file.read()
-    if not file_content:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+    # Spool the upload to a temp file instead of reading it into memory: the
+    # bytes would otherwise stay pinned in RAM for the whole background job.
+    # The background task owns the file and deletes it when the job ends.
+    fd, tmp_path = tempfile.mkstemp(prefix="ocr_upload_")
+    file_size = 0
+    try:
+        with os.fdopen(fd, "wb") as spool:
+            while chunk := await file.read(1024 * 1024):
+                spool.write(chunk)
+                file_size += len(chunk)
 
-    job_id = str(uuid.uuid4())
-    job = await asyncio.to_thread(crud.create_ocr_job, db=db, job_id=job_id, user_id=current_user["id"], file_name=file.filename or "unknown")
+        if file_size == 0:
+            raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+
+        job_id = str(uuid.uuid4())
+        job = await asyncio.to_thread(crud.create_ocr_job, db=db, job_id=job_id, user_id=current_user["id"], file_name=file.filename or "unknown")
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
     # The background task uses the shared client; the request-scoped session is
     # only used to create the job document.
     background_tasks.add_task(
         run_ocr_extraction_task,
         job_id=job_id,
-        file_content=file_content,
+        file_path=tmp_path,
         content_type=file.content_type or "application/octet-stream",
         destination=destination,
         user_id=current_user["id"]
@@ -567,27 +746,32 @@ async def delete_ocr_job(
     return await asyncio.to_thread(crud.delete_ocr_job, db, job_id)
 
 
-# --- Data Export (Excel) ---
+# --- Data Export (Excel / CSV) ---
 @app.get("/export/data")
 def export_data(
     destination: Optional[str] = None, user_id: Optional[str] = None,
     first_name: Optional[str] = None, last_name: Optional[str] = None,
     preview: bool = False,
+    document_type: Optional[DocumentType] = Query(None, description="PP = passeports, PI = cartes d'identité; absent = tous"),
+    export_format: ExportFormat = Query("xlsx", alias="format"),
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
-    """Exports the filtered documents as an Excel (.xlsx) file, or as JSON rows
-    when preview=true (used by the on-screen preview table)."""
+    """Exports the filtered documents as an Excel (.xlsx, default) or CSV
+    file, or as JSON rows when preview=true (used by the on-screen preview
+    table). The optional document_type filter (PP/PI) narrows the rows to one
+    document type; without it, every matching row is exported."""
     effective_user_id = current_user.get("id")
     if current_user.get("role") == "admin":
         effective_user_id = user_id
 
     filtered_data = crud.filter_data(db, destination, effective_user_id, first_name, last_name)
+    filtered_data = _filter_by_document_type(filtered_data, document_type)
     if not filtered_data:
         raise HTTPException(status_code=404, detail="Aucune donnée de passeport trouvée pour les critères donnés")
 
     if preview:
-        return _export_rows_for_preview(filtered_data)
+        return _export_rows_for_preview(_build_export_rows(filtered_data))
 
     filename_parts = ["passeports"]
     if destination:
@@ -605,28 +789,18 @@ def export_data(
     else:
         filename_parts.append(f"pour_{current_user.get('user_name', 'user').lower()}")
 
-    filename = f"{'_'.join(filename_parts)}.xlsx"
-    return _excel_response(filtered_data, filename)
-
-
-# Column set and French headers matching the on-screen passport table.
-SELECTION_EXPORT_COLUMNS = ["id", "first_name", "last_name", "birth_date", "expiration_date",
-                            "nationality", "passport_number", "destination", "confidence_score"]
-SELECTION_EXPORT_HEADERS = {
-    "first_name": "Prénom", "last_name": "Nom de famille", "birth_date": "Date de Naissance",
-    "expiration_date": "Date d'Expiration", "nationality": "Nationalité",
-    "passport_number": "Numéro de Passeport", "destination": "Destination",
-    "confidence_score": "Score de Confiance",
-}
+    return _export_file_response(filtered_data, "_".join(filename_parts), export_format)
 
 
 @app.post("/export/data/selection")
 def export_selected_data(
     payload: schemas.PassportExportSelection,
+    export_format: ExportFormat = Query("xlsx", alias="format"),
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
-    """Exports the explicitly selected documents as an Excel (.xlsx) file."""
+    """Exports the explicitly selected documents as an Excel (.xlsx, default)
+    or CSV file, with the same columns and formatting as /export/data."""
     if not payload.passport_ids:
         raise HTTPException(status_code=400, detail="Aucun passeport sélectionné.")
 
@@ -636,8 +810,7 @@ def export_selected_data(
     if not passports:
         raise HTTPException(status_code=404, detail="Aucune donnée de passeport trouvée pour les critères donnés")
 
-    return _excel_response(passports, "selection_passeports.xlsx",
-                           columns=SELECTION_EXPORT_COLUMNS, header_labels=SELECTION_EXPORT_HEADERS)
+    return _export_file_response(passports, "selection_passeports", export_format)
 
 
 @app.get("/passports/", response_model=list[schemas.Passport])

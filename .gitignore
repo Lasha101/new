@@ -44,3 +44,10 @@ coverage/
 
 # Test documents with personal identity data
 DUBROVNIK.pdf
+backend/bench_result_*.json
+
+# Development-only tools & local artifacts
+backend/bench_ocr.py
+.coverage
+htmlcov/
+.ruff_cache/

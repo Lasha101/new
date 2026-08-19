@@ -4,10 +4,20 @@ Reimplementation of the travel document management app (React + FastAPI +
 PostgreSQL + Google Cloud Vision OCR). The user experience is identical to the
 original implementation, with these changes:
 
-1. **Excel export** — data exports download as `.xlsx` (Excel) instead of `.csv`
-   (both the filtered export and the selection export). The on-screen « Aperçu »
-   table is fed by `GET /export/data?preview=true` (JSON). Exported cell values
-   are sanitized against Excel formula injection.
+1. **Excel and CSV export** — the results screen offers two side-by-side
+   downloads, « Télécharger CSV » and « Télécharger Excel » (both for the
+   filtered export and for the selection export, `?format=csv|xlsx`, default
+   `xlsx`). The results table has a « Type » column — `PP` (passeport) or `PI`
+   (pièce d'identité / CNI), derived from the document-number format since the
+   schema has no type column — and a « Tous / PP / PI » filter; the downloads
+   contain exactly the rows on screen (`?document_type=PP|PI`, optional).
+   Exported files never contain the internal `id`/`owner_id` columns, use the
+   French headers of the on-screen table, and write every text value in
+   UPPERCASE. CSV files are UTF-8 with BOM (`;`-separated, so a French Excel
+   opens them correctly); XLSX cells are all centered and every column is
+   auto-fitted to its longest value. The on-screen « Aperçu » table mirrors the
+   export and is fed by `GET /export/data?preview=true` (JSON). Exported cell
+   values are sanitized against Excel formula injection.
 2. **Self-registration** — a « Créer un compte » button on the login page lets
    users sign up autonomously via `POST /users/register`. Admin invitation
    links were removed entirely (endpoints, admin UI and the `/register/<token>`
@@ -64,6 +74,13 @@ npm install
 npm run dev -- --port 5174 --strictPort
 ```
 `frontend/.env.local` points the UI at the backend (`http://127.0.0.1:8001`).
+
+### 4. Tests
+```bash
+cd backend && pip install -r requirements-dev.txt && python -m pytest -q   # API tests (in-memory SQLite, no PostgreSQL needed)
+cd frontend && npm test                                                    # results-screen helper tests (node --test)
+```
+Both suites also run in CI (`.github/workflows/ci.yml`).
 
 ## Deliberate deviations from the original
 - **Per-page failure messages** are more precise (they distinguish "no passport
