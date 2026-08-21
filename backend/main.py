@@ -54,31 +54,38 @@ CSV_MEDIA_TYPE = "text/csv"
 # which is ';' in a French locale (a ',' file lands in a single column).
 CSV_DELIMITER = ";"
 
-# --- Document type (PP = passeport, PI = pièce d'identité / CNI) ---
+# --- Document type (PASS = passeport, PI = pièce d'identité / CNI) ---
 # The passports table has no document-type column, so the type is derived
 # from the document number: a French passport number is always 2 digits +
 # 2 letters + 5 digits, while a CNI number is 12 digits (old format) or 9
 # alphanumeric characters (new format, never in the passport shape). The
 # frontend applies exactly the same rule (frontend/src/resultsHelpers.js).
-DOC_TYPE_PASSPORT = "PP"
+DOC_TYPE_PASSPORT = "PASS"
 DOC_TYPE_ID_CARD = "PI"
-DocumentType = Literal["PP", "PI"]
+DocumentType = Literal["PASS", "PI"]
 ExportFormat = Literal["xlsx", "csv"]
+# Dates are displayed the French way (jour/mois/année, DD/MM/YYYY) everywhere
+# the export is seen: on-screen preview, CSV text (_format_display_date) and
+# the number format of XLSX date cells.
+XLSX_DATE_NUMBER_FORMAT = "DD/MM/YYYY"
 # ASCII digit class on purpose: the frontend regex (JS \d) is ASCII-only, and
 # both sides must classify every value identically.
 _PASSPORT_NUMBER_RE = re.compile(r"^[0-9]{2}[A-Z]{2}[0-9]{5}$")
 
 
 def document_type_of(passport_number: Any) -> str:
-    """'PP' for a French passport number, 'PI' for any other document number."""
+    """'PASS' for a French passport number, 'PI' for any other document number."""
     number = str(passport_number or "").strip().upper()
     return DOC_TYPE_PASSPORT if _PASSPORT_NUMBER_RE.match(number) else DOC_TYPE_ID_CARD
 
 
 # Exported columns, in order, with the French headers of the on-screen results
-# table (columnTranslations in the frontend). Internal ids are never exported.
-EXPORT_COLUMNS = ["document_type", "first_name", "last_name", "birth_date", "expiration_date",
-                  "nationality", "passport_number", "destination", "confidence_score"]
+# table (columnTranslations in the frontend). The order is the one of the
+# on-screen table (PASSPORT_COLUMN_ORDER in frontend/src/resultsHelpers.js):
+# the derived Type column sits between the document number and the
+# destination. Internal ids are never exported.
+EXPORT_COLUMNS = ["last_name", "first_name", "birth_date", "expiration_date", "nationality",
+                  "passport_number", "document_type", "destination", "confidence_score"]
 EXPORT_HEADERS = {
     "document_type": "Type", "first_name": "Prénom", "last_name": "Nom de famille",
     "birth_date": "Date de Naissance", "expiration_date": "Date d'Expiration",
@@ -389,20 +396,30 @@ def _filter_by_document_type(rows: List[Dict[str, Any]], document_type: Optional
 
 
 def _build_export_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Export rows in EXPORT_COLUMNS order: the derived Type column first,
-    internal ids (id, owner_id) dropped, text values uppercased."""
+    """Export rows in EXPORT_COLUMNS order: the derived Type column (PASS/PI)
+    computed from the document number, internal ids (id, owner_id) dropped,
+    text values uppercased."""
     export_rows = []
     for row in rows:
-        export_row = {"document_type": document_type_of(row.get("passport_number"))}
-        for column in EXPORT_COLUMNS[1:]:
-            export_row[column] = _export_cell_value(row.get(column))
+        export_row = {}
+        for column in EXPORT_COLUMNS:
+            if column == "document_type":
+                export_row[column] = document_type_of(row.get("passport_number"))
+            else:
+                export_row[column] = _export_cell_value(row.get(column))
         export_rows.append(export_row)
     return export_rows
 
 
+def _format_display_date(value: Any) -> str:
+    """Date shown to the user: DD/MM/YYYY (explicit zero padding: strftime's
+    %Y does not pad years below 1000)."""
+    return f"{value.day:02d}/{value.month:02d}/{value.year:04d}"
+
+
 def _displayed_length(value: Any) -> int:
     """Number of characters Excel displays for a cell value (dates render as
-    YYYY-MM-DD, empty cells as nothing)."""
+    DD/MM/YYYY, empty cells as nothing)."""
     if value is None:
         return 0
     if isinstance(value, (datetime, date)):
@@ -411,13 +428,25 @@ def _displayed_length(value: Any) -> int:
 
 
 def _format_export_worksheet(worksheet) -> None:
-    """Centers every cell and auto-fits each column to its longest displayed
-    value (header included) so nothing is ever truncated in Excel."""
+    """Centers every cell, auto-fits each column to its longest displayed
+    value (header included) so nothing is ever truncated in Excel, and turns
+    the header row into filter dropdowns (Excel AutoFilter over the whole
+    table) so the downloaded file can be sorted/filtered column by column
+    as soon as it is opened."""
+    # AutoFilter over the header row + every data row: each header cell gets
+    # the dropdown (sort, text/date/number filters) like an Excel table.
+    worksheet.auto_filter.ref = f"A1:{get_column_letter(worksheet.max_column)}{worksheet.max_row}"
+
     center = Alignment(horizontal="center", vertical="center")
     for column_cells in worksheet.columns:
         longest = 0
         for cell in column_cells:
             cell.alignment = center
+            if isinstance(cell.value, (datetime, date)):
+                # Real date cell (sortable / filterable by date) shown as
+                # DD/MM/YYYY. Set here because pandas' openpyxl writer
+                # ignores its date_format argument (pandas 2.2).
+                cell.number_format = XLSX_DATE_NUMBER_FORMAT
             longest = max(longest, _displayed_length(cell.value))
         # Excel width units are ~one digit wide; uppercase letters and the bold
         # header are wider than digits, hence the factor and the padding. 255
@@ -458,14 +487,14 @@ _ALL_DIGITS_RE = re.compile(r"^[0-9]+$")
 
 
 def _csv_cell(value: Any) -> str:
-    """CSV cell text: dates as YYYY-MM-DD, None as empty, formula-like text
+    """CSV cell text: dates as DD/MM/YYYY, None as empty, formula-like text
     neutralised, and all-digit text (12-digit CNI numbers) wrapped as ="…" so
     that Excel keeps it as text instead of re-typing it as a number (which
     drops leading zeros and displays 1.23457E+11)."""
     if value is None:
         return ""
     if isinstance(value, (datetime, date)):
-        return value.isoformat()[:10]
+        return _format_display_date(value)
     if isinstance(value, str):
         if _ALL_DIGITS_RE.match(value):
             return f'="{value}"'
@@ -498,10 +527,11 @@ def _export_file_response(rows: List[Dict[str, Any]], filename_stem: str, export
 
 
 def _preview_value(value: Any) -> Any:
-    """Preview cell value: dates as YYYY-MM-DD, missing values as blank cells
-    (the table renders raw values, so None must not appear as 'null')."""
-    if isinstance(value, datetime):
-        return value.date().isoformat()
+    """Preview cell value: dates as DD/MM/YYYY (exactly what the downloaded
+    files show), missing values as blank cells (the table renders raw values,
+    so None must not appear as 'null')."""
+    if isinstance(value, (datetime, date)):
+        return _format_display_date(value)
     if value is None:
         return ""
     return value
@@ -752,14 +782,14 @@ def export_data(
     destination: Optional[str] = None, user_id: Optional[str] = None,
     first_name: Optional[str] = None, last_name: Optional[str] = None,
     preview: bool = False,
-    document_type: Optional[DocumentType] = Query(None, description="PP = passeports, PI = cartes d'identité; absent = tous"),
+    document_type: Optional[DocumentType] = Query(None, description="PASS = passeports, PI = cartes d'identité; absent = tous"),
     export_format: ExportFormat = Query("xlsx", alias="format"),
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Exports the filtered documents as an Excel (.xlsx, default) or CSV
     file, or as JSON rows when preview=true (used by the on-screen preview
-    table). The optional document_type filter (PP/PI) narrows the rows to one
+    table). The optional document_type filter (PASS/PI) narrows the rows to one
     document type; without it, every matching row is exported."""
     effective_user_id = current_user.get("id")
     if current_user.get("role") == "admin":

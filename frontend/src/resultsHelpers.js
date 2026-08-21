@@ -1,12 +1,12 @@
 // Pure helpers of the results screen (no React, no DOM) so they can be unit
 // tested with `node --test`.
 
-// Document type of a row: PP = passeport, PI = pièce d'identité (CNI).
+// Document type of a row: PASS = passeport, PI = pièce d'identité (CNI).
 // The database has no document-type column, so the type is derived from the
 // document number: a French passport number is always 2 digits + 2 letters +
 // 5 digits, while a CNI number is 12 digits (old format) or 9 alphanumeric
 // characters (new format). Mirrors document_type_of() in backend/main.py.
-export const DOC_TYPE_PASSPORT = 'PP';
+export const DOC_TYPE_PASSPORT = 'PASS';
 export const DOC_TYPE_ID_CARD = 'PI';
 const PASSPORT_NUMBER_RE = /^\d{2}[A-Z]{2}\d{5}$/;
 
@@ -16,6 +16,26 @@ export const DOC_TYPE_FILTER_OPTIONS = [
     { value: DOC_TYPE_PASSPORT, label: DOC_TYPE_PASSPORT },
     { value: DOC_TYPE_ID_CARD, label: DOC_TYPE_ID_CARD },
 ];
+
+// Columns of the passports screen, in order, shared by the results table, the
+// export preview and the downloaded CSV/XLSX files (mirrors EXPORT_COLUMNS in
+// backend/main.py): the derived Type column sits between the document number
+// and the destination.
+export const PASSPORT_COLUMN_ORDER = [
+    'last_name', 'first_name', 'birth_date', 'expiration_date', 'nationality',
+    'passport_number', 'document_type', 'destination', 'confidence_score',
+];
+
+// Date shown to the user: DD/MM/YYYY (jour/mois/année). Accepts the API's
+// ISO values ('1990-05-17' or '1990-05-17T00:00:00'); anything else (empty,
+// already formatted, free text) is returned untouched. Pure string work, so
+// the displayed day never shifts with the browser's time zone.
+export function formatDateFR(value) {
+    if (value == null || value === '') return '';
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+    if (!match) return String(value);
+    return `${match[3]}/${match[2]}/${match[1]}`;
+}
 
 export function getDocumentType(item) {
     const number = String(item?.passport_number ?? '').trim().toUpperCase();

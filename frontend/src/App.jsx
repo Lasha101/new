@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, DOC_TYPE_FILTER_OPTIONS } from './resultsHelpers.js';
+import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, formatDateFR, DOC_TYPE_FILTER_OPTIONS, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -357,7 +357,7 @@ const GlobalStyles = () => (
 );
 
 const columnTranslations = {
-    document_type: 'Type', // PP = passeport, PI = pièce d'identité (derived, see resultsHelpers.js)
+    document_type: 'Type', // PASS = passeport, PI = pièce d'identité (derived, see resultsHelpers.js)
     first_name: 'Prénom',
     last_name: 'Nom de famille',
     birth_date: 'Date de Naissance',
@@ -1081,7 +1081,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const [editingItem, setEditingItem] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
     const [filters, setFilters] = useState({});
-    // Type filter of the results table ('' = Tous, 'PP', 'PI'); shared with
+    // Type filter of the results table ('' = Tous, 'PASS', 'PI'); shared with
     // the export panel so the downloads contain exactly the rows on screen.
     const [docTypeFilter, setDocTypeFilter] = useState('');
     const [dynamicDestinations, setDynamicDestinations] = useState([]);
@@ -1348,9 +1348,10 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
 
     const displayFields = { ...fields };
     if (endpoint === 'admin/users') delete displayFields.password;
-    if (endpoint === 'passports') delete displayFields.destination;
-    // The derived Type column (PP/PI) opens the passports table.
-    const displayColumns = endpoint === 'passports' ? ['document_type', ...Object.keys(displayFields)] : Object.keys(displayFields);
+    // Passports: same columns and order as the export files (the derived Type
+    // column PASS/PI sits between the document number and the destination),
+    // see resultsHelpers.js.
+    const displayColumns = endpoint === 'passports' ? PASSPORT_COLUMN_ORDER : Object.keys(displayFields);
 
     // Use dynamic destinations (if admin looking at a user) or generic user destinations for the bulk list
     const availableBulkDestinations = (user.role === 'admin' && dynamicDestinations.length > 0) ? dynamicDestinations : userDestinations;
@@ -1392,7 +1393,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             {/* --- END EXPORT PANEL --- */}
 
             {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-2"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, Email...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="form-input" autoComplete="off"/></div></div> )}
-            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-2">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontWeight: 600, color: '#374151' }}>Type<select name="document_type_filter" value={docTypeFilter} onChange={(e) => handleDocTypeFilterChange(e.target.value)} className="form-input" style={{ width: 'auto', minWidth: '110px' }} title="Filtrer par type de document (PP = passeport, PI = pièce d'identité)">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <option key={option.value} value={option.value}>{option.label}</option> ))}</select></label> )} </div> )}
+            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-2">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontWeight: 600, color: '#374151' }}>Type<select name="document_type_filter" value={docTypeFilter} onChange={(e) => handleDocTypeFilterChange(e.target.value)} className="form-input" style={{ width: 'auto', minWidth: '110px' }} title="Filtrer par type de document (PASS = passeport, PI = pièce d'identité)">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <option key={option.value} value={option.value}>{option.label}</option> ))}</select></label> )} </div> )}
             <div className="table-container">
                 <table className="table">
                     <thead>
@@ -1443,6 +1444,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                                 {displayColumns.map(field => {
                                     let cellValue = field === 'document_type' ? getDocumentType(item) : item[field];
                                     if (field === 'confidence_score' && typeof cellValue === 'number') { cellValue = `${(cellValue * 100).toFixed(0)}%`; }
+                                    // Dates are displayed as DD/MM/YYYY (the stored ISO value is untouched, so sorting and the edit form keep working).
+                                    if (fields[field] === 'date') { cellValue = formatDateFR(cellValue); }
                                     // Missing values render as an empty cell, never as the text "null".
                                     return <td key={field}>{cellValue == null ? '' : String(cellValue)}</td>
                                 })}

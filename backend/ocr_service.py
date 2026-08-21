@@ -148,6 +148,16 @@ def _fix_mrz_passport_number(mrz_text: str) -> str:
     )
 
 
+# Passport MRZ line 1: 'P<FRA' + SURNAME + '<<' + GIVEN<NAMES + '<' fillers.
+# Surname words are separated by a single '<' (LE<FLOCH), the surname and the
+# given names by '<<'. The surname group therefore only accepts single '<'
+# separators, so the first '<<' of the line is the name separator; a greedy
+# [A-Z<]+ would swallow the whole line up to the trailing fillers and leave
+# the split to guesswork (LE FLOCH / SANDRINE became LE / FLOCH SANDRINE).
+# Stray fillers OCR may insert right after the country code are skipped.
+PASSPORT_MRZ_LINE1_RE = re.compile(r'P<FRA<*([A-Z]+(?:<[A-Z]+)*)<<([A-Z<]+)')
+
+
 def _parse_passport(full_text: str) -> Optional[dict]:
     """Parses French passport data from normalized OCR text. Returns None when
     the page cannot be confirmed as a complete French passport, in which case
@@ -159,10 +169,10 @@ def _parse_passport(full_text: str) -> Optional[dict]:
 
     # MRZ-first parsing
     mrz_text = _fix_mrz_passport_number(full_text.replace(' ', ''))
-    mrz_line1_match = re.search(r'P<FRA([A-Z<]+)<<([A-Z<]+)', mrz_text)
+    mrz_line1_match = PASSPORT_MRZ_LINE1_RE.search(mrz_text)
     if mrz_line1_match:
-        data["last_name"] = mrz_line1_match.group(1).replace('<', ' ').strip()
-        data["first_name"] = ' '.join(mrz_line1_match.group(2).replace('<', ' ').strip().split())
+        data["last_name"], data["first_name"] = _split_mrz_names(
+            mrz_line1_match.group(1) + '<<' + mrz_line1_match.group(2))
 
     mrz_line2_match = re.search(r'(\d{2}[A-Z]{2}\d{5})\d?(FRA)(\d{2}\d{2}\d{2})\d[MFX<](\d{2}\d{2}\d{2})', mrz_text)
     if mrz_line2_match:

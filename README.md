@@ -7,17 +7,25 @@ original implementation, with these changes:
 1. **Excel and CSV export** — the results screen offers two side-by-side
    downloads, « Télécharger CSV » and « Télécharger Excel » (both for the
    filtered export and for the selection export, `?format=csv|xlsx`, default
-   `xlsx`). The results table has a « Type » column — `PP` (passeport) or `PI`
-   (pièce d'identité / CNI), derived from the document-number format since the
-   schema has no type column — and a « Tous / PP / PI » filter; the downloads
-   contain exactly the rows on screen (`?document_type=PP|PI`, optional).
+   `xlsx`). The results table has a « Type » column — `PASS` (passeport) or
+   `PI` (pièce d'identité / CNI), derived from the document-number format since
+   the schema has no type column — and a « Tous / PASS / PI » filter; the
+   downloads contain exactly the rows on screen (`?document_type=PASS|PI`,
+   optional). Columns come in the order of the on-screen table: Nom de
+   famille, Prénom, Date de Naissance, Date d'Expiration, Nationalité, Numéro
+   de Passeport, Type, Destination, Score de Confiance (shared constant
+   `EXPORT_COLUMNS` / `PASSPORT_COLUMN_ORDER`, kept in sync by a test).
    Exported files never contain the internal `id`/`owner_id` columns, use the
    French headers of the on-screen table, and write every text value in
-   UPPERCASE. CSV files are UTF-8 with BOM (`;`-separated, so a French Excel
-   opens them correctly); XLSX cells are all centered and every column is
-   auto-fitted to its longest value. The on-screen « Aperçu » table mirrors the
-   export and is fed by `GET /export/data?preview=true` (JSON). Exported cell
-   values are sanitized against Excel formula injection.
+   UPPERCASE. Dates are always `DD/MM/YYYY` (table, preview, CSV text, and the
+   number format of the real date cells in XLSX). CSV files are UTF-8 with
+   BOM (`;`-separated, so a French Excel opens them correctly); XLSX cells are
+   all centered, every column is auto-fitted to its longest value, and an
+   Excel AutoFilter covers the whole table so every column header has its
+   sort/filter dropdown as soon as the file is opened. The on-screen « Aperçu »
+   table mirrors the export and is fed by `GET /export/data?preview=true`
+   (JSON). Exported cell values are sanitized against Excel formula
+   injection.
 2. **Self-registration** — a « Créer un compte » button on the login page lets
    users sign up autonomously via `POST /users/register`. Admin invitation
    links were removed entirely (endpoints, admin UI and the `/register/<token>`
@@ -32,9 +40,12 @@ original implementation, with these changes:
    new-format 2021+ cards (3-line TD1 MRZ on the back, visual-zone fallback
    when only the front is on the page). Both document types use the exact same
    schema and fields; the CNI document number is stored in `passport_number`.
-   Passport parsing logic is unchanged from the original, so passport pages
-   produce identical results. Every non-extracted page gets an explicit
-   technical diagnostic in the job's failure list.
+   Passport parsing logic is the original one with a single fix: MRZ line 1
+   is split on the `<<` that separates the surname from the given names
+   (`P<FRALE<FLOCH<<SANDRINE` → `LE FLOCH` / `SANDRINE`; the original greedy
+   match put every word but the first into the given names). Every
+   non-extracted page gets an explicit technical diagnostic in the job's
+   failure list.
 5. **PostgreSQL storage** — the data layer was migrated from Google Firestore
    to PostgreSQL (SQLAlchemy). API behavior was verified identical with a full
    before/after end-to-end test (same OCR extraction, credits, exports and
@@ -91,7 +102,7 @@ Both suites also run in CI (`.github/workflows/ci.yml`).
   had `page_credits`/`uploaded_pages_count` written as `null` to Firestore,
   which broke the account (HTTP 500 on every subsequent request). Here the
   protected fields are silently dropped instead.
-- **Export preview** shows dates as `YYYY-MM-DD` and blanks for missing values
+- **Export preview** shows dates as `DD/MM/YYYY` and blanks for missing values
   (the original rendered raw CSV artifacts such as `1990-05-12 00:00:00+00:00`).
 - **Vision calls are retried once** on transient API errors before a page is
   reported as failed.
