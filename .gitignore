@@ -44,6 +44,8 @@ coverage/
 
 # Test documents with personal identity data
 DUBROVNIK.pdf
+ITALIE 2 PIECES IDENTITE - copie.pdf
+
 backend/bench_result_*.json
 
 # Development-only tools & local artifacts

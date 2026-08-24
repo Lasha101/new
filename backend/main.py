@@ -209,6 +209,14 @@ async def _run_ocr_extraction_job(
     for i, result in enumerate(extraction_results):
         page_number = result.get("page_number")
 
+        if "verso_of_page" in result:
+            # Verso of a split old-format CNI, merged into the document of its
+            # recto (page result['verso_of_page']): nothing to save, nothing to
+            # report as a failure. The page still counts toward the credit
+            # charge below, like every processed page.
+            logger.info(f"[Job {job_id}] Page {page_number} : verso fusionné avec le recto de la page {result['verso_of_page']}.")
+            continue
+
         if "error" in result:
             logger.warning(f"[Job {job_id}] Page {page_number} non extraite : {result['error']}")
             failures.append({"page_number": page_number, "detail": result["error"]})

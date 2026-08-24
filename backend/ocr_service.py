@@ -64,6 +64,14 @@ def clean_and_parse_date(date_str: str) -> datetime | None:
         return None
 
 
+def _mrz_check_digit(field: str) -> str:
+    """ICAO 9303 check digit of an MRZ field: digits count as themselves,
+    letters as A=10..Z=35, '<' as 0; weights cycle 7, 3, 1."""
+    values = [int(c) if c.isdigit() else (0 if c == '<' else ord(c) - 55) for c in field]
+    weights = (7, 3, 1)
+    return str(sum(v * weights[i % 3] for i, v in enumerate(values)) % 10)
+
+
 def _parse_mrz_date(yymmdd: str, is_birth_date: bool) -> Optional[str]:
     """Parses a 6-digit MRZ date. Birth dates use a sliding century window;
     expiration dates are assumed to be in the 21st century."""
@@ -93,6 +101,22 @@ def _mrz_lines(raw_text: str) -> List[str]:
         if cleaned:
             lines.append(cleaned)
     return lines
+
+
+def _mrz_fragment_candidates(lines: List[str]) -> List[str]:
+    """Candidate MRZ lines rebuilt from fragments: Vision sometimes splits one
+    physical MRZ line at a faint '<' filler run, occasionally emitting the two
+    halves out of order. MRZ-looking fragments ('<' present or IDFRA prefix)
+    are kept and concatenations of 2-3 consecutive fragments (pairs also in
+    reversed order) are added; the anchored MRZ patterns filter out the rest."""
+    fragments = [line for line in lines if '<' in line or line.startswith('IDFRA')]
+    candidates = list(fragments)
+    for size in (2, 3):
+        for i in range(len(fragments) - size + 1):
+            candidates.append(''.join(fragments[i:i + size]))
+    for i in range(len(fragments) - 1):
+        candidates.append(fragments[i + 1] + fragments[i])
+    return candidates
 
 
 def _compute_confidence_score(data: dict, full_text_annotation) -> float:
@@ -127,6 +151,39 @@ def _compute_confidence_score(data: dict, full_text_annotation) -> float:
     return round(final_confidence, 4)
 
 
+# --- Split-document signals ---
+# An old-format CNI prints its MRZ on the front and its expiration date only on
+# the back. When the two sides arrive as two separate pages, each page alone
+# fails; these HTTPException subclasses keep today's exact error messages while
+# carrying the partial information, so extract_data_page_by_page can pair a
+# front with the adjacent verso page. A page still never yields more than one
+# document.
+
+_OLD_CNI_MISSING_EXPIRY_DETAIL = (
+    "CNI (ancien format) détectée via sa MRZ, mais la date d'expiration est introuvable : "
+    "la mention 'Carte valable jusqu'au JJ.MM.AAAA' du verso est absente ou illisible sur la page.")
+_UNRECOGNIZED_DOCUMENT_DETAIL = (
+    "Document non reconnu : aucune MRZ de passeport français (P<FRA...), aucune MRZ de "
+    "carte nationale d'identité (IDFRA...) ni aucun recto de CNI exploitable n'a été "
+    "détecté sur cette page.")
+
+
+class OldCniFrontMissingExpiry(HTTPException):
+    """Front of an old-format CNI fully identified via its MRZ, but the page
+    carries no 'Carte valable jusqu'au' expiration date."""
+    def __init__(self, partial_data: dict):
+        super().__init__(status_code=422, detail=_OLD_CNI_MISSING_EXPIRY_DETAIL)
+        self.partial_data = partial_data
+
+
+class PotentialOldCniVerso(HTTPException):
+    """Unrecognized page whose only exploitable content is the
+    'Carte valable jusqu'au' date of an old-format CNI verso."""
+    def __init__(self, expiration_date: str):
+        super().__init__(status_code=422, detail=_UNRECOGNIZED_DOCUMENT_DETAIL)
+        self.expiration_date = expiration_date
+
+
 # --- Passport parsing (identical behavior to the original implementation) ---
 
 # OCR sometimes reads the letter 'I' as the digit '1'. In a French passport
@@ -157,6 +214,17 @@ def _fix_mrz_passport_number(mrz_text: str) -> str:
 # Stray fillers OCR may insert right after the country code are skipped.
 PASSPORT_MRZ_LINE1_RE = re.compile(r'P<FRA<*([A-Z]+(?:<[A-Z]+)*)<<([A-Z<]+)')
 
+# Fallbacks for a scan that crops the left edge of the MRZ (the first
+# characters of both lines are physically missing):
+# - the right-hand tail of line 2 that survives the crop: 'FRA' + birth
+#   date (6) + check digit + sex + expiry date (6) + check digit. Both ICAO
+#   check digits are validated before the match is trusted, so ordinary text
+#   can never fake it;
+# - 'SURNAME<<GIVEN<NAMES' followed by a filler run, matched without the
+#   'P<FRA' anchor when that anchor was cropped away.
+PASSPORT_PARTIAL_LINE2_RE = re.compile(r'FRA(\d{6})(\d)([MFX])(\d{6})(\d)')
+PASSPORT_NAME_FRAGMENT_RE = re.compile(r'([A-Z]+(?:<[A-Z]+)*)<<([A-Z]+(?:<[A-Z]+)*)<{3,}')
+
 
 def _parse_passport(full_text: str) -> Optional[dict]:
     """Parses French passport data from normalized OCR text. Returns None when
@@ -184,6 +252,41 @@ def _parse_passport(full_text: str) -> Optional[dict]:
         expiration = _parse_mrz_date(mrz_line2_match.group(4), is_birth_date=False)
         if expiration:
             data["expiration_date"] = expiration
+    else:
+        # Line 2 with its left edge cropped out of the scan: dates and
+        # nationality from the surviving checksummed tail (the document number
+        # is gone from the MRZ; the visual-zone fallback below recovers it).
+        partial = PASSPORT_PARTIAL_LINE2_RE.search(mrz_text)
+        if partial and _mrz_check_digit(partial.group(1)) == partial.group(2) \
+                and _mrz_check_digit(partial.group(4)) == partial.group(5):
+            data["nationality"] = "Française"
+            birth = _parse_mrz_date(partial.group(1), is_birth_date=True)
+            if birth:
+                data["birth_date"] = birth
+            expiration = _parse_mrz_date(partial.group(4), is_birth_date=False)
+            if expiration:
+                data["expiration_date"] = expiration
+
+    if not data["last_name"] and not data["first_name"]:
+        # Line 1 with its 'P<FRA' anchor cropped: the '<<' separator still
+        # splits the names. The fragment may carry residue of the cut anchor
+        # (and, in space-stripped text, of preceding words), so the surname is
+        # the longest suffix that exists as a standalone word in the visual
+        # zone — MRZ tokens (any word containing '<') are excluded so the
+        # fragment can never validate itself.
+        name_fragment = PASSPORT_NAME_FRAGMENT_RE.search(mrz_text)
+        if name_fragment:
+            given = ' '.join(name_fragment.group(2).replace('<', ' ').split())
+            viz_text = ' '.join(w for w in full_text.split() if '<' not in w)
+            surname = None
+            for i in range(len(name_fragment.group(1))):
+                candidate = ' '.join(name_fragment.group(1)[i:].replace('<', ' ').split())
+                if len(candidate.replace(' ', '')) >= 3 and re.search(
+                        r'(?<![A-Za-z])' + re.escape(candidate) + r'(?![A-Za-z])', viz_text, re.IGNORECASE):
+                    surname = candidate
+                    break
+            if surname and given:
+                data["last_name"], data["first_name"] = surname, given
 
     # Visual-zone fallbacks
     if not data["passport_number"]:
@@ -233,6 +336,15 @@ MRZ_NAME_LINE_RE = re.compile(r'^([A-Z]+(?:<[A-Z]+)*)<<([A-Z][A-Z<]*)$')
 #           + birth date (6) + check + sex + check
 TD2_LINE1_RE = re.compile(r'^IDFRA([A-Z<]{15,30})(\d{4,6})$')
 TD2_LINE2_RE = re.compile(r'^(\d{12})(\d)([A-Z<]{5,20}?)(\d{6})(\d)([MFX])(\d?)$')
+
+# Tolerant variants for OCR-damaged MRZ lines, used only on candidates rebuilt
+# from fragments when the strict patterns above matched nothing on the page:
+#   line 1 with part of its '<' filler run dropped by the OCR,
+#   line 2 with the digit '0' misread as the letter 'O' in numeric positions
+#   (the mirror of the 'I'-misread-as-'1' passport fix above; 'O' stays a real
+#   letter inside the name field).
+TD2_LINE1_RELAXED_RE = re.compile(r'^IDFRA([A-Z<]{2,30}?)(\d{4,6})$')
+TD2_LINE2_RELAXED_RE = re.compile(r'^([0-9O]{12})([0-9O])([A-Z<]{5,20}?)([0-9O]{6})([0-9O])([MFX])([0-9O]?)$')
 
 
 def _split_mrz_names(name_field: str) -> tuple[str, str]:
@@ -318,7 +430,10 @@ def _find_visual_given_names(full_text: str) -> Optional[str]:
 
 def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
     """Parses the 2-line MRZ of old-format cards, completing the expiration
-    date and full given names from the visual zones."""
+    date and full given names from the visual zones. A front whose expiration
+    is missing from the page raises OldCniFrontMissingExpiry carrying the
+    already-parsed identity, so the caller can complete it from an adjacent
+    verso page."""
     lines = _mrz_lines(raw_text)
 
     surname = None
@@ -335,18 +450,36 @@ def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
             mrz_given_names = ' '.join(m2.group(3).replace('<', ' ').split())
             birth_date = _parse_mrz_date(m2.group(4), is_birth_date=True)
 
+    # Tolerant second pass, only for what the strict pass could not find:
+    # candidates rebuilt from MRZ fragments, matched with the relaxed patterns.
+    if surname is None or card_number is None:
+        for candidate in _mrz_fragment_candidates(lines):
+            if surname is None:
+                m1 = TD2_LINE1_RELAXED_RE.match(candidate)
+                if m1:
+                    surname = ' '.join(m1.group(1).replace('<', ' ').split())
+            if card_number is None:
+                m2 = TD2_LINE2_RELAXED_RE.match(candidate)
+                if m2:
+                    card_number = m2.group(1).replace('O', '0')
+                    mrz_given_names = ' '.join(m2.group(3).replace('<', ' ').split())
+                    birth_date = _parse_mrz_date(m2.group(4).replace('O', '0'), is_birth_date=True)
+
     if not (surname and card_number and birth_date):
         return None
 
+    first_name = _find_visual_given_names(full_text) or mrz_given_names
+
     expiration_date = _find_old_cni_expiration(full_text)
     if not expiration_date:
-        raise HTTPException(
-            status_code=422,
-            detail=("CNI (ancien format) détectée via sa MRZ, mais la date d'expiration est introuvable : "
-                    "la mention 'Carte valable jusqu'au JJ.MM.AAAA' du verso est absente ou illisible sur la page."),
-        )
+        if first_name:
+            raise OldCniFrontMissingExpiry({
+                "first_name": first_name, "last_name": surname,
+                "passport_number": card_number, "nationality": "Française",
+                "birth_date": birth_date,
+            })
+        raise HTTPException(status_code=422, detail=_OLD_CNI_MISSING_EXPIRY_DETAIL)
 
-    first_name = _find_visual_given_names(full_text) or mrz_given_names
     if not first_name:
         return None
 
@@ -501,7 +634,14 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes, retry_empty: boo
     if data is None:
         data = _parse_cni_new_mrz(raw_text)
     if data is None:
-        data = _parse_cni_old_mrz(raw_text, full_text)
+        try:
+            data = _parse_cni_old_mrz(raw_text, full_text)
+        except OldCniFrontMissingExpiry as e:
+            # The front's identity is complete: score it here (the annotation
+            # only exists in this scope) so a later recto/verso merge carries
+            # the same confidence semantics as a single-page extraction.
+            e.partial_data["confidence_score"] = _compute_confidence_score(e.partial_data, full_text_annotation)
+            raise
     if data is None:
         data = _parse_cni_new_visual(full_text)
         if data is not None:
@@ -511,16 +651,51 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes, retry_empty: boo
             # 300-dpi render when the fast embedded-image path was used.
             data["_visual_only"] = True
     if data is None:
-        raise HTTPException(
-            status_code=422,
-            detail=("Document non reconnu : aucune MRZ de passeport français (P<FRA...), aucune MRZ de "
-                    "carte nationale d'identité (IDFRA...) ni aucun recto de CNI exploitable n'a été "
-                    "détecté sur cette page."),
-        )
+        # A page carrying only the back of an old-format CNI (address block +
+        # 'Carte valable jusqu'au ...') has no MRZ and no recognizable front:
+        # keep the standard rejection, but tag the page as a potential verso so
+        # the caller can pair it with an adjacent front missing its expiry.
+        verso_expiration = _find_old_cni_expiration(full_text)
+        if verso_expiration:
+            raise PotentialOldCniVerso(verso_expiration)
+        raise HTTPException(status_code=422, detail=_UNRECOGNIZED_DOCUMENT_DETAIL)
 
     data["confidence_score"] = _compute_confidence_score(data, full_text_annotation)
     logger.info(f"--- Données analysées ---\n{data}\n--------------------")
     return data
+
+
+def _pair_split_old_cni(results: List[Dict[str, Any]]) -> None:
+    """Joins the two pages of an old-format CNI scanned recto and verso on two
+    separate, adjacent pages. A page recognized as a front missing its expiry
+    ('_pending_front') is merged with an adjacent unrecognized page carrying
+    only the verso's 'Carte valable jusqu'au' date ('_pending_verso'): the next
+    page is tried first, then the previous one, and each verso is consumed at
+    most once. The merged document is reported under the front's page; the
+    verso entry becomes an informational {'verso_of_page': N}. Pages left
+    unpaired keep their original errors, so behavior is unchanged whenever no
+    split card is present. Only the expiration date ever comes from the verso —
+    the identity comes exclusively from the front's MRZ, and a page still never
+    yields more than one document."""
+    by_page = {r.get("page_number"): r for r in results}
+    for result in results:
+        front = result.get("_pending_front")
+        if not front:
+            continue
+        page_number = result["page_number"]
+        for neighbor in (page_number + 1, page_number - 1):
+            verso = by_page.get(neighbor)
+            if verso and "_pending_verso" in verso:
+                result.pop("error", None)
+                result.pop("_pending_front", None)
+                result["data"] = dict(front, expiration_date=verso.pop("_pending_verso"))
+                verso.pop("error", None)
+                verso["verso_of_page"] = page_number
+                logger.info(f"CNI ancien format fusionnée : recto page {page_number} + verso page {neighbor}.")
+                break
+    for result in results:
+        result.pop("_pending_front", None)
+        result.pop("_pending_verso", None)
 
 
 def _render_page_png(pdf_document, page_num: int, fitz_lock: threading.Lock) -> bytes:
@@ -663,6 +838,12 @@ async def extract_data_page_by_page(
                             extracted_data.pop("_visual_only", None)
                             logger.info(f"Données extraites avec succès de la page {page_index}.")
                             return {"page_number": page_index, "data": extracted_data}
+                        except OldCniFrontMissingExpiry as e:
+                            logger.warning(f"Échec de l'extraction des données de la page {page_index}: {e.detail}")
+                            return {"page_number": page_index, "error": e.detail, "_pending_front": e.partial_data}
+                        except PotentialOldCniVerso as e:
+                            logger.warning(f"Échec de l'extraction des données de la page {page_index}: {e.detail}")
+                            return {"page_number": page_index, "error": e.detail, "_pending_verso": e.expiration_date}
                         except HTTPException as e:
                             logger.warning(f"Échec de l'extraction des données de la page {page_index}: {e.detail}")
                             return {"page_number": page_index, "error": e.detail}
@@ -690,6 +871,7 @@ async def extract_data_page_by_page(
             # Pages finish out of order; restore document order for the
             # per-page result list and the credit accounting downstream.
             results.sort(key=lambda r: r.get("page_number", 0))
+            _pair_split_old_cni(results)
         except HTTPException:
             raise
         except Exception as e:
