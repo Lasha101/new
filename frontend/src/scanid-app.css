@@ -1,0 +1,201 @@
+/* ============================================================
+   ScanID — Application Design System v1.0 (04/09/2026)
+   Charte identique au site scanid.fr : navy / cyan / blanc cassé
+   Fonts : Space Grotesk (titres, boutons) + Inter (texte)
+   Intégration React : importer ce fichier globalement (src/index.css
+   ou équivalent) puis mapper les classes ci-dessous sur les
+   composants existants. Aucune dépendance.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+:root {
+  /* Couleurs de marque */
+  --sid-navy: #0B1628;
+  --sid-navy-2: #0F1E38;
+  --sid-navy-3: #162040;
+  --sid-cyan: #0EA5E9;
+  --sid-cyan-dark: #0284C7;
+  --sid-bg: #eef4fb;
+  --sid-card: #ffffff;
+  --sid-border: #e2edf8;
+  --sid-line: #cfe0f1;
+  --sid-ink: #0B1628;
+  --sid-text: #475569;
+  --sid-muted: #94A3B8;
+  /* États */
+  --sid-ok-bg: #e7f6ee;   --sid-ok: #0f766e;
+  --sid-warn-bg: #fff3c4; --sid-warn: #92400e;
+  --sid-err-bg: #fde8e8;  --sid-err: #b42318;
+  --sid-info-bg: #e0f2fe; --sid-info: #0369a1;
+  /* Formes */
+  --sid-radius: 14px;
+  --sid-radius-lg: 18px;
+  --sid-shadow: 0 20px 50px rgba(11, 22, 40, .08);
+  --sid-shadow-sm: 0 6px 18px rgba(11, 22, 40, .07);
+  --sid-focus: 0 0 0 3px rgba(14, 165, 233, .25);
+  /* Typo */
+  --sid-font-head: 'Space Grotesk', sans-serif;
+  --sid-font-body: 'Inter', sans-serif;
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sid-font-body);
+  background: var(--sid-bg);
+  color: var(--sid-ink);
+  line-height: 1.55;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { font-family: var(--sid-font-head); color: var(--sid-ink); letter-spacing: -.01em; margin: 0 0 .6rem; }
+h1 { font-size: 1.6rem; } h2 { font-size: 1.25rem; } h3 { font-size: 1.05rem; }
+p { color: var(--sid-text); margin: 0 0 .8rem; }
+a { color: var(--sid-cyan-dark); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- Barre d'application ---------- */
+.sid-topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .8rem 1.4rem;
+  background: rgba(11, 22, 40, .96);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(14, 165, 233, .14);
+}
+.sid-logo { font-family: var(--sid-font-head); font-weight: 700; font-size: 1.25rem; color: #fff; letter-spacing: -.02em; }
+.sid-logo span { color: var(--sid-cyan); }
+.sid-topbar-right { display: flex; align-items: center; gap: 1rem; color: var(--sid-muted); font-size: .85rem; }
+.sid-credits {
+  font-family: var(--sid-font-head); font-weight: 600; font-size: .82rem;
+  color: var(--sid-cyan); background: rgba(14, 165, 233, .12);
+  border: 1px solid rgba(14, 165, 233, .3);
+  padding: .35rem .8rem; border-radius: 999px;
+}
+
+/* ---------- Conteneurs ---------- */
+.sid-page { max-width: 1100px; margin: 0 auto; padding: 1.6rem 20px 3rem; }
+.sid-card {
+  background: var(--sid-card);
+  border: 1px solid var(--sid-border);
+  border-radius: var(--sid-radius-lg);
+  box-shadow: var(--sid-shadow);
+  padding: 1.5rem clamp(1rem, 2.5vw, 1.8rem);
+  margin-bottom: 1.1rem;
+}
+.sid-card h2 { margin-bottom: 1rem; }
+
+/* ---------- Boutons ---------- */
+.sid-btn, .sid-btn-outline, .sid-btn-ghost {
+  font-family: var(--sid-font-head); font-weight: 700; font-size: .92rem;
+  border-radius: 12px; padding: .7rem 1.4rem; cursor: pointer;
+  border: 1.5px solid transparent; transition: all .18s ease;
+  display: inline-flex; align-items: center; gap: .5rem; line-height: 1;
+}
+.sid-btn { background: var(--sid-cyan); color: var(--sid-navy); }
+.sid-btn:hover { background: var(--sid-navy); color: #fff; }
+.sid-btn-outline { background: transparent; color: var(--sid-navy); border-color: var(--sid-line); }
+.sid-btn-outline:hover { border-color: var(--sid-cyan); color: var(--sid-cyan-dark); }
+.sid-btn-ghost { background: transparent; color: var(--sid-cyan-dark); padding-inline: .6rem; }
+.sid-btn:disabled, .sid-btn-outline:disabled { opacity: .45; cursor: not-allowed; }
+.sid-btn:focus-visible, .sid-btn-outline:focus-visible,
+input:focus-visible, select:focus-visible { outline: none; box-shadow: var(--sid-focus); }
+
+/* Paire de téléchargement (spec Lasha : CSV + XLSX côte à côte) */
+.sid-download-group { display: flex; gap: .6rem; flex-wrap: wrap; }
+.sid-download-group .sid-btn::before { content: "⬇"; font-size: .95em; }
+
+/* ---------- Formulaires ---------- */
+.sid-label { display: block; font-family: var(--sid-font-head); font-weight: 600; font-size: .84rem; margin: .9rem 0 .3rem; }
+.sid-input, .sid-select, input[type="text"], input[type="email"], input[type="password"], select {
+  width: 100%; padding: .68rem .85rem;
+  border: 1px solid var(--sid-line); border-radius: 10px;
+  font-family: var(--sid-font-body); font-size: .95rem; color: var(--sid-ink);
+  background: #fbfdff; transition: border-color .18s;
+}
+.sid-input:focus, .sid-select:focus { border-color: var(--sid-cyan); }
+
+/* ---------- Zone d'import ---------- */
+.sid-dropzone {
+  border: 2px dashed rgba(14, 165, 233, .5);
+  border-radius: var(--sid-radius-lg);
+  background: rgba(14, 165, 233, .05);
+  padding: 2.2rem 1.4rem; text-align: center;
+  color: var(--sid-text); transition: all .18s; cursor: pointer;
+}
+.sid-dropzone:hover, .sid-dropzone.is-dragover {
+  border-color: var(--sid-cyan); background: rgba(14, 165, 233, .1);
+}
+.sid-dropzone strong { color: var(--sid-ink); font-family: var(--sid-font-head); display: block; margin-bottom: .25rem; }
+.sid-dropzone small { color: var(--sid-muted); }
+
+/* ---------- Filtres Tous / PP / PI (segmented) ---------- */
+.sid-seg { display: inline-flex; background: #e6eef8; border-radius: 10px; padding: 3px; gap: 2px; }
+.sid-seg button {
+  font-family: var(--sid-font-head); font-weight: 600; font-size: .82rem;
+  border: none; background: transparent; color: var(--sid-text);
+  padding: .42rem .95rem; border-radius: 8px; cursor: pointer; transition: all .15s;
+}
+.sid-seg button.is-active { background: var(--sid-navy); color: #fff; }
+
+/* ---------- Badges type de document ---------- */
+.sid-badge {
+  display: inline-block; font-family: var(--sid-font-head); font-weight: 700;
+  font-size: .72rem; letter-spacing: .04em; padding: .18rem .55rem; border-radius: 6px;
+}
+.sid-badge--pp { background: var(--sid-navy); color: #fff; }          /* Passeport */
+.sid-badge--pi { background: rgba(14,165,233,.15); color: var(--sid-cyan-dark); border: 1px solid rgba(14,165,233,.35); } /* CNI */
+
+/* ---------- Statuts de traitement ---------- */
+.sid-chip { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; padding: .22rem .6rem; border-radius: 999px; }
+.sid-chip--queued     { background: #eef2f7; color: var(--sid-muted); }
+.sid-chip--processing { background: var(--sid-info-bg); color: var(--sid-info); }
+.sid-chip--done       { background: var(--sid-ok-bg); color: var(--sid-ok); }
+.sid-chip--failed     { background: var(--sid-err-bg); color: var(--sid-err); }
+
+/* ---------- Tableau de résultats (spec Lasha : MAJUSCULES, centré) ---------- */
+.sid-table-wrap { overflow-x: auto; border-radius: var(--sid-radius); border: 1px solid var(--sid-border); }
+.sid-table { width: 100%; border-collapse: collapse; font-size: .86rem; background: #fff; }
+.sid-table th {
+  font-family: var(--sid-font-head); font-weight: 600; font-size: .74rem;
+  text-transform: uppercase; letter-spacing: .06em;
+  background: var(--sid-navy); color: #fff; text-align: center;
+  padding: .7rem .8rem; white-space: nowrap; position: sticky; top: 0;
+}
+.sid-table td {
+  padding: .6rem .8rem; text-align: center; text-transform: uppercase;
+  color: var(--sid-ink); border-top: 1px solid var(--sid-border); white-space: nowrap;
+}
+.sid-table tbody tr:nth-child(even) { background: #f7fafd; }
+.sid-table tbody tr:hover { background: rgba(14, 165, 233, .06); }
+
+/* ---------- Barre de progression ---------- */
+.sid-progress { height: 8px; background: #e6eef8; border-radius: 999px; overflow: hidden; }
+.sid-progress > div { height: 100%; background: linear-gradient(90deg, var(--sid-cyan), var(--sid-cyan-dark)); border-radius: 999px; transition: width .3s ease; }
+
+/* ---------- Alertes ---------- */
+.sid-alert { border-radius: 12px; padding: .8rem 1rem; font-size: .88rem; margin-bottom: 1rem; border: 1px solid; }
+.sid-alert--info { background: var(--sid-info-bg); color: var(--sid-info); border-color: #bae0f7; }
+.sid-alert--ok   { background: var(--sid-ok-bg);   color: var(--sid-ok);   border-color: #bfe6d2; }
+.sid-alert--err  { background: var(--sid-err-bg);  color: var(--sid-err);  border-color: #f6c6c2; }
+
+/* ---------- États vides & chargement ---------- */
+.sid-empty { text-align: center; color: var(--sid-muted); padding: 2.5rem 1rem; }
+.sid-empty strong { display: block; color: var(--sid-ink); font-family: var(--sid-font-head); margin-bottom: .3rem; }
+.sid-spinner { width: 22px; height: 22px; border: 3px solid #dbeafe; border-top-color: var(--sid-cyan); border-radius: 50%; animation: sid-spin .8s linear infinite; }
+@keyframes sid-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Pied d'application ---------- */
+.sid-appfoot { text-align: center; color: var(--sid-muted); font-size: .78rem; padding: 1.5rem 0 .5rem; }
+.sid-appfoot a { color: var(--sid-muted); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .sid-page { padding: 1rem 12px 2.4rem; }
+  .sid-card { padding: 1.1rem .9rem; border-radius: var(--sid-radius); }
+  .sid-table td, .sid-table th { padding: .5rem .55rem; }
+  .sid-download-group { width: 100%; }
+  .sid-download-group .sid-btn, .sid-download-group .sid-btn-outline { flex: 1; justify-content: center; }
+}

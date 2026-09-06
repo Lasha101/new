@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test harness (tests/README.md)
+# Fixture binaries are generated, not committed: ~20 MB, and regenerating them
+# is deterministic (npm run test:fixtures).
+tests/fixtures/files/
+# Locally vendored WebKit system libraries (npm run pretest:e2e fetches them).
+tests/.browser-libs/
+# Playwright output
+test-results/
+playwright-report/
+blob-report/
+.playwright/

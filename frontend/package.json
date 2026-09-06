@@ -7,8 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test \"src/**/*.test.js\"",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm run test:unit",
+    "pretest:unit": "node tests/fixtures/generate.mjs",
+    "test:unit": "node --test \"src/**/*.test.js\" \"tests/**/*.test.js\"",
+    "pretest:e2e": "node tests/scripts/ensure-webkit-deps.mjs",
+    "test:e2e": "playwright test",
+    "pretest:e2e:mobile": "node tests/scripts/ensure-webkit-deps.mjs",
+    "test:e2e:mobile": "playwright test --project=mobile-small --project=mobile-375",
+    "test:e2e:desktop": "playwright test --project=desktop",
+    "test:e2e:ui": "playwright test --ui",
+    "test:fixtures": "node tests/fixtures/generate.mjs --force"
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -16,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
@@ -24,6 +34,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "jpeg-js": "^0.4.4",
     "postcss": "^8.5.6",
     "vite": "^7.0.4"
   }
