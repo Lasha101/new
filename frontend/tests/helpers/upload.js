@@ -70,15 +70,45 @@ export async function waitForProcessing(page, { timeout = 120_000 } = {}) {
     return (await page.locator(SELECTORS.jobProgressText).allTextContents()).map(label => label.trim());
 }
 
-/** The results table: the last .table-container, so an open export preview
-    (which renders its own table above) is never counted by mistake. */
+/** The results table itself. Scoped to .sid-results, so the export preview
+    (which renders its own .sid-table-wrap above) is never matched by mistake. */
 export function resultsTable(page) {
-    return page.locator(SELECTORS.tableContainer).last();
+    return page.locator(SELECTORS.tableContainer);
 }
 
-/** Its body rows, including the single « Aucune donnée trouvée. » placeholder. */
+/** The mobile card list — the same rows, from the same column definition. */
+export function resultsCards(page) {
+    return page.locator(SELECTORS.cardItem);
+}
+
+/**
+ * The rows currently ON SCREEN.
+ *
+ * Both views are always mounted and CSS alone switches them at 720 px, so this
+ * matches whichever one is displayed: table rows above the breakpoint, cards
+ * below. Callers keep asking for "the rows", as they did before Package A.
+ */
 export function resultsRows(page) {
-    return resultsTable(page).locator('tbody tr');
+    return page.locator(
+        `${SELECTORS.tableContainer} tbody tr:visible, ${SELECTORS.cardItem}:visible`,
+    );
+}
+
+/**
+ * Sets the Tous/PASS/PI filter.
+ *
+ * It used to be a <select> driven by selectOption(); the design system renders
+ * it as a .sid-seg group of buttons. Only the gesture changed — the state it
+ * sets and the rows it narrows are identical.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {''|'PASS'|'PI'} value '' selects « Tous ».
+ */
+export async function selectDocType(page, value) {
+    const group = page.locator(SELECTORS.typeFilter);
+    await expect(group).toBeVisible();
+    await group.locator(`button[value="${value}"]`).click();
+    await expect(group.locator(`button[value="${value}"]`)).toHaveClass(/is-active/);
 }
 
 /** Rows currently rendered in the results table (« Aucune donnée trouvée. » = 0). */

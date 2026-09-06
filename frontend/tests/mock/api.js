@@ -166,7 +166,35 @@ export async function installMockApi(context, options = {}) {
             });
         }
 
+        // POST /users/register — self-registration (main.py:614). Mirrors the two
+        // French conflict messages and the 5/minute limit's 429.
+        if (path === '/users/register' && method === 'POST') {
+            const body = JSON.parse(request.postData() || '{}');
+            if (body.email === state.user.email) {
+                return json(route, 400, { detail: 'Email déjà enregistré' });
+            }
+            if (body.user_name === state.user.user_name) {
+                return json(route, 400, { detail: "Nom d'utilisateur déjà enregistré" });
+            }
+            return json(route, 200, {
+                ...body, id: 'u-new', role: 'user', password: undefined,
+                uploaded_pages_count: 0, page_credits: 10, passports: [], voyages: [],
+            });
+        }
+
         if (!authorized(request)) return unauthorized(route);
+
+        if (path === '/users/me' && method === 'PUT') {
+            const body = JSON.parse(request.postData() || '{}');
+            // The server never echoes the password back, and a non-admin cannot
+            // move its own counters (main.py update_user_me).
+            const { password: _password, uploaded_pages_count, page_credits, ...safe } = body;
+            const counters = state.user.role === 'admin'
+                ? { uploaded_pages_count, page_credits }
+                : {};
+            state.user = { ...state.user, ...safe, ...counters };
+            return json(route, 200, state.user);
+        }
 
         if (path === '/users/me') {
             materializeJobs();
@@ -253,6 +281,22 @@ export async function installMockApi(context, options = {}) {
                 ? state.passports.filter(row => row.destination === destination)
                 : state.passports;
             return json(route, 200, rows);
+        }
+
+        // POST /passports/ — manual creation (main.py:694). The row the server
+        // returns is the posted body plus a server-assigned id and owner.
+        if (path === '/passports' && method === 'POST') {
+            const body = JSON.parse(request.postData() || '{}');
+            const created = {
+                id: `p-manual-${state.passports.length + 1}`,
+                owner_id: state.user.id,
+                first_name: '', last_name: '', birth_date: null, expiration_date: null,
+                nationality: '', passport_number: '', destination: null,
+                confidence_score: null, voyages: [],
+                ...body,
+            };
+            state.passports = [created, ...state.passports];
+            return json(route, 200, created);
         }
 
         if (path.startsWith('/passports/') && method === 'PUT') {

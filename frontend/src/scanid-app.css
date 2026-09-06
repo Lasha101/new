@@ -1,13 +1,14 @@
 /* ============================================================
-   ScanID — Application Design System v1.0 (04/09/2026)
+   ScanID — Application Design System v1.1 (06/09/2026)
    Charte identique au site scanid.fr : navy / cyan / blanc cassé
    Fonts : Space Grotesk (titres, boutons) + Inter (texte)
-   Intégration React : importer ce fichier globalement (src/index.css
-   ou équivalent) puis mapper les classes ci-dessous sur les
+   Auto-hébergées via Fontsource, importées dans src/main.jsx —
+   aucune requête vers un tiers.
+   Intégration React : ce fichier est importé globalement dans
+   src/main.jsx, puis les classes ci-dessous sont mappées sur les
    composants existants. Aucune dépendance.
+   Écarts par rapport à la v1.0 : voir CHANGELOG-css.md.
    ============================================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
 :root {
   /* Couleurs de marque */
@@ -23,6 +24,10 @@
   --sid-ink: #0B1628;
   --sid-text: #475569;
   --sid-muted: #94A3B8;
+  /* Gris lisible sur fond clair (AA). Voir CHANGELOG-css.md §4c :
+     #64748B, la valeur d'origine, tombe à 4,23:1 sur .sid-chip--queued
+     et 4,30:1 sur .sid-appfoot — mesuré, pas estimé. */
+  --sid-muted-strong: #5A6A80;
   /* États */
   --sid-ok-bg: #e7f6ee;   --sid-ok: #0f766e;
   --sid-warn-bg: #fff3c4; --sid-warn: #92400e;
@@ -65,7 +70,7 @@ a:hover { text-decoration: underline; }
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(14, 165, 233, .14);
 }
-.sid-logo { font-family: var(--sid-font-head); font-weight: 700; font-size: 1.25rem; color: #fff; letter-spacing: -.02em; }
+.sid-logo { font-family: var(--sid-font-head); font-weight: 700; font-size: 1.25rem; color: #fff; letter-spacing: -.02em; margin: 0; }
 .sid-logo span { color: var(--sid-cyan); }
 .sid-topbar-right { display: flex; align-items: center; gap: 1rem; color: var(--sid-muted); font-size: .85rem; }
 .sid-credits {
@@ -73,7 +78,12 @@ a:hover { text-decoration: underline; }
   color: var(--sid-cyan); background: rgba(14, 165, 233, .12);
   border: 1px solid rgba(14, 165, 233, .3);
   padding: .35rem .8rem; border-radius: 999px;
+  white-space: nowrap;
 }
+/* Le cyan foncé du bouton fantôme ne tient que 4,04:1 sur la barre navy.
+   Le cyan de marque y atteint 5,97:1. Voir CHANGELOG-css.md §N3. */
+.sid-topbar .sid-btn-ghost { color: var(--sid-cyan); }
+.sid-topbar .sid-btn-ghost:hover { color: #fff; }
 
 /* ---------- Conteneurs ---------- */
 .sid-page { max-width: 1100px; margin: 0 auto; padding: 1.6rem 20px 3rem; }
@@ -92,30 +102,38 @@ a:hover { text-decoration: underline; }
   font-family: var(--sid-font-head); font-weight: 700; font-size: .92rem;
   border-radius: 12px; padding: .7rem 1.4rem; cursor: pointer;
   border: 1.5px solid transparent; transition: all .18s ease;
-  display: inline-flex; align-items: center; gap: .5rem; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem; line-height: 1;
+  /* Cible tactile : 44 px, le minimum iOS HIG et Material. */
+  min-height: 44px;
 }
 .sid-btn { background: var(--sid-cyan); color: var(--sid-navy); }
 .sid-btn:hover { background: var(--sid-navy); color: #fff; }
 .sid-btn-outline { background: transparent; color: var(--sid-navy); border-color: var(--sid-line); }
 .sid-btn-outline:hover { border-color: var(--sid-cyan); color: var(--sid-cyan-dark); }
 .sid-btn-ghost { background: transparent; color: var(--sid-cyan-dark); padding-inline: .6rem; }
-.sid-btn:disabled, .sid-btn-outline:disabled { opacity: .45; cursor: not-allowed; }
-.sid-btn:focus-visible, .sid-btn-outline:focus-visible,
+.sid-btn:disabled, .sid-btn-outline:disabled, .sid-btn-ghost:disabled { opacity: .45; cursor: not-allowed; }
+.sid-btn:focus-visible, .sid-btn-outline:focus-visible, .sid-btn-ghost:focus-visible,
+.sid-seg button:focus-visible, textarea:focus-visible,
 input:focus-visible, select:focus-visible { outline: none; box-shadow: var(--sid-focus); }
 
 /* Paire de téléchargement (spec Lasha : CSV + XLSX côte à côte) */
 .sid-download-group { display: flex; gap: .6rem; flex-wrap: wrap; }
-.sid-download-group .sid-btn::before { content: "⬇"; font-size: .95em; }
+.sid-download-group .sid-btn::before,
+.sid-download-group .sid-btn-outline::before { content: "⬇"; font-size: .95em; }
 
 /* ---------- Formulaires ---------- */
 .sid-label { display: block; font-family: var(--sid-font-head); font-weight: 600; font-size: .84rem; margin: .9rem 0 .3rem; }
 .sid-input, .sid-select, input[type="text"], input[type="email"], input[type="password"], select {
   width: 100%; padding: .68rem .85rem;
   border: 1px solid var(--sid-line); border-radius: 10px;
-  font-family: var(--sid-font-body); font-size: .95rem; color: var(--sid-ink);
+  font-family: var(--sid-font-body);
+  /* 16 px : en dessous, Safari iOS zoome sur le champ au focus. */
+  font-size: 1rem;
+  color: var(--sid-ink);
   background: #fbfdff; transition: border-color .18s;
 }
 .sid-input:focus, .sid-select:focus { border-color: var(--sid-cyan); }
+.sid-checkbox { width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: var(--sid-cyan-dark); }
 
 /* ---------- Zone d'import ---------- */
 .sid-dropzone {
@@ -129,14 +147,18 @@ input:focus-visible, select:focus-visible { outline: none; box-shadow: var(--sid
   border-color: var(--sid-cyan); background: rgba(14, 165, 233, .1);
 }
 .sid-dropzone strong { color: var(--sid-ink); font-family: var(--sid-font-head); display: block; margin-bottom: .25rem; }
-.sid-dropzone small { color: var(--sid-muted); }
+.sid-dropzone small { color: var(--sid-muted-strong); }
 
-/* ---------- Filtres Tous / PP / PI (segmented) ---------- */
+/* ---------- Filtres Tous / PASS / PI (segmented) ---------- */
 .sid-seg { display: inline-flex; background: #e6eef8; border-radius: 10px; padding: 3px; gap: 2px; }
 .sid-seg button {
   font-family: var(--sid-font-head); font-weight: 600; font-size: .82rem;
   border: none; background: transparent; color: var(--sid-text);
   padding: .42rem .95rem; border-radius: 8px; cursor: pointer; transition: all .15s;
+  /* 44 px, pas 38 : le padding du parent n'appartient pas à la zone cliquable
+     de l'enfant, donc 38 px laisserait une cible de 38 px. Voir
+     CHANGELOG-css.md §4a. */
+  min-height: 44px;
 }
 .sid-seg button.is-active { background: var(--sid-navy); color: #fff; }
 
@@ -146,11 +168,13 @@ input:focus-visible, select:focus-visible { outline: none; box-shadow: var(--sid
   font-size: .72rem; letter-spacing: .04em; padding: .18rem .55rem; border-radius: 6px;
 }
 .sid-badge--pp { background: var(--sid-navy); color: #fff; }          /* Passeport */
-.sid-badge--pi { background: rgba(14,165,233,.15); color: var(--sid-cyan-dark); border: 1px solid rgba(14,165,233,.35); } /* CNI */
+/* --sid-cyan-dark ne tenait que 3,53:1 sur ce fond ; --sid-info donne 5,12:1.
+   Voir CHANGELOG-css.md §N1. */
+.sid-badge--pi { background: rgba(14,165,233,.15); color: var(--sid-info); border: 1px solid rgba(14,165,233,.35); } /* CNI */
 
 /* ---------- Statuts de traitement ---------- */
 .sid-chip { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; padding: .22rem .6rem; border-radius: 999px; }
-.sid-chip--queued     { background: #eef2f7; color: var(--sid-muted); }
+.sid-chip--queued     { background: #eef2f7; color: var(--sid-muted-strong); }
 .sid-chip--processing { background: var(--sid-info-bg); color: var(--sid-info); }
 .sid-chip--done       { background: var(--sid-ok-bg); color: var(--sid-ok); }
 .sid-chip--failed     { background: var(--sid-err-bg); color: var(--sid-err); }
@@ -162,7 +186,7 @@ input:focus-visible, select:focus-visible { outline: none; box-shadow: var(--sid
   font-family: var(--sid-font-head); font-weight: 600; font-size: .74rem;
   text-transform: uppercase; letter-spacing: .06em;
   background: var(--sid-navy); color: #fff; text-align: center;
-  padding: .7rem .8rem; white-space: nowrap; position: sticky; top: 0;
+  padding: .7rem .8rem; white-space: nowrap;
 }
 .sid-table td {
   padding: .6rem .8rem; text-align: center; text-transform: uppercase;
@@ -182,14 +206,52 @@ input:focus-visible, select:focus-visible { outline: none; box-shadow: var(--sid
 .sid-alert--err  { background: var(--sid-err-bg);  color: var(--sid-err);  border-color: #f6c6c2; }
 
 /* ---------- États vides & chargement ---------- */
-.sid-empty { text-align: center; color: var(--sid-muted); padding: 2.5rem 1rem; }
+.sid-empty { text-align: center; color: var(--sid-muted-strong); padding: 2.5rem 1rem; }
 .sid-empty strong { display: block; color: var(--sid-ink); font-family: var(--sid-font-head); margin-bottom: .3rem; }
 .sid-spinner { width: 22px; height: 22px; border: 3px solid #dbeafe; border-top-color: var(--sid-cyan); border-radius: 50%; animation: sid-spin .8s linear infinite; }
 @keyframes sid-spin { to { transform: rotate(360deg); } }
 
 /* ---------- Pied d'application ---------- */
-.sid-appfoot { text-align: center; color: var(--sid-muted); font-size: .78rem; padding: 1.5rem 0 .5rem; }
-.sid-appfoot a { color: var(--sid-muted); }
+.sid-appfoot { text-align: center; color: var(--sid-muted-strong); font-size: .78rem; padding: 1.5rem 0 .5rem; }
+.sid-appfoot a { color: var(--sid-muted-strong); }
+
+/* ---------- Liste en cartes (mobile) ---------- */
+.sid-card-list { display: none; }
+
+.sid-card-item {
+  background: var(--sid-card);
+  border: 1px solid var(--sid-border);
+  border-radius: var(--sid-radius);
+  box-shadow: var(--sid-shadow-sm);
+  padding: .9rem 1rem;
+  margin-bottom: .7rem;
+}
+.sid-card-item__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; margin-bottom: .7rem;
+  padding-bottom: .6rem; border-bottom: 1px solid var(--sid-border);
+}
+.sid-card-item__row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 1rem; padding: .3rem 0;
+}
+.sid-card-item__label {
+  font-family: var(--sid-font-head); font-weight: 600;
+  font-size: .72rem; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--sid-muted-strong); flex-shrink: 0;
+}
+.sid-card-item__value {
+  font-size: .88rem; text-transform: uppercase;
+  color: var(--sid-ink); text-align: right; word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  /* Portée limitée à .sid-results : .sid-table-wrap habille aussi l'aperçu
+     d'export, qui n'a pas de liste en cartes et disparaîtrait sans remplacement.
+     Voir CHANGELOG-css.md §N2. */
+  .sid-results .sid-table-wrap { display: none; }
+  .sid-results .sid-card-list  { display: block; }
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {

@@ -5,23 +5,27 @@
 // The selectors below therefore lean on French placeholder text, French button
 // text and the existing class names. If a later package adds test ids or fixes
 // the label association, change these constants and the suites follow.
+//
+// Package A moved the app onto the scanid-app.css design system, so the class
+// names here are the .sid-* ones. Only the handles changed; every assertion in
+// the baseline suite is the one it had before.
 
 export const SELECTORS = {
     // Login screen
-    loginForm: '.landing-auth .form-container',
+    loginForm: '.landing-auth .sid-card',
     usernameInput: '.landing-auth input[type="text"]',
     passwordInput: '.landing-auth input[name="password"]',
-    errorMessage: '.error-message',
+    errorMessage: '.sid-alert--err',
 
     // Shell
-    appHeader: '.app-header',
-    logoutButton: '.app-header .btn-danger',
-    creditBadge: '.credit-badge',
+    appHeader: '.sid-topbar',
+    logoutButton: '.sid-topbar-right .sid-btn-ghost',
+    creditBadge: '.sid-credits',
     navButtons: '.dashboard-nav .nav-button',
 
     // Upload card
-    uploadCard: '.drop-zone',
-    fileInput: '.drop-zone input[type="file"]',
+    uploadCard: '.sid-dropzone',
+    fileInput: '.sid-dropzone input[type="file"]',
     destinationInput: 'input[list="destination-datalist-ocr"]',
 
     // OCR job monitor
@@ -29,12 +33,24 @@ export const SELECTORS = {
     jobItem: '.job-monitor .job-item',
     jobProgressText: '.job-monitor .progress-text',
 
-    // Results table. When the export preview is open the app renders a second
-    // .table-container above this one, so the results table is always the LAST
-    // one on the page — use resultsTable()/resultsRows() from upload.js rather
-    // than these selectors directly.
-    tableContainer: '.table-container',
-    typeFilter: 'select[name="document_type_filter"]',
+    // Results screen. The table and the mobile card list are both always
+    // mounted inside .sid-results; CSS alone decides which one is shown
+    // (720 px). Use resultsRows() from upload.js, which picks the visible one,
+    // rather than these selectors directly.
+    results: '.sid-results',
+    tableContainer: '.sid-results .sid-table-wrap',
+    cardList: '.sid-results .sid-card-list',
+    cardItem: '.sid-results .sid-card-item',
+    typeFilter: '.sid-seg[data-name="document_type_filter"]',
+
+    // Design-system pieces the Package A suites assert on.
+    topbar: '.sid-topbar',
+    logo: '.sid-logo',
+    badge: '.sid-badge',
+    chip: '.sid-chip',
+    downloadGroup: '.sid-download-group',
+    emptyState: '.sid-empty',
+    appFooter: '.sid-appfoot',
 
     // Export panel
     exportPanel: '.filter-bar',
@@ -56,6 +72,7 @@ export const TEXT = {
     downloadExcel: 'Télécharger Excel',
     preview: 'Aperçu',
     noData: 'Aucune donnée trouvée.',
+    filterAll: 'Tous',
     jobDone: 'Terminé',
     jobFailed: 'Échoué',
 };

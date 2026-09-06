@@ -48,6 +48,23 @@ export function filterByDocumentType(items, docTypeFilter) {
     return items.filter(item => getDocumentType(item) === docTypeFilter);
 }
 
+// The value one results column shows for one row, as a string. The results
+// table and the mobile card list both render from this single function, so the
+// two views cannot drift: the derived Type column, the confidence percentage and
+// the DD/MM/YYYY date formatting are decided here once.
+//
+// `fieldTypes` is the endpoint's field map (passportFields in App.jsx); a field
+// declared 'date' there is formatted, everything else is passed through.
+export function resultCellValue(item, field, fieldTypes = {}) {
+    let value = field === 'document_type' ? getDocumentType(item) : item?.[field];
+    if (field === 'confidence_score' && typeof value === 'number') {
+        value = `${(value * 100).toFixed(0)}%`;
+    }
+    if (fieldTypes[field] === 'date') { value = formatDateFR(value); }
+    // Missing values render as an empty cell, never as the text "null".
+    return value == null ? '' : String(value);
+}
+
 // Query string of GET /export/data, so that the file contains exactly the rows
 // on screen: the export panel filters (user_id only for admins), the results
 // table's own filters (user_filter -> user_id, voyage_filter/destination_filter

@@ -65,10 +65,10 @@ test.describe('helpers', () => {
     test('getComputedColorPair resolves a translucent background down to an opaque one', async ({ page }) => {
         await login(page);
 
-        // .app-header is rgba(255,255,255,0.85) over the body colour, so this
+        // .sid-topbar is rgba(11,22,40,.96) over the body colour, so this
         // only works if the helper composites the layers rather than returning
         // the declared value.
-        const pair = await getComputedColorPair(page, '.app-header h1');
+        const pair = await getComputedColorPair(page, '.sid-topbar .sid-logo');
 
         expect(pair.background).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
         expect(pair.foreground).toMatch(/^rgba?\(/);
@@ -78,8 +78,8 @@ test.describe('helpers', () => {
         expect(pair.aaThreshold).toBe(pair.isLargeText ? 3 : 4.5);
         expect(pair.passesAA).toBe(pair.ratio >= pair.aaThreshold);
 
-        // White button text on the indigo primary must resolve to that indigo.
-        const button = await getComputedColorPair(page, '.btn-primary');
+        // Navy button text on the cyan primary must resolve to that cyan.
+        const button = await getComputedColorPair(page, '.sid-btn');
         expect(button.background).not.toBe('rgb(255, 255, 255)');
         expect(button.ratio).toBeGreaterThan(1);
 

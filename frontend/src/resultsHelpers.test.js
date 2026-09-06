@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, formatDateFR,
+    resultCellValue,
     DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, DOC_TYPE_ID_CARD, PASSPORT_COLUMN_ORDER,
 } from './resultsHelpers.js';
 
@@ -93,4 +94,52 @@ test('download filename comes from Content-Disposition, with a format-aware fall
     // the backend sends the (destination-derived) name unquoted; ';' or '"' inside it must not truncate the extension away
     assert.equal(downloadFilename('attachment; filename=passeports_rome_;_milan_pour_x.csv', 'x', 'csv'), 'passeports_rome_;_milan_pour_x.csv');
     assert.equal(downloadFilename('attachment; filename=passeports_a"b_pour_x.xlsx', 'x', 'xlsx'), 'passeports_a"b_pour_x.xlsx');
+});
+
+// --- resultCellValue: the one function both results views render through ---
+//
+// The reference values below are what the table produced BEFORE Package A
+// extracted this function out of the JSX. If any of them changes, the two views
+// change together — which is the whole point — but the export no longer matches
+// the screen, so a failure here is a real regression, not a cosmetic one.
+const fieldTypes = {
+    first_name: 'text', last_name: 'text', birth_date: 'date', expiration_date: 'date',
+    nationality: 'text', passport_number: 'text', destination: 'text', confidence_score: 'number',
+};
+const row = {
+    id: 'p1', first_name: 'Élodie', last_name: 'Dupont-Lévy', birth_date: '1990-05-17',
+    expiration_date: '2030-01-02T00:00:00', nationality: 'Française',
+    passport_number: '12AB34567', destination: null, confidence_score: 0.8734,
+};
+
+test('resultCellValue: derived type, percentage, DD/MM/YYYY dates, empty for null', () => {
+    assert.equal(resultCellValue(row, 'document_type', fieldTypes), DOC_TYPE_PASSPORT);
+    assert.equal(resultCellValue(row, 'last_name', fieldTypes), 'Dupont-Lévy');
+    assert.equal(resultCellValue(row, 'birth_date', fieldTypes), '17/05/1990');
+    assert.equal(resultCellValue(row, 'expiration_date', fieldTypes), '02/01/2030');
+    assert.equal(resultCellValue(row, 'confidence_score', fieldTypes), '87%');
+
+    // A missing value is an empty cell, never the text "null" or "undefined".
+    assert.equal(resultCellValue(row, 'destination', fieldTypes), '');
+    assert.equal(resultCellValue({ ...row, birth_date: null }, 'birth_date', fieldTypes), '');
+    assert.equal(resultCellValue({}, 'first_name', fieldTypes), '');
+
+    // A row with no number is a PI, exactly as getDocumentType decides.
+    assert.equal(resultCellValue({ passport_number: 'X4RTBPFW4' }, 'document_type', fieldTypes),
+        DOC_TYPE_ID_CARD);
+
+    // A confidence score that is not a number is passed through untouched.
+    assert.equal(resultCellValue({ ...row, confidence_score: null }, 'confidence_score', fieldTypes), '');
+});
+
+test('resultCellValue covers every column of the shared definition', () => {
+    // The card list renders one row per column; nothing may throw or return
+    // undefined for a column the table shows.
+    for (const field of PASSPORT_COLUMN_ORDER) {
+        const value = resultCellValue(row, field, fieldTypes);
+        assert.equal(typeof value, 'string', `${field} did not produce a string`);
+    }
+    // Without a field-type map the dates stay in their stored ISO form rather
+    // than throwing — the admin/users table calls it that way.
+    assert.equal(resultCellValue(row, 'birth_date', {}), '1990-05-17');
 });

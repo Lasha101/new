@@ -182,7 +182,9 @@ does not exist. The fixtures are ready for the package that adds the checks.
 | `logout(page)`, `storedToken(page)` | Session teardown; the stored JWT |
 | `uploadFiles(page, paths, opts)` | Drives the real file input (`opts.submit` also clicks « Lancer l'analyse ») |
 | `waitForProcessing(page, opts)` | Waits until every job reaches « Terminé » / « Échoué »; returns the labels |
-| `countResultRows(page)`, `resultsRows(page)`, `resultsTable(page)` | The results table, never the export preview's |
+| `countResultRows(page)`, `resultsRows(page)` | The rows **on screen** — table rows above 720 px, cards below |
+| `resultsTable(page)`, `resultsCards(page)` | Each view explicitly, never the export preview's |
+| `selectDocType(page, value)` | Sets the Tous/PASS/PI `.sid-seg` filter (`''`, `'PASS'`, `'PI'`) |
 | `getStorageState(page)` | localStorage, sessionStorage, IndexedDB names, Cache Storage keys, service workers — plus `unavailable[]` |
 | `measureTapTargets(page, selector)` | A box per visible match, with `smallestSide` |
 | `tapTargetsBelow(targets, px)` | Those under a size threshold |
@@ -190,6 +192,8 @@ does not exist. The fixtures are ready for the package that adds the checks.
 | `contrastRatio(fg, bg)` | WCAG ratio, 1 to 21. Pure — no browser needed |
 | `getComputedColorPair(page, selector)` | Computed foreground and *effective* background, composited through ancestors, plus `ratio`, `aaThreshold`, `passesAA` |
 | `parseColor`, `compositeOver`, `relativeLuminance`, `isLargeText`, `wcagAAThreshold` | The pieces, exported for reuse |
+| `readCsv(path)`, `readXlsx(path)` | Parsed rows of a downloaded export, `string[][]`. Dependency-free |
+| `unzip(buffer)` | ZIP entries as `{ name -> Buffer }`; handles stored and deflate |
 | `SELECTORS`, `TEXT` | The DOM handles and French strings the suites depend on |
 
 Two notes for whoever builds on these:
@@ -202,11 +206,35 @@ Two notes for whoever builds on these:
   image sits behind the text. The ratio then describes only the colour layers and
   must not be trusted on its own.
 
-The app has **no test ids**, and its `<label>` elements are not associated with
-their inputs (no `htmlFor`/`id`, no nesting), so `getByLabel` does not work.
+The app has **almost no test ids**, and its `<label>` elements are not associated
+with their inputs (no `htmlFor`/`id`, no nesting), so `getByLabel` does not work.
 `tests/helpers/selectors.js` therefore leans on French placeholder text, button
-text and existing class names. If a later package adds test ids or fixes the
+text and the `.sid-*` class names. If a later package adds test ids or fixes the
 label association, change that one file and the suites follow.
+
+The one exception Package A added: **results cells and card values carry
+`data-field="<column>"`**, so the table/card parity spec can read both views the
+same way instead of counting columns by position.
+
+---
+
+## The suites
+
+| File | What it holds |
+|---|---|
+| `e2e/smoke.spec.js` | The regression baseline. **Nothing here may be weakened to make it pass.** |
+| `e2e/helpers.spec.js` | Proves the helpers themselves work in a real browser |
+| `e2e/fonts.spec.js` | Both families load and resolve; a full session makes **zero** requests to googleapis/gstatic; every font file comes from this origin |
+| `e2e/a11y.spec.js` | 44 px tap targets, ≥ 16 px inputs, the measured contrast table, a focus ring on every tab stop |
+| `e2e/responsive.spec.js` | The 720 px switch, **table/card parity**, uppercase/centring, no horizontal overflow at 360/375 |
+| `e2e/design-system.spec.js` | Badges and chips driven by real data, download column order and accents, no English strings, the top bar |
+| `e2e/features.spec.js` | Everything else the app can do: sorting, selection, bulk edit, multi-delete, manual create/edit, job removal, export preview and selection exports, password toggle, registration, account edit, navigation — plus what the cards can and cannot do on a phone |
+| `build/no-google-fonts.test.js` | Scans the shipped `dist/` — runs under `npm test`, not Playwright |
+
+The parity spec is the load-bearing one: the results table and the mobile card
+list render from one column definition (`PASSPORT_COLUMN_ORDER`) and one cell
+function (`resultCellValue`), and that spec asserts them field-by-field equal. If
+it goes red, the two views have drifted.
 
 ---
 

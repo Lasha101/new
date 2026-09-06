@@ -20,6 +20,8 @@
     "test:fixtures": "node tests/fixtures/generate.mjs --force"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

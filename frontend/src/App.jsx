@@ -1,358 +1,139 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, formatDateFR, DOC_TYPE_FILTER_OPTIONS, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
+import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, resultCellValue, DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // --- STYLES COMPONENT ---
+// Only what the design system does not cover: the dashboard grid, the job
+// monitor, the sort controls, the password toggle and a few utilities.
+// Surfaces, buttons, inputs, tables, badges, chips, alerts and empty states all
+// come from scanid-app.css, imported globally in main.jsx — the rules that used
+// to duplicate them here were removed so the two cannot fight.
 const GlobalStyles = () => (
     <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-        :root {
-            /* Modern Indigo/Violet Palette */
-            --primary-color: #4f46e5; /* Indigo-600 */
-            --primary-hover: #4338ca; /* Indigo-700 */
-            --secondary-color: #6b7280; /* Gray-500 */
-            --background-color: #f3f4f6; /* Gray-100 */
-            --surface-color: #ffffff;
-            --text-color: #1f2937; /* Gray-800 */
-            --border-color: #e5e7eb; /* Gray-200 */
-            
-            --danger-color: #ef4444;
-            --danger-hover: #dc2626;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --processing-color: #3b82f6;
-            
-            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            --radius-lg: 16px;
-            --radius-md: 10px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Padding and borders count inside declared widths, so no element can
-           grow past its parent (and the viewport) because of its padding. */
-        *, *::before, *::after { box-sizing: border-box; }
-
         /* 'clip' (not 'hidden') so no scroll container is created and
            position: sticky keeps working on the header and sidebar. */
         html, body { max-width: 100%; overflow-x: clip; }
-
-        body {
-            font-family: var(--font-family);
-            background-color: var(--background-color);
-            color: var(--text-color);
-            margin: 0;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Full-bleed layout: the app uses the whole screen width (the login
-           form stays centered via .landing-container). */
-        .container { max-width: none; margin: 0 auto; padding: 2rem; }
-        @media (max-width: 600px) {
-            .container { padding: 1rem; }
-            .app-header { padding: 1rem; }
-        }
-        /* Very narrow screens: the title and the logout button together
-           exceed the viewport, so scale them down and allow wrapping. */
-        @media (max-width: 380px) {
-            .app-header { flex-wrap: wrap; gap: 0.5rem; }
-            .app-header h1 { font-size: 1.1rem; }
-            .app-header .btn { padding: 0.45rem 0.7rem; font-size: 0.85rem; }
-        }
-
-        /* HEADER */
-        .app-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            background-color: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(12px);
-            padding: 1rem 2rem; 
-            border-radius: var(--radius-lg); 
-            box-shadow: var(--shadow-sm); 
-            margin-bottom: 2rem; 
-            border: 1px solid rgba(255,255,255,0.5);
-            position: sticky;
-            top: 1rem;
-            z-index: 100;
-        }
-        .app-header h1 { 
-            font-size: 1.5rem; 
-            font-weight: 700; 
-            color: var(--primary-color); 
-            margin: 0; 
-            letter-spacing: -0.025em;
-        }
-
-        /* BUTTONS */
-        .btn { 
-            padding: 0.6rem 1.2rem; 
-            border: none; 
-            border-radius: var(--radius-md); 
-            font-size: 0.95rem; 
-            font-weight: 600; 
-            cursor: pointer; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-            text-align: center; 
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        .btn:active { transform: scale(0.98); }
-        .btn:disabled { background-color: #d1d5db; cursor: not-allowed; transform: none; }
-        
-        .btn-primary { 
-            background-color: var(--primary-color); 
-            color: white; 
-            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
-        }
-        .btn-primary:hover:not(:disabled) { 
-            background-color: var(--primary-hover); 
-            box-shadow: 0 6px 10px rgba(79, 70, 229, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .btn-danger { background-color: var(--surface-color); color: var(--danger-color); border: 1px solid var(--border-color); }
-        .btn-danger:hover { background-color: #fef2f2; border-color: var(--danger-color); }
-
-        /* FORMS */
-        .form-container { 
-            background-color: var(--surface-color); 
-            padding: 2.5rem; 
-            border-radius: var(--radius-lg); 
-            box-shadow: var(--shadow-lg); 
-            max-width: 500px; 
-            margin: 2rem auto; 
-            border: 1px solid var(--border-color);
-        }
-        .form-container h2 { text-align: center; margin-bottom: 2rem; font-size: 1.75rem; color: #111827; letter-spacing: -0.025em; }
-        
-        .form-group { margin-bottom: 1.25rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600; color: #374151; }
-        
-        .form-input { 
-            width: 100%; 
-            padding: 0.75rem 1rem; 
-            border: 1px solid var(--border-color); 
-            border-radius: var(--radius-md); 
-            font-size: 0.95rem; 
-            box-sizing: border-box; 
-            transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: #f9fafb;
-        }
-        .form-input:focus { 
-            outline: none; 
-            border-color: var(--primary-color); 
-            background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); 
-        }
-        .form-checkbox { width: 1.2rem; height: 1.2rem; cursor: pointer; accent-color: var(--primary-color); }
-
-        .password-container { position: relative; }
-        .password-container .form-input { padding-right: 40px; }
-        .password-toggle-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--secondary-color); padding: 0; display: flex; }
-        .password-toggle-btn:hover { color: var(--primary-color); }
-
-        /* MESSAGES */
-        .error-message { background-color: #fef2f2; color: var(--danger-color); padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; text-align: center; border: 1px solid #fecaca; font-size: 0.9rem; }
-        .success-message { background-color: #ecfdf5; color: var(--success-color); padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; text-align: center; border: 1px solid #a7f3d0; font-size: 0.9rem; }
-        .info-message { background-color: #eff6ff; color: var(--primary-color); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid #bfdbfe; font-size: 0.9rem; }
 
         /* DASHBOARD GRID — two columns: on the passports tab the welcome card
            (nav) and the « Ajouter un Passeport » card share row 1 (left/right);
            every other section spans the entire screen width. Vertical rhythm
            comes from the sections' own margins, hence row-gap: 0. */
-        .dashboard-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); column-gap: 2rem; row-gap: 0; margin-top: 1rem; }
+        .dashboard-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); column-gap: 1.4rem; row-gap: 0; }
         /* Grid items refuse to shrink below their content's minimum width by
            default (min-width: auto), so a wide table would push the content
            column past the viewport, where it cannot be reached. min-width: 0
            lets the column fit the screen; wide content then scrolls inside
-           .table-container as designed. */
+           .sid-table-wrap as designed. */
         .dashboard-content, .dashboard-nav { grid-column: 1 / -1; min-width: 0; }
         /* Passports tab: flatten the intermediate wrappers so the sections —
            which live in different subtrees — become items of this same grid
            and can share a row. Nav goes row 1 left, the uploader (first
-           .form-container) row 1 right, everything else keeps DOM order and
+           .sid-card) row 1 right, everything else keeps DOM order and
            spans the full width. */
         .passports-layout .dashboard-nav { grid-column: 1; grid-row: 1; }
         .dashboard-content.passports-view, .passports-view > div, .passports-view > div > div { display: contents; }
         .passports-view > div > *, .passports-view > div > div > * { grid-column: 1 / -1; min-width: 0; }
-        .passports-view > div > div > .form-container:first-child { grid-column: 2; grid-row: 1; }
+        .passports-view > div > div > .sid-card:first-child { grid-column: 2; grid-row: 1; }
         /* Narrow screens: stack the two row-1 cards like everything else. */
         @media (max-width: 768px) {
-            .passports-layout .dashboard-nav, .passports-view > div > div > .form-container:first-child { grid-column: 1 / -1; grid-row: auto; }
+            .passports-layout .dashboard-nav, .passports-view > div > div > .sid-card:first-child { grid-column: 1 / -1; grid-row: auto; }
+        }
+        /* Very narrow screens: the logo and the logout button together exceed
+           the viewport, so let the top bar wrap. */
+        @media (max-width: 380px) {
+            .sid-topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.7rem 1rem; }
         }
 
         /* NAVIGATION SIDEBAR */
-        .dashboard-nav {
-            background-color: var(--surface-color);
-            padding: 1.5rem;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border-color);
-            margin-bottom: 2rem;
-        }
-        .dashboard-nav h3 { margin-top: 0; font-size: 1.2rem; margin-bottom: 0.25rem; font-weight: 700; }
-        .dashboard-nav .credit-display { margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--secondary-color); }
-        
-        .nav-menu { display: flex; flex-direction: column; gap: 0.5rem; }
-        .nav-button { 
-            text-align: left; 
-            padding: 0.75rem 1rem; 
-            border: none; 
-            background-color: transparent; 
-            border-radius: var(--radius-md); 
-            cursor: pointer; 
-            font-size: 0.95rem; 
-            font-weight: 500; 
-            width: 100%; 
-            color: #4b5563;
-            transition: all 0.2s; 
-        }
-        .nav-button:hover { background-color: #f3f4f6; color: var(--primary-color); }
-        .nav-button.active { 
-            background-color: #eef2ff; 
-            color: var(--primary-color); 
-            font-weight: 600;
-        }
+        .dashboard-nav h3 { margin-top: 0; margin-bottom: 0.25rem; }
+        .dashboard-nav .credit-display { margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--sid-text); }
 
-        /* MAIN CONTENT AREA */
-        .dashboard-content { 
-            background-color: var(--surface-color); 
-            padding: 2.5rem; 
-            border-radius: var(--radius-lg); 
-            box-shadow: var(--shadow-sm); 
-            border: 1px solid var(--border-color);
-            min-height: 500px;
-            animation: fadeIn 0.4s ease-out;
-        }
-        .dashboard-content h2 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem; color: #111827; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
-
-        /* TABLES */
-        .table-container { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: white; }
-        .table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .table th, .table td { padding: 1rem 1.5rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-        
-        /* UPDATED TABLE HEADERS FOR SORTING */
-        .table thead th { 
-            background-color: #f9fafb; 
-            font-weight: 600; 
-            color: #374151; 
-            font-size: 0.85rem; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            user-select: none;
-        }
-        .table thead th.sortable { 
-            cursor: pointer; 
-            transition: background-color 0.2s; 
-            position: relative;
-        }
-        .table thead th.sortable:hover { 
-            background-color: #e5e7eb; 
-            color: var(--primary-color);
-        }
-        
-        /* SORT UI ELEMENTS */
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .sort-checkbox {
+        .nav-menu { display: flex; flex-direction: column; gap: 0.4rem; }
+        .nav-button {
+            text-align: left;
+            padding: 0.7rem 1rem;
+            border: none;
+            background-color: transparent;
+            border-radius: 10px;
             cursor: pointer;
-            accent-color: var(--primary-color);
-            width: 1rem;
-            height: 1rem;
+            font-family: var(--sid-font-head);
+            font-size: 0.92rem;
+            font-weight: 600;
+            width: 100%;
+            min-height: 44px;
+            color: var(--sid-text);
+            transition: all 0.18s;
         }
-        .sort-badge { 
-            display: inline-flex; 
-            align-items: center;
-            margin-left: 0.5rem; 
-            font-size: 0.9em;
-            color: var(--primary-color);
-            background: #eef2ff;
-            padding: 0px 4px;
-            border-radius: 4px;
-        }
-        .sort-badge small {
-            font-size: 0.7em;
-            margin-left: 2px;
-            font-weight: 800;
-        }
-        .sort-indicator {
-            margin-left: auto;
-            color: #9ca3af;
-            font-size: 0.8em;
-        }
-        .sort-indicator.active {
-            color: var(--primary-color);
-            font-weight: bold;
-        }
+        .nav-button:hover { background-color: #e6eef8; color: var(--sid-ink); }
+        .nav-button.active { background-color: var(--sid-navy); color: #fff; }
+        .nav-button:focus-visible { outline: none; box-shadow: var(--sid-focus); }
 
-        .table tbody tr:last-child td { border-bottom: none; }
-        .table tbody tr { transition: background-color 0.1s; }
-        .table tbody tr:hover { background-color: #f9fafb; }
-        .table tbody tr.selected-row { background-color: #eff6ff; }
-        .table th.checkbox-cell, .table td.checkbox-cell { width: 1%; text-align: center; padding-right: 0.5rem; }
+        /* PASSWORD FIELD */
+        .password-container { position: relative; }
+        .password-container .sid-input { padding-right: 44px; }
+        .password-toggle-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--sid-text); padding: 6px; display: flex; border-radius: 8px; }
+        .password-toggle-btn:hover { color: var(--sid-cyan-dark); }
+        .password-toggle-btn:focus-visible { outline: none; box-shadow: var(--sid-focus); }
+
+        .sid-dropzone * { pointer-events: none; }
+
+        /* SORT UI ELEMENTS */
+        .sid-table thead th.sortable { cursor: pointer; transition: background-color 0.2s; user-select: none; }
+        .sid-table thead th.sortable:hover { background-color: var(--sid-navy-3); }
+        .header-content { display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+        .sort-checkbox { cursor: pointer; accent-color: var(--sid-cyan); width: 1rem; height: 1rem; flex-shrink: 0; }
+        .sort-badge { display: inline-flex; align-items: center; margin-left: 0.35rem; font-size: 0.9em; color: var(--sid-navy); background: var(--sid-cyan); padding: 0 4px; border-radius: 4px; }
+        .sort-badge small { font-size: 0.7em; margin-left: 2px; font-weight: 800; }
+        .sort-indicator { margin-left: auto; color: rgba(255,255,255,0.55); font-size: 0.8em; }
+        .sort-indicator.active { color: #fff; font-weight: bold; }
+
+        /* Selection and action cells sit outside the uppercase/centred body. */
+        .sid-table th.checkbox-cell, .sid-table td.checkbox-cell { width: 1%; padding-right: 0.4rem; }
+        .sid-table tbody tr.selected-row { background-color: rgba(14, 165, 233, .1); }
 
         /* FILTERS */
-        .filter-bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: #f9fafb; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+        .filter-bar { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
+        /* Without a floor, the destination field is squeezed to a few characters
+           on a phone instead of wrapping onto its own line. */
+        .filter-bar .form-group { min-width: 12rem; }
 
         /* JOB MONITOR */
-        .job-monitor { background-color: var(--surface-color); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); margin-bottom: 2rem; }
         .job-list { list-style-type: none; padding: 0; margin: 0; max-height: 400px; overflow-y: auto; }
-        .job-item { padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.75rem; background: #fff; transition: box-shadow 0.2s; }
-        .job-item:hover { box-shadow: var(--shadow-sm); }
-        .job-header { display: flex; justify-content: space-between; align-items: center; }
+        .job-item { padding: 0.9rem; border: 1px solid var(--sid-border); border-radius: 12px; margin-bottom: 0.7rem; background: #fff; }
+        .job-item:last-child { margin-bottom: 0; }
+        .job-header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
         /* Long unbreakable file names must wrap instead of widening the page. */
         .job-details { min-width: 0; overflow-wrap: anywhere; }
+        .job-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 
-        /* PROGRESS BARS */
-        .progress-container { width: 100%; background-color: #e5e7eb; border-radius: 999px; height: 1rem; overflow: hidden; margin-top: 0.75rem; position: relative; }
+        /* PROGRESS BARS — the track comes from .sid-progress; these carry state. */
         .progress-fill { height: 100%; transition: width 0.6s ease; border-radius: 999px; }
-        .progress-processing { background-color: var(--processing-color); background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent); background-size: 1rem 1rem; animation: progress-bar-stripes 1s linear infinite; }
-        .progress-complete { background-color: var(--success-color); }
-        .progress-failed { background-color: var(--danger-color); }
-        .progress-text { font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-top: 0.25rem; display: block; text-align: right; }
-        
+        .progress-processing { background-image: linear-gradient(45deg,rgba(255,255,255,.25) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.25) 50%,rgba(255,255,255,.25) 75%,transparent 75%,transparent); background-size: 1rem 1rem; animation: progress-bar-stripes 1s linear infinite; }
+        .progress-complete { background: var(--sid-ok); }
+        .progress-failed { background: var(--sid-err); }
+        .progress-text { font-size: 0.75rem; font-weight: 600; color: var(--sid-text); margin-top: 0.25rem; display: block; text-align: right; }
+
         @keyframes progress-bar-stripes { 0% { background-position: 1rem 0; } 100% { background-position: 0 0; } }
 
-        /* MISC UI ELEMENTS */
-        .credit-badge { background-color: #e0e7ff; color: var(--primary-color); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-top: 0.5rem; }
-        
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: var(--radius-lg); padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background-color: #f8fafc; margin-bottom: 1.5rem; }
-        .drop-zone:hover, .drop-zone.active { border-color: var(--primary-color); background-color: #eff6ff; }
-        .drop-zone * { pointer-events: none; }
-        .drop-zone svg { width: 48px; height: 48px; color: #94a3b8; margin-bottom: 1rem; }
-
         /* LANDING PAGE */
-        .landing-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; animation: fadeIn 0.6s ease-out; }
-        .landing-auth { width: 100%; max-width: 450px; }
-        .landing-auth .form-container { width: 100%; margin: 0; border: none; box-shadow: var(--shadow-lg); }
+        .landing-container { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
+        .landing-auth { width: 100%; max-width: 460px; }
+        .landing-auth .sid-card { width: 100%; margin: 0; }
 
-        .legal-footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: center; color: #9ca3af; font-size: 0.85rem; }
-        .legal-links { display: flex; justify-content: center; gap: 1rem 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
-        .legal-links a { color: #6b7280; text-decoration: none; transition: color 0.2s; font-weight: 500; }
-        .legal-links a:hover { color: var(--primary-color); }
+        /* FAILURE LIST */
+        .failure-list { margin-top: 0.7rem; background-color: var(--sid-err-bg); border: 1px solid #f6c6c2; border-radius: 10px; padding: 0.7rem; }
+        .failure-item { display: flex; gap: 0.5rem; color: var(--sid-err); font-size: 0.85rem; margin-bottom: 0.25rem; align-items: flex-start; }
+        .failure-item:last-child { margin-bottom: 0; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
+        /* Legal links row inside .sid-appfoot */
+        .legal-links { display: flex; justify-content: center; gap: 0.5rem 1.5rem; margin-bottom: 0.6rem; flex-wrap: wrap; }
+
         .mt-1 { margin-top: 1rem; }
         .mb-1 { margin-bottom: 1rem; }
         .mb-2 { margin-bottom: 2rem; }
-
-        /* Failure List Styling */
-        .failure-list { margin-top: 0.75rem; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem; }
-        .failure-item { display: flex; gap: 0.5rem; color: #dc2626; font-size: 0.85rem; margin-bottom: 0.25rem; align-items: flex-start; }
-        .failure-item:last-child { margin-bottom: 0; }
     `}</style>
 );
 
@@ -384,7 +165,7 @@ function PasswordInput({ value, onChange, name, placeholder, required = false })
     const [showPassword, setShowPassword] = useState(false);
     return (
         <div className="password-container">
-            <input type={showPassword ? 'text' : 'password'} name={name} value={value} onChange={onChange} className="form-input" placeholder={placeholder} required={required} autoComplete="new-password" />
+            <input type={showPassword ? 'text' : 'password'} name={name} value={value} onChange={onChange} className="sid-input" placeholder={placeholder} required={required} autoComplete="new-password" />
             <button type="button" className="password-toggle-btn" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}>
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
@@ -418,7 +199,7 @@ const ProgressBar = ({ progress, status }) => {
 
     return (
         <div style={{ marginTop: '0.5rem' }}>
-            <div className="progress-container">
+            <div className="sid-progress">
                 <div 
                     className={`progress-fill ${statusClass}`} 
                     style={{ width: `${progress > 0 ? progress : 5}%` }}
@@ -461,7 +242,22 @@ export default function App() {
             default: return <Login setToken={setToken} fetchUser={fetchUser} onShowRegistration={() => setView('signup')} />;
         }
     };
-    return (<><GlobalStyles /><div className="container"><header className="app-header"><h1>Gestionnaire de Voyages</h1>{user && <button onClick={logout} className="btn btn-danger">Déconnexion</button>}</header><main>{renderView()}</main></div></>);
+    return (
+        <>
+            <GlobalStyles />
+            <header className="sid-topbar">
+                <h1 className="sid-logo">Scan<span>ID</span></h1>
+                {user && (
+                    <div className="sid-topbar-right">
+                        {/* The credits counter the dashboard used to show in its sidebar. */}
+                        <span className="sid-credits">Crédits : {user.page_credits}</span>
+                        <button onClick={logout} className="sid-btn-ghost">Déconnexion</button>
+                    </div>
+                )}
+            </header>
+            <div className="sid-page"><main>{renderView()}</main></div>
+        </>
+    );
 }
 
 // --- PAGE & VIEW COMPONENTS ---
@@ -502,29 +298,29 @@ function Login({ setToken, fetchUser, onShowRegistration }) {
         <div>
             <div className="landing-container">
                 <div className="landing-auth">
-                    <div className="form-container">
+                    <div className="sid-card">
                         <h2>Connexion</h2>
-                        {error && <p className="error-message">{error}</p>}
+                        {error && <p className="sid-alert sid-alert--err">{error}</p>}
                         <form onSubmit={handleSubmit}>
                             <div className="form-group">
-                                <label>Nom d'utilisateur</label>
-                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="form-input" placeholder="Entrez votre identifiant" required />
+                                <label className="sid-label">Nom d'utilisateur</label>
+                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="sid-input" placeholder="Entrez votre identifiant" required />
                             </div>
                             <div className="form-group">
-                                <label>Mot de passe</label>
+                                <label className="sid-label">Mot de passe</label>
                                 <PasswordInput name="password" value={password} onChange={e => setPassword(e.target.value)} required={true} placeholder="Entrez votre mot de passe" />
                             </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '0.8rem' }} disabled={isLoading}>
+                            <button type="submit" className="sid-btn" style={{ width: '100%', marginTop: '1rem' }} disabled={isLoading}>
                                 {isLoading ? 'Connexion...' : 'Se connecter'}
                             </button>
                         </form>
-                        <button type="button" onClick={onShowRegistration} className="btn" style={{ width: '100%', marginTop: '0.75rem', padding: '0.8rem', backgroundColor: '#fff', color: 'var(--primary-color)', border: '1px solid var(--primary-color)' }}>
+                        <button type="button" onClick={onShowRegistration} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>
                             Créer un compte
                         </button>
                     </div>
                 </div>
             </div>
-            <footer className="legal-footer">
+            <footer className="sid-appfoot">
                 <div className="legal-links">
                     <a href="#">Mentions Légales</a>
                     <a href="#">Politique de Confidentialité</a>
@@ -549,8 +345,8 @@ function SelfRegistrationPage({ onBackToLogin }) {
             if (response.ok) { setSuccess('Inscription réussie ! Vous allez être redirigé vers la page de connexion.'); setTimeout(() => { window.history.pushState({}, '', '/'); window.location.reload(); }, 2000); } else { const detail = (await response.json()).detail; setError(typeof detail === 'string' ? detail : "Échec de l'inscription. Veuillez vérifier les champs saisis."); }
         } catch (err) { setError("Une erreur est survenue lors de l'inscription."); }
     };
-    if (success) return <div className="form-container"><p className="success-message">{success}</p></div>
-    return (<div className="form-container"><h2>Créer un nouveau compte</h2>{error && <p className="error-message">{error}</p>}<form onSubmit={handleSubmit}><div className="form-group"><label>Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="form-input" required /></div><div className="form-group"><label>Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="form-input" required /></div><div className="form-group"><label>Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" required /></div><div className="form-group"><label>Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="form-input" required /></div><div className="form-group"><label>Nom d'utilisateur</label><input type="text" name="user_name" value={formData.user_name} onChange={handleChange} className="form-input" required /></div><div className="form-group"><label>Mot de passe</label><PasswordInput name="password" value={formData.password} onChange={handleChange} required={true} /></div><button type="submit" className="btn btn-primary" style={{ width: '100%' }}>S'inscrire</button></form><button type="button" onClick={onBackToLogin} className="btn" style={{ width: '100%', marginTop: '0.75rem', backgroundColor: '#f3f4f6', color: '#374151' }}>Retour à la connexion</button></div>);
+    if (success) return <div className="sid-card"><p className="sid-alert sid-alert--ok">{success}</p></div>
+    return (<div className="sid-card"><h2>Créer un nouveau compte</h2>{error && <p className="sid-alert sid-alert--err">{error}</p>}<form onSubmit={handleSubmit}><div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom d'utilisateur</label><input type="text" name="user_name" value={formData.user_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Mot de passe</label><PasswordInput name="password" value={formData.password} onChange={handleChange} required={true} /></div><button type="submit" className="sid-btn" style={{ width: '100%' }}>S'inscrire</button></form><button type="button" onClick={onBackToLogin} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>Retour à la connexion</button></div>);
 }
 
 // Static field configurations, at module scope so their identity is stable:
@@ -670,11 +466,10 @@ function Dashboard({ user, token, fetchUser }) {
 
     return (
         <div className={`dashboard-layout${activeTab === 'passports' ? ' passports-layout' : ''}`}>
-            <nav className="dashboard-nav">
+            <nav className="dashboard-nav sid-card">
                 <h3>Bienvenue, {user.first_name}!</h3>
                 <div className="credit-display">
-                    <span className="credit-badge">Crédits : {user.page_credits}</span>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>Pages Traitées : {user.uploaded_pages_count}</span>
+                    <span style={{ display: 'block' }}>Pages Traitées : {user.uploaded_pages_count}</span>
                 </div>
                 <div className="nav-menu">
                     <button onClick={() => setActiveTab('passports')} className={`nav-button ${activeTab === 'passports' ? 'active' : ''}`}>Passeports</button>
@@ -684,7 +479,7 @@ function Dashboard({ user, token, fetchUser }) {
                     <button onClick={() => setActiveTab('account')} className={`nav-button ${activeTab === 'account' ? 'active' : ''}`}>Mon Compte</button>
                 </div>
             </nav>
-            <div className={`dashboard-content${activeTab === 'passports' ? ' passports-view' : ''}`}>{renderTabContent()}</div>
+            <div className={`dashboard-content sid-card${activeTab === 'passports' ? ' passports-view' : ''}`}>{renderTabContent()}</div>
         </div>
     );
 }
@@ -763,24 +558,24 @@ function AccountEditor({ user, token, fetchUser }) {
     return (
         <div>
             <h2>Modifier Mon Compte</h2>
-            {message && <p className="success-message">{message}</p>}
+            {message && <p className="sid-alert sid-alert--ok">{message}</p>}
             <form onSubmit={handleSubmit}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                    <div className="form-group"><label>Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="form-input" /></div>
-                    <div className="form-group"><label>Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="form-input" /></div>
-                    <div className="form-group"><label>Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" /></div>
-                    <div className="form-group"><label>Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="form-input" /></div>
+                    <div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" /></div>
+                    <div className="form-group"><label className="sid-label">Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="sid-input" /></div>
+                    <div className="form-group"><label className="sid-label">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" /></div>
+                    <div className="form-group"><label className="sid-label">Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="sid-input" /></div>
                     <div className="form-group">
-                        <label>{columnTranslations['uploaded_pages_count']}</label>
-                        <input type="number" name="uploaded_pages_count" value={formData.uploaded_pages_count} onChange={handleChange} className="form-input" readOnly={user.role !== 'admin'} disabled={user.role !== 'admin'} style={{ backgroundColor: user.role !== 'admin' ? '#f3f4f6' : 'white' }} />
+                        <label className="sid-label">{columnTranslations['uploaded_pages_count']}</label>
+                        <input type="number" name="uploaded_pages_count" value={formData.uploaded_pages_count} onChange={handleChange} className="sid-input" readOnly={user.role !== 'admin'} disabled={user.role !== 'admin'} style={{ backgroundColor: user.role !== 'admin' ? '#eef2f7' : undefined }} />
                     </div>
                     <div className="form-group">
-                        <label>{columnTranslations['page_credits']}</label>
-                        <input type="number" name="page_credits" value={formData.page_credits} onChange={handleChange} className="form-input" readOnly={user.role !== 'admin'} disabled={user.role !== 'admin'} style={{ backgroundColor: user.role !== 'admin' ? '#f3f4f6' : 'white' }} />
+                        <label className="sid-label">{columnTranslations['page_credits']}</label>
+                        <input type="number" name="page_credits" value={formData.page_credits} onChange={handleChange} className="sid-input" readOnly={user.role !== 'admin'} disabled={user.role !== 'admin'} style={{ backgroundColor: user.role !== 'admin' ? '#eef2f7' : undefined }} />
                     </div>
                 </div>
-                <div className="form-group"><label>Nouveau mot de passe (optionnel)</label><PasswordInput name="password" value={formData.password} onChange={handleChange} placeholder="Laisser vide pour conserver le mot de passe actuel" /></div>
-                <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem' }}>Enregistrer les modifications</button>
+                <div className="form-group"><label className="sid-label">Nouveau mot de passe (optionnel)</label><PasswordInput name="password" value={formData.password} onChange={handleChange} placeholder="Laisser vide pour conserver le mot de passe actuel" /></div>
+                <button type="submit" className="sid-btn" style={{ marginTop: '1rem' }}>Enregistrer les modifications</button>
             </form>
         </div>
     );
@@ -832,34 +627,41 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
     };
 
     return (
-        <div className="form-container" style={{ maxWidth: 'none', margin: '0 0 2rem 0', padding: '2.5rem' }}>
+        <div className="sid-card">
             <h3 style={{ marginTop: 0 }}>Ajouter un Passeport</h3>
-            <p className="mb-2" style={{ color: 'var(--secondary-color)' }}>Glissez votre document ci-dessous pour lancer l'extraction automatique.</p>
-            {error && <p className="error-message">{error}</p>}
+            <p className="mb-2">Glissez votre document ci-dessous pour lancer l'extraction automatique.</p>
+            {error && <p className="sid-alert sid-alert--err">{error}</p>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Destination (Optionnel)</label>
-                    <input type="text" name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="form-input" list="destination-datalist-ocr" placeholder="Ex: Voyage Japon 2024" autoComplete="off" />
+                    <label className="sid-label">Destination (Optionnel)</label>
+                    <input type="text" name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="sid-input" list="destination-datalist-ocr" placeholder="Ex: Voyage Japon 2024" autoComplete="off" />
                     <datalist id="destination-datalist-ocr">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist>
                 </div>
                 <div className="form-group">
-                    <label>Document (Image ou PDF)</label>
-                    <div className={`drop-zone ${isDragging ? 'active' : ''}`} onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileInput}>
+                    <label className="sid-label">Document (Image ou PDF)</label>
+                    <div className={`sid-dropzone ${isDragging ? 'is-dragover' : ''}`} onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileInput}>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/jpg, application/pdf" style={{ display: 'none' }} />
                         <UploadIcon />
-                        <p style={{ fontWeight: 600, color: '#374151' }}>{file ? `Fichier prêt : ${file.name}` : "Cliquez ou glissez votre fichier ici"}</p>
-                        {!file && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>PNG, JPG ou PDF jusqu'à 10Mo</p>}
+                        <strong>{file ? `Fichier prêt : ${file.name}` : "Cliquez ou glissez votre fichier ici"}</strong>
+                        {!file && <small>PNG, JPG ou PDF jusqu'à 10Mo</small>}
                     </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-                    <button type="button" onClick={isUploading ? onCancelUpload : handleReset} className="btn" style={{ backgroundColor: '#f3f4f6', color: '#374151' }}>{isUploading ? "Annuler l'envoi" : 'Annuler'}</button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.6rem', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={isUploading ? onCancelUpload : handleReset} className="sid-btn-outline">{isUploading ? "Annuler l'envoi" : 'Annuler'}</button>
                     {/* Disabled while uploading: a double-click used to create two jobs and burn double credits. */}
-                    <button type="submit" className="btn btn-primary" disabled={!file || isUploading}>{isUploading ? 'Envoi en cours…' : "Lancer l'analyse"}</button>
+                    <button type="submit" className="sid-btn" disabled={!file || isUploading}>{isUploading ? 'Envoi en cours…' : "Lancer l'analyse"}</button>
                 </div>
             </form>
         </div>
     );
 }
+
+// Processing-state chips, keyed by the job.status values the backend writes
+// (backend/crud.py): 'processing', 'complete', 'failed'. No new status is
+// introduced — 'queued' is only the fallback for a job whose status has not
+// arrived yet.
+const JOB_STATUS_CHIP = { processing: 'processing', complete: 'done', failed: 'failed' };
+const JOB_STATUS_LABEL = { processing: 'En cours', complete: 'Terminé', failed: 'Échoué' };
 
 function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, uploadProgress, fetchUser, containerRef }) {
     const [jobs, setJobs] = useState([]);
@@ -960,13 +762,13 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, up
     }
 
     if (isLoading && !uploadingFile && jobs.length === 0) return null;
-    if (error) return <p className="error-message">{error}</p>;
+    if (error) return <p className="sid-alert sid-alert--err">{error}</p>;
 
     return (
-        <div className="job-monitor" ref={containerRef}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Fichiers en cours de traitement</h3>
+        <div className="job-monitor sid-card" ref={containerRef}>
+            <h3 style={{ marginTop: 0 }}>Fichiers en cours de traitement</h3>
             {displayJobs.length === 0 ? (
-                <p className="info-message">Aucun document récent.</p>
+                <p className="sid-alert sid-alert--info">Aucun document récent.</p>
             ) : (
                 <ul className="job-list">
                     {displayJobs.map(job => (
@@ -974,16 +776,18 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, up
                             <div className="job-header">
                                 <div className="job-details">
                                     <strong style={{ display: 'block', marginBottom: '0.25rem' }}>{job.file_name}</strong>
-                                    <small style={{ color: 'var(--secondary-color)' }}>{formatDate(job.created_at)}</small>
+                                    <small style={{ color: 'var(--sid-muted-strong)' }}>{formatDate(job.created_at)}</small>
                                 </div>
                                 <div className="job-actions">
-                                     {job.id !== 'temp-virtual-id' && ( <button onClick={() => handleRemoveJob(job.id)} className="btn btn-danger" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>X</button> )}
+                                    {/* Chip driven by job.status, the value the API already sends. */}
+                                    <span className={`sid-chip sid-chip--${JOB_STATUS_CHIP[job.status] || 'queued'}`}>{JOB_STATUS_LABEL[job.status] || JOB_STATUS_LABEL.processing}</span>
+                                     {job.id !== 'temp-virtual-id' && ( <button onClick={() => handleRemoveJob(job.id)} className="sid-btn-ghost" style={{ padding: '0.25rem 0.5rem' }} aria-label="Supprimer ce job">X</button> )}
                                 </div>
                             </div>
                             <ProgressBar progress={job.progress} status={job.status} />
                             {job.failures.length > 0 && (
                                 <div className="failure-list">
-                                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#b91c1c' }}>Échecs détectés ({job.failures.length}):</div>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--sid-err)' }}>Échecs détectés ({job.failures.length}):</div>
                                     {job.failures.map((failure, index) => (
                                         <div key={index} className="failure-item"><FailureIcon /><span><b>Page {failure.page_number}</b> : {failure.detail}</span></div>
                                     ))}
@@ -1049,13 +853,13 @@ function CrudForm({ item, isCreating, onSave, onCancel, fields, endpoint, token 
     };
     const formFields = { ...fields };
     if (formFields.confidence_score) { delete formFields.confidence_score; }
-    return (<form onSubmit={handleSubmit} className="form-container" style={{ maxWidth: 'none', margin: 0, padding: '2.5rem' }}><h3>{isCreating ? 'Créer' : 'Modifier'}</h3>{error && <p className="error-message">{error}</p>}<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>{Object.entries(formFields).map(([key, type]) => (<div className="form-group" key={key}><label>{columnTranslations[key] || key.replace(/_/g, ' ')}</label>{key === 'password' ? (<PasswordInput name={key} value={formData[key] || ''} onChange={handleChange} placeholder={!isCreating ? 'Laisser vide pour conserver' : ''} required={isCreating} />) : key === 'destination' ? (<><input type="text" name="destination" value={formData.destination || ''} onChange={handleChange} className="form-input" list="destination-datalist-form" placeholder="Ex: Voyage 2024" autoComplete="off" /><datalist id="destination-datalist-form">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist></>) : type === 'checkbox' ? (<input type="checkbox" name={key} checked={!!formData[key]} onChange={handleChange} className="form-checkbox" />) : (<input type={type} name={key} value={formData[key] || ''} onChange={handleChange} className="form-input" required={key !== 'destination' && type !== 'checkbox' && key !== 'uploaded_pages_count' && key !== 'page_credits'} />)}</div>))}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}><button type="button" onClick={onCancel} className="btn" style={{ backgroundColor: '#f3f4f6', color: '#374151' }}>Annuler</button><button type="submit" className="btn btn-primary">Enregistrer</button></div></form>);
+    return (<form onSubmit={handleSubmit} className="sid-card"><h3>{isCreating ? 'Créer' : 'Modifier'}</h3>{error && <p className="sid-alert sid-alert--err">{error}</p>}<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem 1.5rem' }}>{Object.entries(formFields).map(([key, type]) => (<div className="form-group" key={key}><label className="sid-label">{columnTranslations[key] || key.replace(/_/g, ' ')}</label>{key === 'password' ? (<PasswordInput name={key} value={formData[key] || ''} onChange={handleChange} placeholder={!isCreating ? 'Laisser vide pour conserver' : ''} required={isCreating} />) : key === 'destination' ? (<><input type="text" name="destination" value={formData.destination || ''} onChange={handleChange} className="sid-input" list="destination-datalist-form" placeholder="Ex: Voyage 2024" autoComplete="off" /><datalist id="destination-datalist-form">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist></>) : type === 'checkbox' ? (<input type="checkbox" name={key} checked={!!formData[key]} onChange={handleChange} className="sid-checkbox" />) : (<input type={type} name={key} value={formData[key] || ''} onChange={handleChange} className="sid-input" required={key !== 'destination' && type !== 'checkbox' && key !== 'uploaded_pages_count' && key !== 'page_credits'} />)}</div>))}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.6rem', flexWrap: 'wrap' }}><button type="button" onClick={onCancel} className="sid-btn-outline">Annuler</button><button type="submit" className="sid-btn">Enregistrer</button></div></form>);
 }
 
 function PreviewTable({ data }) {
-    if (!data || data.length === 0) return <p className="mt-2 text-center info-message">Aucune donnée trouvée.</p>;
+    if (!data || data.length === 0) return <p className="sid-alert sid-alert--info mt-1">Aucune donnée trouvée.</p>;
     const headers = Object.keys(data[0]);
-    return (<div className="mt-2"><h3 className="mb-1">Aperçu</h3><div className="table-container"><table className="table"><thead><tr>{headers.map(h => <th key={h}>{columnTranslations[h] || h.replace(/_/g, ' ')}</th>)}</tr></thead><tbody>{data.map((row, i) => <tr key={i}>{headers.map(h => <td key={h}>{String(row[h])}</td>)}</tr>)}</tbody></table></div></div>);
+    return (<div className="mt-1"><h3 className="mb-1">Aperçu</h3><div className="sid-table-wrap"><table className="sid-table"><thead><tr>{headers.map(h => <th key={h}>{columnTranslations[h] || h.replace(/_/g, ' ')}</th>)}</tr></thead><tbody>{data.map((row, i) => <tr key={i}>{headers.map(h => <td key={h}>{String(row[h])}</td>)}</tr>)}</tbody></table></div></div>);
 }
 
 function ComboBoxFilter({ name, placeholder, options, getOptionValue, getOptionLabel, onChange }) {
@@ -1070,7 +874,7 @@ function ComboBoxFilter({ name, placeholder, options, getOptionValue, getOptionL
     };
     return (
         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-            <input list={dataListId} name={name} placeholder={placeholder} onChange={handleChange} className="form-input" autoComplete="off" />
+            <input list={dataListId} name={name} placeholder={placeholder} onChange={handleChange} className="sid-input" autoComplete="off" />
             <datalist id={dataListId}><option value="">-- Aucun --</option>{options.map(option => (<option key={getOptionValue(option)} value={getOptionLabel(option)} />))}</datalist>
         </div>
     );
@@ -1356,49 +1160,63 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     // Use dynamic destinations (if admin looking at a user) or generic user destinations for the bulk list
     const availableBulkDestinations = (user.role === 'admin' && dynamicDestinations.length > 0) ? dynamicDestinations : userDestinations;
 
+    // The row's actions, rendered identically in the table and in the cards.
+    const rowActions = (item) => (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => setEditingItem(item)} className="sid-btn-ghost">Modifier</button>
+            {endpoint !== 'passports' && ( <button onClick={() => handleDelete(item.id)} className="sid-btn-ghost">Suppr</button> )}
+        </div>
+    );
+
     return (
         <div>
             {endpoint === 'passports' && ( <> <OcrUploader token={token} onUpload={handleUpload} isUploading={isUploadInFlight} onCancelUpload={handleCancelUpload} /> <OcrJobMonitor token={token} refreshTrigger={refreshJobsTrigger} onJobComplete={handleJobComplete} uploadingFile={uploadingFile} uploadProgress={uploadProgress} fetchUser={fetchUser} containerRef={jobMonitorRef} /> </> )}
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="mb-2">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }} className="mb-1">
                 <h2>{title}</h2>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    {endpoint === 'passports' && selectedIds.size > 0 && ( <> {isBulkEditingDest ? ( <form onSubmit={handleBulkEditSubmit} style={{ display: 'flex', gap: '0.5rem' }}><input type="text" className="form-input" placeholder="Nouvelle destination" value={bulkDestination} onChange={e => setBulkDestination(e.target.value)} list="bulk-dest-list" required style={{ padding: '0.4rem', width: '200px' }} /><datalist id="bulk-dest-list">{availableBulkDestinations && availableBulkDestinations.map(d => <option key={d} value={d} />)}</datalist><button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>OK</button><button type="button" onClick={() => setIsBulkEditingDest(false)} className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem', background: '#e5e7eb' }}>X</button></form> ) : ( <> <button onClick={() => setIsBulkEditingDest(true)} className="btn" style={{ backgroundColor: '#e0e7ff', color: '#4338ca' }}>Modifier Destination</button> <button onClick={handleMultiDelete} className="btn btn-danger">Supprimer ({selectedIds.size})</button> </> )} </> )}
-                    <button onClick={startCreating} className="btn btn-primary" style={{ backgroundColor: '#fff', color: 'var(--primary-color)', border: '1px solid var(--primary-color)' }}>{endpoint === 'passports' ? '+ Manuel' : '+ Nouveau'}</button>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {endpoint === 'passports' && selectedIds.size > 0 && ( <> {isBulkEditingDest ? ( <form onSubmit={handleBulkEditSubmit} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}><input type="text" className="sid-input" placeholder="Nouvelle destination" value={bulkDestination} onChange={e => setBulkDestination(e.target.value)} list="bulk-dest-list" required style={{ width: '200px' }} /><datalist id="bulk-dest-list">{availableBulkDestinations && availableBulkDestinations.map(d => <option key={d} value={d} />)}</datalist><button type="submit" className="sid-btn">OK</button><button type="button" onClick={() => setIsBulkEditingDest(false)} className="sid-btn-outline">X</button></form> ) : ( <> <button onClick={() => setIsBulkEditingDest(true)} className="sid-btn-outline">Modifier Destination</button> <button onClick={handleMultiDelete} className="sid-btn-outline">Supprimer ({selectedIds.size})</button> </> )} </> )}
+                    <button onClick={startCreating} className="sid-btn-outline">{endpoint === 'passports' ? '+ Manuel' : '+ Nouveau'}</button>
                 </div>
             </div>
 
             {/* --- INTEGRATED EXPORT PANEL --- */}
             {endpoint === 'passports' && (
-                <div className="form-container" style={{ maxWidth: 'none', margin: '0 0 2rem 0', padding: '1.5rem', border: '1px solid #e5e7eb', boxShadow: 'none' }}>
-                    <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#4b5563' }}>Exportation des Données</h3>
-                    <div className="filter-bar mb-1" style={{ background: 'transparent', padding: 0, border: 'none' }}>
+                <div className="sid-card">
+                    <h3 style={{ marginTop: 0 }}>Exportation des Données</h3>
+                    <div className="filter-bar mb-1">
                         {user.role === 'admin' && ( 
                             <ComboBoxFilter name="user_id" placeholder="Tous les utilisateurs" options={adminUsers || []} getOptionValue={(o) => o.id} getOptionLabel={(o) => `${o.first_name} ${o.last_name}`} onChange={handleExportFilterChange} /> 
                         )}
                         <ComboBoxFilter name="destination" placeholder="Toutes destinations" options={(userDestinations || []).map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleExportFilterChange} />
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                         <button onClick={handlePreview} className="btn btn-primary" disabled={selectedIds.size > 0} style={{ backgroundColor: '#fff', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', opacity: selectedIds.size > 0 ? 0.5 : 1 }}>Aperçu</button>
-                         <button onClick={() => handleUnifiedExport('csv')} className="btn btn-primary">
-                             {selectedIds.size > 0 ? `Exporter Sélection CSV (${selectedIds.size})` : 'Télécharger CSV'}
-                         </button>
-                         <button onClick={() => handleUnifiedExport('xlsx')} className="btn btn-primary">
-                             {selectedIds.size > 0 ? `Exporter Sélection Excel (${selectedIds.size})` : 'Télécharger Excel'}
-                         </button>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                         <button onClick={handlePreview} className="sid-btn-ghost" disabled={selectedIds.size > 0}>Aperçu</button>
+                         {/* XLSX is the primary of the pair, CSV the outline one. */}
+                         <div className="sid-download-group">
+                             <button onClick={() => handleUnifiedExport('xlsx')} className="sid-btn">
+                                 {selectedIds.size > 0 ? `Exporter Sélection Excel (${selectedIds.size})` : 'Télécharger Excel'}
+                             </button>
+                             <button onClick={() => handleUnifiedExport('csv')} className="sid-btn-outline">
+                                 {selectedIds.size > 0 ? `Exporter Sélection CSV (${selectedIds.size})` : 'Télécharger CSV'}
+                             </button>
+                         </div>
                     </div>
                     {previewData && selectedIds.size === 0 && ( <PreviewTable data={previewData} /> )}
                 </div>
             )}
             {/* --- END EXPORT PANEL --- */}
 
-            {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-2"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, Email...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="form-input" autoComplete="off"/></div></div> )}
-            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-2">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontWeight: 600, color: '#374151' }}>Type<select name="document_type_filter" value={docTypeFilter} onChange={(e) => handleDocTypeFilterChange(e.target.value)} className="form-input" style={{ width: 'auto', minWidth: '110px' }} title="Filtrer par type de document (PASS = passeport, PI = pièce d'identité)">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <option key={option.value} value={option.value}>{option.label}</option> ))}</select></label> )} </div> )}
-            <div className="table-container">
-                <table className="table">
+            {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-1"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, Email...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="sid-input" autoComplete="off"/></div></div> )}
+            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-1">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><span className="sid-label" style={{ margin: 0 }}>Type</span><div className="sid-seg" role="group" aria-label="Filtrer par type de document (PASS = passeport, PI = pièce d'identité)" data-name="document_type_filter">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <button key={option.value} type="button" value={option.value} className={docTypeFilter === option.value ? 'is-active' : ''} aria-pressed={docTypeFilter === option.value} onClick={() => handleDocTypeFilterChange(option.value)}>{option.label}</button> ))}</div></div> )} </div> )}
+            {/* Both views are always mounted; only CSS decides which one shows,
+                so a resize never unmounts a view and never loses state. */}
+            <div className="sid-results">
+            <div className="sid-table-wrap">
+                <table className="sid-table">
                     <thead>
                         <tr>
-                            {endpoint === 'passports' && ( <th className="checkbox-cell"><input type="checkbox" className="form-checkbox" onChange={handleToggleSelectAll} checked={visibleItems.length > 0 && selectedIds.size === visibleItems.length} aria-label="Sélectionner tout" /></th> )}
+                            {endpoint === 'passports' && ( <th className="checkbox-cell"><input type="checkbox" className="sid-checkbox" onChange={handleToggleSelectAll} checked={visibleItems.length > 0 && selectedIds.size === visibleItems.length} aria-label="Sélectionner tout" /></th> )}
                             {displayColumns.map(field => {
                                 const sortState = sortConfig.find(s => s.key === field);
                                 const sortIndex = sortConfig.findIndex(s => s.key === field);
@@ -1438,22 +1256,47 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedItems.length === 0 ? ( <tr><td colSpan={displayColumns.length + 2} style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>Aucune donnée trouvée.</td></tr> ) : sortedItems.map(item => (
+                        {sortedItems.length === 0 ? ( <tr><td colSpan={displayColumns.length + 2}><div className="sid-empty">Aucune donnée trouvée.</div></td></tr> ) : sortedItems.map(item => (
                             <tr key={item.id} className={selectedIds.has(item.id) ? 'selected-row' : ''}>
-                                {endpoint === 'passports' && ( <td className="checkbox-cell"><input type="checkbox" className="form-checkbox" onChange={() => handleToggleSelect(item.id)} checked={selectedIds.has(item.id)} aria-label={`Sélectionner ${item.first_name} ${item.last_name}`} /></td> )}
-                                {displayColumns.map(field => {
-                                    let cellValue = field === 'document_type' ? getDocumentType(item) : item[field];
-                                    if (field === 'confidence_score' && typeof cellValue === 'number') { cellValue = `${(cellValue * 100).toFixed(0)}%`; }
-                                    // Dates are displayed as DD/MM/YYYY (the stored ISO value is untouched, so sorting and the edit form keep working).
-                                    if (fields[field] === 'date') { cellValue = formatDateFR(cellValue); }
-                                    // Missing values render as an empty cell, never as the text "null".
-                                    return <td key={field}>{cellValue == null ? '' : String(cellValue)}</td>
-                                })}
-                                <td><div style={{ display: 'flex', gap: '0.5rem' }}><button onClick={() => setEditingItem(item)} className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', backgroundColor: '#e0e7ff', color: '#4338ca' }}>Modifier</button>{endpoint !== 'passports' && ( <button onClick={() => handleDelete(item.id)} className="btn btn-danger" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Suppr</button> )}</div></td>
+                                {endpoint === 'passports' && ( <td className="checkbox-cell"><input type="checkbox" className="sid-checkbox" onChange={() => handleToggleSelect(item.id)} checked={selectedIds.has(item.id)} aria-label={`Sélectionner ${item.first_name} ${item.last_name}`} /></td> )}
+                                {/* Cell values come from resultCellValue — the same function the
+                                    card list below uses, so the two views cannot drift. */}
+                                {displayColumns.map(field => (
+                                    <td key={field} data-field={field}>{field === 'document_type'
+                                        ? <span className={`sid-badge sid-badge--${resultCellValue(item, field, fields) === DOC_TYPE_PASSPORT ? 'pp' : 'pi'}`}>{resultCellValue(item, field, fields)}</span>
+                                        : resultCellValue(item, field, fields)}</td>
+                                ))}
+                                <td className="actions-cell">{rowActions(item)}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile view of the very same rows and the very same displayColumns.
+                Shown below 720 px by CSS alone — see scanid-app.css. */}
+            <div className="sid-card-list">
+                {sortedItems.length === 0 ? ( <div className="sid-empty">Aucune donnée trouvée.</div> ) : sortedItems.map(item => {
+                    const typeValue = endpoint === 'passports' ? resultCellValue(item, 'document_type', fields) : null;
+                    return (
+                        <div key={item.id} className="sid-card-item">
+                            <div className="sid-card-item__head">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    {endpoint === 'passports' && ( <input type="checkbox" className="sid-checkbox" onChange={() => handleToggleSelect(item.id)} checked={selectedIds.has(item.id)} aria-label={`Sélectionner ${item.first_name} ${item.last_name}`} /> )}
+                                    {typeValue !== null && ( <span className={`sid-badge sid-badge--${typeValue === DOC_TYPE_PASSPORT ? 'pp' : 'pi'}`} data-field="document_type">{typeValue}</span> )}
+                                </div>
+                                {rowActions(item)}
+                            </div>
+                            {displayColumns.filter(field => field !== 'document_type').map(field => (
+                                <div className="sid-card-item__row" key={field}>
+                                    <span className="sid-card-item__label">{columnTranslations[field] || field.replace(/_/g, ' ')}</span>
+                                    <span className="sid-card-item__value" data-field={field}>{resultCellValue(item, field, fields)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })}
+            </div>
             </div>
         </div>
     );

@@ -7,7 +7,7 @@
 import { test, expect, LIVE, EXPECTED_ROW_COUNTS } from './test-base.js';
 import {
     login, storedToken, uploadFiles, waitForProcessing, countResultRows, resultsRows,
-    SELECTORS, TEXT,
+    selectDocType, SELECTORS, TEXT,
 } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 
@@ -54,13 +54,13 @@ test.describe('ScanID — baseline', () => {
         const total = await countResultRows(page);
         expect(total).toBeGreaterThan(0);
 
-        await filter.selectOption('PASS');
+        await selectDocType(page, 'PASS');
         const passCount = await countResultRows(page);
 
-        await filter.selectOption('PI');
+        await selectDocType(page, 'PI');
         const idCardCount = await countResultRows(page);
 
-        await filter.selectOption('');
+        await selectDocType(page, '');
         expect(await countResultRows(page)).toBe(total);
 
         // Every row is one type or the other, and filtering really narrows.
@@ -75,7 +75,7 @@ test.describe('ScanID — baseline', () => {
         }
 
         // The filter narrows on the document number, which is what PASS means.
-        await filter.selectOption('PASS');
+        await selectDocType(page, 'PASS');
         for (const cells of await resultsRows(page).all()) {
             await expect(cells).toContainText(/\d{2}[A-Z]{2}\d{5}/);
         }
