@@ -1,9 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, resultCellValue, DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
+import { prepareFileForUpload } from './upload/imagePrep.js';
+import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUEUE_STATUS_LABEL } from './upload/uploadQueue.js';
+import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
+import OfflineScreen from './OfflineScreen.jsx';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+// The file types the picker offers. HEIC/HEIF are added because that is what an
+// iPhone's photo library hands over; nothing that was accepted before has been
+// removed, so a PDF is still a PDF.
+const UPLOAD_ACCEPT = 'image/png, image/jpeg, image/jpg, image/heic, image/heif, application/pdf';
+
+/** Where the photo guide lives (opened in a new tab from the capture row). */
+const PHOTO_GUIDE_URL = 'https://scanid.fr/guide-photo.html';
+
+/** « 4,2 Mo » — file sizes in the queue, in French notation. */
+const formatBytes = (bytes) => {
+    if (!Number.isFinite(bytes)) return '';
+    if (bytes < 1024) return `${bytes} o`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+    return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+};
 
 // --- STYLES COMPONENT ---
 // Only what the design system does not cover: the dashboard grid, the job
@@ -216,14 +236,32 @@ export default function App() {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [user, setUser] = useState(null);
     const [view, setView] = useState('login');
-    const logout = useCallback(() => { localStorage.removeItem('token'); setToken(null); setUser(null); window.history.pushState({}, '', '/'); setView('login'); }, []);
+    const [sessionExpired, setSessionExpired] = useState(false);
+    const online = useOnlineStatus();
+    const logout = useCallback(({ expired = false } = {}) => {
+        localStorage.removeItem('token'); setToken(null); setUser(null);
+        setSessionExpired(!!expired);
+        window.history.pushState({}, '', '/'); setView('login');
+    }, []);
     const fetchUser = useCallback(async () => {
         const currentToken = localStorage.getItem('token');
         if (currentToken) {
             try {
                 const response = await fetch(`${API_URL}/users/me`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
-                if (response.ok) { const data = await response.json(); setUser(data); setView('dashboard'); } else { logout(); }
-            } catch (error) { console.error("Échec de la récupération de l'utilisateur:", error); logout(); }
+                reportNetworkResult(true);
+                if (response.ok) { const data = await response.json(); setUser(data); setView('dashboard'); setSessionExpired(false); }
+                // The server answered and refused: the session really is over.
+                // Say so on the login screen instead of dropping the user there
+                // with no explanation.
+                else { logout({ expired: true }); }
+            } catch (error) {
+                // A transport failure is NOT an expired session. This used to
+                // log the user out, so a lift or a tunnel discarded the session
+                // and everything on screen. The token is kept, the « hors ligne »
+                // screen appears, and the session resumes when the link is back.
+                console.error("Échec de la récupération de l'utilisateur:", error);
+                reportNetworkResult(false);
+            }
         } else {
             setView('login');
         }
@@ -234,14 +272,17 @@ export default function App() {
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, [fetchUser]);
+    // Back online with a session that never got to load: pick it up again.
+    useEffect(() => { if (online && token && !user) fetchUser(); }, [online, token, user, fetchUser]);
     const renderView = () => {
         switch (view) {
-            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} onShowRegistration={() => setView('signup')} />;
+            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} />;
             case 'signup': return <SelfRegistrationPage onBackToLogin={() => setView('login')} />;
             case 'dashboard': return <Dashboard user={user} logout={logout} token={token} fetchUser={fetchUser} />;
-            default: return <Login setToken={setToken} fetchUser={fetchUser} onShowRegistration={() => setView('signup')} />;
+            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} />;
         }
     };
+    const handleReconnect = useCallback(() => { reportNetworkResult(true); fetchUser(); }, [fetchUser]);
     return (
         <>
             <GlobalStyles />
@@ -251,17 +292,20 @@ export default function App() {
                     <div className="sid-topbar-right">
                         {/* The credits counter the dashboard used to show in its sidebar. */}
                         <span className="sid-credits">Crédits : {user.page_credits}</span>
-                        <button onClick={logout} className="sid-btn-ghost">Déconnexion</button>
+                        <button onClick={() => logout()} className="sid-btn-ghost">Déconnexion</button>
                     </div>
                 )}
             </header>
             <div className="sid-page"><main>{renderView()}</main></div>
+            {/* An overlay, not a replacement: the app underneath stays mounted,
+                so losing the network for a moment costs no work in progress. */}
+            {!online && <OfflineScreen onRetry={handleReconnect} />}
         </>
     );
 }
 
 // --- PAGE & VIEW COMPONENTS ---
-function Login({ setToken, fetchUser, onShowRegistration }) {
+function Login({ setToken, fetchUser, onShowRegistration, sessionExpired = false }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -278,6 +322,7 @@ function Login({ setToken, fetchUser, onShowRegistration }) {
                 const data = await response.json();
                 localStorage.setItem('token', data.access_token);
                 setToken(data.access_token);
+                reportNetworkResult(true);
                 fetchUser();
             } else {
                 if (response.status === 429) {
@@ -288,6 +333,7 @@ function Login({ setToken, fetchUser, onShowRegistration }) {
                 }
             }
         } catch (err) {
+            reportNetworkResult(false);
             setError('Une erreur est survenue. Veuillez réessayer.');
         } finally {
             setIsLoading(false);
@@ -300,6 +346,14 @@ function Login({ setToken, fetchUser, onShowRegistration }) {
                 <div className="landing-auth">
                     <div className="sid-card">
                         <h2>Connexion</h2>
+                        {/* An expired session is a prompt to sign in again, not
+                            a silent return to the login form. Informational, so
+                            it never competes with a real credentials error. */}
+                        {sessionExpired && !error && (
+                            <p className="sid-alert sid-alert--info sid-session-expired">
+                                Votre session a expiré. Veuillez vous reconnecter pour continuer.
+                            </p>
+                        )}
                         {error && <p className="sid-alert sid-alert--err">{error}</p>}
                         <form onSubmit={handleSubmit}>
                             <div className="form-group">
@@ -582,12 +636,68 @@ function AccountEditor({ user, token, fetchUser }) {
 }
 
 function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
-    const [file, setFile] = useState(null);
+    const [files, setFiles] = useState([]);
     const [error, setError] = useState('');
     const [destination, setDestination] = useState('');
     const [destinations, setDestinations] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
+    const [queueItems, setQueueItems] = useState([]);
     const fileInputRef = useRef(null);
+    const cameraInputRef = useRef(null);
+
+    // Read by the queue's worker, which is created once and must not close over
+    // a stale render's props or destination.
+    const onUploadRef = useRef(onUpload);
+    const destinationRef = useRef(destination);
+    useEffect(() => { onUploadRef.current = onUpload; }, [onUpload]);
+    useEffect(() => { destinationRef.current = destination; }, [destination]);
+
+    // Prepared (rotated / downscaled) bytes, keyed by queue item id, so a retry
+    // does not decode and re-encode the same photo again. In memory only, and
+    // dropped with the queue.
+    const preparedRef = useRef(new Map());
+
+    const queueRef = useRef(null);
+    if (queueRef.current === null) {
+        queueRef.current = new UploadQueue({
+            upload: async (item, ctx) => {
+                let prepared = preparedRef.current.get(item.id);
+                if (!prepared) {
+                    prepared = (await prepareFileForUpload(item.file)).file;
+                    preparedRef.current.set(item.id, prepared);
+                }
+                const formData = new FormData();
+                formData.append('file', prepared);
+                if (destinationRef.current) { formData.append('destination', destinationRef.current); }
+                return onUploadRef.current(formData, prepared, ctx.onProgress);
+            },
+            onBatchSettled: () => setUploadBusy(false),
+        });
+    }
+    const queue = queueRef.current;
+
+    useEffect(() => {
+        const unsubscribe = queue.subscribe(setQueueItems);
+        setQueueItems(queue.snapshot());
+        return unsubscribe;
+    }, [queue]);
+
+    // A document waiting on a phone is a document stored on a phone: the queue
+    // dies with the component, and so do the prepared bytes.
+    useEffect(() => () => {
+        queue.clear();
+        preparedRef.current.clear();
+        setUploadBusy(false);
+    }, [queue]);
+
+    // The job monitor publishes {jobId: status} after each poll; that is what
+    // moves a document from « Traitement » to « Terminé ». Ids and statuses
+    // only — no extracted data crosses this event.
+    useEffect(() => {
+        const onSnapshot = (event) => queue.applyJobStatuses(event.detail || {});
+        window.addEventListener('ocr-jobs-snapshot', onSnapshot);
+        return () => window.removeEventListener('ocr-jobs-snapshot', onSnapshot);
+    }, [queue]);
 
     useEffect(() => {
         const fetchDestinations = async () => {
@@ -600,7 +710,13 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
     }, [token]);
 
     const handleFileChange = (e) => {
-        if (e.target.files && e.target.files.length > 0) { setFile(e.target.files[0]); setError(''); }
+        if (e.target.files && e.target.files.length > 0) {
+            setFiles(Array.from(e.target.files));
+            setError('');
+        }
+        // Allow the same file to be chosen twice in a row (the camera hands
+        // back the same name every time).
+        e.target.value = '';
     };
 
     const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
@@ -609,22 +725,47 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
     const handleDrop = (e) => {
         e.preventDefault(); e.stopPropagation(); setIsDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const droppedFile = e.dataTransfer.files[0];
-            const fileType = droppedFile.type;
-            if (fileType === 'application/pdf' || fileType.startsWith('image/')) { setFile(droppedFile); setError(''); } else { setError('Type de fichier non supporté. Veuillez télécharger une image ou un PDF.'); }
+            const dropped = Array.from(e.dataTransfer.files);
+            const accepted = dropped.filter(candidate =>
+                candidate.type === 'application/pdf' || candidate.type.startsWith('image/')
+                // An iPhone HEIC often arrives with an empty type; the byte
+                // sniffing in imagePrep.js is what actually decides.
+                || /\.hei[cf]$/i.test(candidate.name));
+            if (accepted.length > 0) { setFiles(accepted); setError(''); }
+            if (accepted.length !== dropped.length) { setError('Type de fichier non supporté. Veuillez télécharger une image ou un PDF.'); }
         }
     };
 
     const triggerFileInput = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
-    const handleReset = () => { setFile(null); setDestination(''); setError(''); };
+    const triggerCamera = () => { if (cameraInputRef.current) { cameraInputRef.current.click(); } };
+    const handleReset = () => {
+        setFiles([]); setDestination(''); setError('');
+        queue.clear(); preparedRef.current.clear();
+    };
+    const handleCancel = () => {
+        // Stop the batch and drop the in-flight request together, so nothing
+        // reappears in the list after the current transfer unwinds.
+        queue.clear(); preparedRef.current.clear(); setFiles([]);
+        onCancelUpload();
+    };
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!file) { setError('Veuillez sélectionner un fichier à télécharger.'); return; }
-        const formData = new FormData();
-        formData.append('file', file);
-        if (destination) { formData.append('destination', destination); }
-        onUpload(formData, file);
+        if (files.length === 0) { setError('Veuillez sélectionner un fichier à télécharger.'); return; }
+        setError('');
+        queue.enqueue(files);
+        setFiles([]);
+        setUploadBusy(true);
+        queue.run();
     };
+    const handleRetryFailed = () => {
+        if (queue.retryFailed().length === 0) return;
+        setUploadBusy(true);
+        queue.run();
+    };
+    const hasFailed = queueItems.some(item => item.status === QUEUE_STATUS.failed);
+    const readyLabel = files.length === 1
+        ? `Fichier prêt : ${files[0].name}`
+        : `Fichiers prêts : ${files.length}`;
 
     return (
         <div className="sid-card">
@@ -640,18 +781,60 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
                 <div className="form-group">
                     <label className="sid-label">Document (Image ou PDF)</label>
                     <div className={`sid-dropzone ${isDragging ? 'is-dragover' : ''}`} onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileInput}>
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/jpg, application/pdf" style={{ display: 'none' }} />
+                        {/* No `capture` here: this is the picker, and on a phone
+                            `capture` replaces the photo library with the camera.
+                            The camera has its own control below. */}
+                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept={UPLOAD_ACCEPT} multiple style={{ display: 'none' }} />
                         <UploadIcon />
-                        <strong>{file ? `Fichier prêt : ${file.name}` : "Cliquez ou glissez votre fichier ici"}</strong>
-                        {!file && <small>PNG, JPG ou PDF jusqu'à 10Mo</small>}
+                        <strong>{files.length > 0 ? readyLabel : "Cliquez ou glissez vos fichiers ici"}</strong>
+                        {files.length === 0 && <small>PNG, JPG, HEIC ou PDF jusqu'à 10Mo</small>}
+                    </div>
+                    <div className="sid-capture">
+                        {/* capture="environment" asks for the rear camera. */}
+                        <input type="file" ref={cameraInputRef} onChange={handleFileChange} accept={UPLOAD_ACCEPT} capture="environment" multiple style={{ display: 'none' }} className="sid-capture__input" />
+                        <button type="button" onClick={triggerCamera} className="sid-btn-outline sid-capture__button">Prendre une photo</button>
+                        <a className="sid-capture__guide" href={PHOTO_GUIDE_URL} target="_blank" rel="noopener noreferrer">Guide : réussir la photo de votre document</a>
                     </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.6rem', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={isUploading ? onCancelUpload : handleReset} className="sid-btn-outline">{isUploading ? "Annuler l'envoi" : 'Annuler'}</button>
+                    <button type="button" onClick={isUploading ? handleCancel : handleReset} className="sid-btn-outline">{isUploading ? "Annuler l'envoi" : 'Annuler'}</button>
                     {/* Disabled while uploading: a double-click used to create two jobs and burn double credits. */}
-                    <button type="submit" className="sid-btn" disabled={!file || isUploading}>{isUploading ? 'Envoi en cours…' : "Lancer l'analyse"}</button>
+                    <button type="submit" className="sid-btn" disabled={files.length === 0 || isUploading}>{isUploading ? 'Envoi en cours…' : "Lancer l'analyse"}</button>
                 </div>
             </form>
+            {queueItems.length > 0 && (
+                <div className="sid-queue">
+                    <div className="sid-queue__head">
+                        <span className="sid-queue__title">Envoi des documents</span>
+                        {hasFailed && (
+                            <button type="button" className="sid-btn-outline" onClick={handleRetryFailed}>
+                                Réessayer les échecs
+                            </button>
+                        )}
+                    </div>
+                    <ul className="sid-queue__list">
+                        {queueItems.map(item => (
+                            <li key={item.id} className="sid-queue__item" data-queue-status={item.status}>
+                                <div className="sid-queue__row">
+                                    <div className="sid-queue__name">
+                                        {item.name}
+                                        <span className="sid-queue__size">{formatBytes(item.size)}</span>
+                                    </div>
+                                    <span className={`sid-chip sid-chip--${QUEUE_STATUS_CHIP[item.status]}`}>
+                                        {QUEUE_STATUS_LABEL[item.status]}
+                                    </span>
+                                </div>
+                                {(item.status === QUEUE_STATUS.uploading || item.status === QUEUE_STATUS.processing) && (
+                                    <div className="sid-progress sid-queue__progress">
+                                        <div style={{ width: `${item.progress}%` }} />
+                                    </div>
+                                )}
+                                {item.error && <p className="sid-queue__error">{item.error}</p>}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
@@ -682,6 +865,13 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, up
                     const prev = prevJobs.find(p => p.id === job.id);
                     return (prev && job.status === 'processing' && (prev.progress || 0) > (job.progress || 0))
                         ? { ...job, progress: prev.progress } : job;
+                }));
+                // Publish {jobId: status} so the upload queue can move a
+                // document from « Traitement » to « Terminé » when its OCR job
+                // really finished. Ids and statuses only — no extracted data
+                // travels on this event.
+                window.dispatchEvent(new CustomEvent('ocr-jobs-snapshot', {
+                    detail: Object.fromEntries(data.map(job => [job.id, job.status])),
                 }));
                 let hasNewCompletion = false;
                 data.forEach(job => {
@@ -903,7 +1093,26 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
 
     // --- SCROLL REF ---
     const jobMonitorRef = useRef(null);
-    
+
+    // --- OBJECT URLs ---
+    // A downloaded export is a blob of identity data held alive by its object
+    // URL for as long as the document lives. They used to be created and never
+    // revoked, so every export leaked one until the tab was closed. Every URL
+    // is registered here, released shortly after the download starts, and
+    // revoked outright when this view goes away.
+    const objectUrlsRef = useRef(new Set());
+    const trackObjectUrl = (url) => { objectUrlsRef.current.add(url); return url; };
+    const releaseObjectUrl = (url) => {
+        // Not synchronously: revoking in the same tick as click() cancels the
+        // download in Chrome. The unmount below is the backstop.
+        setTimeout(() => { if (objectUrlsRef.current.delete(url)) URL.revokeObjectURL(url); }, 1500);
+    };
+    useEffect(() => {
+        const urls = objectUrlsRef.current;
+        return () => { urls.forEach(url => URL.revokeObjectURL(url)); urls.clear(); };
+    }, []);
+
+
     // --- SORTING STATE ---
     const [sortConfig, setSortConfig] = useState([]); // Array of { key, direction }
 
@@ -959,7 +1168,13 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     };
     
     const handleSave = () => { setEditingItem(null); setIsCreating(false); setSelectedIds(new Set()); fetchData(); };
-    const handleUpload = (formData, fileObj) => {
+    // One document per request — the API contract is untouched. What changed is
+    // that this now RESOLVES or REJECTS instead of alerting, so the queue that
+    // calls it can retry a transport failure and show the outcome per document.
+    // A rejection with `retriable` is a network problem worth another attempt;
+    // anything the server actually answered (« Crédits insuffisants », a
+    // rejected file) is final — repeating it would spend credits for nothing.
+    const handleUpload = (formData, fileObj, onProgress) => new Promise((resolve, reject) => {
         setUploadingFile(fileObj); setSelectedIds(new Set()); setUploadProgress(0); setIsUploadInFlight(true);
         // XMLHttpRequest instead of fetch: fetch cannot report upload progress.
         const xhr = new XMLHttpRequest();
@@ -969,14 +1184,22 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         // Stall watchdog instead of a flat total timeout: a slow-but-moving
         // large upload must never be aborted, only one with no bytes moving.
         let lastProgressAt = Date.now();
+        let stalled = false;
         const stallWatchdog = setInterval(() => {
             if (Date.now() - lastProgressAt > 60000) {
                 clearInterval(stallWatchdog);
-                alert('Le téléchargement semble bloqué et a été annulé. Vérifiez votre connexion et réessayez.');
+                stalled = true;
                 xhr.abort();
             }
         }, 5000);
-        xhr.upload.onprogress = (e) => { lastProgressAt = Date.now(); if (e.lengthComputable) { setUploadProgress(Math.round((e.loaded / e.total) * 100)); } };
+        xhr.upload.onprogress = (e) => {
+            lastProgressAt = Date.now();
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                setUploadProgress(percent);
+                if (onProgress) onProgress(percent);
+            }
+        };
         xhr.onload = () => {
             clearInterval(stallWatchdog);
             uploadXhrRef.current = null;
@@ -990,17 +1213,28 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                     }
                 }, 100);
                 setTimeout(() => { setUploadingFile(null); }, 2000);
+                let jobId = null;
+                try { jobId = JSON.parse(xhr.responseText).id ?? null; } catch { /* non-JSON success body */ }
+                resolve({ jobId });
             } else {
                 let detail = 'Erreur inconnue';
                 try { detail = JSON.parse(xhr.responseText).detail || detail; } catch { /* non-JSON error body */ }
-                alert(`Erreur de téléchargement: ${detail}`);
                 setUploadingFile(null);
+                reject(new Error(`Erreur de téléchargement : ${detail}`));
             }
         };
-        xhr.onerror = () => { clearInterval(stallWatchdog); uploadXhrRef.current = null; setIsUploadInFlight(false); alert('Une erreur inattendue est survenue lors du téléchargement.'); setUploadingFile(null); };
-        xhr.onabort = () => { clearInterval(stallWatchdog); uploadXhrRef.current = null; setIsUploadInFlight(false); setUploadingFile(null); };
+        xhr.onerror = () => {
+            clearInterval(stallWatchdog); uploadXhrRef.current = null; setIsUploadInFlight(false); setUploadingFile(null);
+            reject(new RetriableUploadError('Connexion interrompue pendant le téléchargement.'));
+        };
+        xhr.onabort = () => {
+            clearInterval(stallWatchdog); uploadXhrRef.current = null; setIsUploadInFlight(false); setUploadingFile(null);
+            reject(stalled
+                ? new RetriableUploadError('Le téléchargement semble bloqué. Vérifiez votre connexion.')
+                : new Error("Envoi annulé."));
+        };
         xhr.send(formData);
-    };
+    });
     const handleCancelUpload = () => { if (uploadXhrRef.current) { uploadXhrRef.current.abort(); } };
     const handleJobComplete = useCallback(() => { fetchData(); }, [fetchData]);
     const handleCancel = () => { setEditingItem(null); setIsCreating(false); setSelectedIds(new Set()); }
@@ -1047,9 +1281,10 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                 const response = await fetch(`${API_URL}/export/data/selection?format=${format}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ passport_ids: Array.from(selectedIds) }) });
                 if (!response.ok) { const err = await response.json(); alert(`Échec de l'exportation: ${err.detail}`); return; }
                 const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
+                const url = trackObjectUrl(URL.createObjectURL(blob));
                 const link = document.createElement('a'); link.href = url; link.setAttribute('download', downloadFilename(response.headers.get('content-disposition'), 'selection_passeports', format));
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                releaseObjectUrl(url);
             } catch (err) { alert("Une erreur est survenue lors de l'exportation."); }
         } else {
             // -- EXPORT FILTERED (Server-Side, CSV or Excel; honours the type filter) --
@@ -1057,7 +1292,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             if (response) {
                 const blob = await response.blob();
                 const filename = downloadFilename(response.headers.get('content-disposition'), 'passports_export', format);
-                const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+                const url = trackObjectUrl(window.URL.createObjectURL(blob)); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+                releaseObjectUrl(url);
                 setPreviewData(null);
             }
         }

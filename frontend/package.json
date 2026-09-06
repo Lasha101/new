@@ -17,11 +17,14 @@
     "test:e2e:mobile": "playwright test --project=mobile-small --project=mobile-375",
     "test:e2e:desktop": "playwright test --project=desktop",
     "test:e2e:ui": "playwright test --ui",
-    "test:fixtures": "node tests/fixtures/generate.mjs --force"
+    "test:fixtures": "node tests/fixtures/generate.mjs --force",
+    "icons": "node scripts/generate-icons.mjs",
+    "test:e2e:pwa": "playwright test --project=pwa"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
+    "heic2any": "^0.0.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -38,6 +41,7 @@
     "globals": "^16.3.0",
     "jpeg-js": "^0.4.4",
     "postcss": "^8.5.6",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vite-plugin-pwa": "^1.3.0"
   }
 }

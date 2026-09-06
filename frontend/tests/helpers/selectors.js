@@ -23,10 +23,26 @@ export const SELECTORS = {
     creditBadge: '.sid-credits',
     navButtons: '.dashboard-nav .nav-button',
 
-    // Upload card
+    // Upload card. The picker lives inside the drop zone; the camera input sits
+    // beside it so `capture` does not take the photo library away from the
+    // picker (Package B — see SCANID-HANDOVER.md).
     uploadCard: '.sid-dropzone',
     fileInput: '.sid-dropzone input[type="file"]',
+    cameraInput: '.sid-capture input[type="file"]',
+    cameraButton: '.sid-capture__button',
+    photoGuideLink: '.sid-capture__guide',
     destinationInput: 'input[list="destination-datalist-ocr"]',
+
+    // Upload queue (Package B)
+    queue: '.sid-queue',
+    queueItem: '.sid-queue__item',
+    queueChip: '.sid-queue__item .sid-chip',
+    queueError: '.sid-queue__error',
+    retryFailed: '.sid-queue__head .sid-btn-outline',
+
+    // PWA
+    offlineScreen: '.sid-offline',
+    sessionExpired: '.sid-session-expired',
 
     // OCR job monitor
     jobMonitor: '.job-monitor',

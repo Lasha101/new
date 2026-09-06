@@ -345,3 +345,301 @@ card view needs a sort control and a select-all.
 
 Everything under "Cannot be automated" above, plus Package 0's list in
 `frontend/tests/README.md`. See `SCANID-HUMAN-ONLY.md` for the full checklist.
+
+---
+
+## Handover — Package B — Mobile capture & PWA
+
+- **Branch:** `feat/mobile-pwa` (branched from `feat/design-system`, whose work is
+  now committed as `05c40e8` — Package A was uncommitted when this session
+  started, and `git status` had to be clean before branching. Same situation, and
+  same resolution, as Package A faced with Package 0.)
+- **Date:** 2026-09-06
+- **Scope:** `frontend/` only. No backend file, no `deploy/`, no nginx config, no
+  `ops/`. `src/scanid-app.css` is **byte-identical** to Package A's.
+
+### Test suites and their status
+
+| Suite | Command | Result |
+|---|---|---|
+| Unit (`node --test`) | `npm test` | **67 passed, 0 failed** (30 from Package A + 37 new: 21 `fileSniff`, 16 `uploadQueue`) |
+| E2E, 4 projects | `npm run test:e2e` | **310 passed, 1 skipped, 0 failed** (was 192 over 3 projects) |
+| Build | `npm run build` | clean; precache 48 entries / 771 KiB |
+| Lint | `npm run lint` | the **same 7 pre-existing** errors in `App.jsx`. No new ones. |
+
+The one skip is deliberate and named in the spec — see "Cannot be automated" #1.
+
+**Re-verified after the fact.** Every row above was re-run from the working tree
+in a separate pass and reproduced exactly: 67/67 unit, 310 passed + 1 skipped
+over the four projects (2.7 min, exit 0), the same 48-entry / 771.45 KiB
+precache, the same 7 lint errors. The compression, EXIF-band and storage figures
+quoted further down were re-measured in that pass and matched to the byte and to
+the decimal; only the retry delays differ run to run, and that is jitter, not
+behaviour (see the queue paragraph). Four independent audits were run alongside
+the suites, none of which depend on the suites being honest:
+
+- **Every `fetch` / `xhr.open` call site is byte-identical to Package A's**, as
+  is the multipart field set, and the top-level declaration list differs only by
+  three additions (`formatBytes`, `PHOTO_GUIDE_URL`, `UPLOAD_ACCEPT`) — nothing
+  removed, nothing renamed. That is the functionality-preservation claim checked
+  mechanically rather than asserted.
+- **`src/scanid-app.css` is byte-identical to `05c40e8`** (`git diff --quiet`),
+  and `index.html` differs by exactly the two permitted lines.
+- **The built `dist/sw.js` registers one route** — the shell NavigationRoute with
+  `denylist:[/^\/api\//,/^\/events/]` — and its precache manifest is 48 URLs:
+  40 `woff2`, 3 `png`, 1 each of `webmanifest`, `svg`, `js`, `html`, `css`. No
+  endpoint, and no `heic2any`.
+- **The only storage write in the whole of `src/` is `localStorage['token']`**
+  (four call sites in `App.jsx`, all auth). Grepping every storage API across
+  `src/` returns nothing else.
+
+### What changed
+
+```
+frontend/vite.config.js          VitePWA (generateSW). ALLOW-LIST precache,
+                                 runtimeCaching: [] — nothing may grow a strategy
+                                 that matches an upload by pattern.
+frontend/index.html              +2 lines: theme-color meta, apple-touch-icon.
+                                 The manifest <link> is injected by the plugin.
+frontend/public/icons/*.png      NEW. 192, 512, 512-maskable.
+frontend/scripts/generate-icons.mjs  NEW. Rasterises them with Playwright's
+                                 Chromium (already a devDependency). `npm run icons`.
+frontend/src/upload/fileSniff.js     NEW, pure/browser-free: magic bytes, EXIF
+                                 orientation, EXIF stripping, SOF dimensions,
+                                 orientation transforms, resize arithmetic.
+frontend/src/upload/imagePrep.js     NEW, browser-only: HEIC→JPEG, downscale,
+                                 rotate. Never drops a file.
+frontend/src/upload/uploadQueue.js   NEW, framework-free: the batch queue.
+frontend/src/pwa.js              NEW: SW registration + update-on-idle, and the
+                                 online/offline signal.
+frontend/src/OfflineScreen.jsx   NEW: the French « hors ligne » overlay.
+frontend/src/mobile-pwa.css      NEW, ~120 lines. Justified in its own header.
+frontend/src/main.jsx            +2 imports (mobile-pwa.css, registerServiceWorker).
+frontend/src/App.jsx             Uploader: multiple + camera + guide link + queue.
+                                 handleUpload: resolves/rejects instead of alerting.
+                                 fetchUser: network failure ≠ expired session.
+                                 Object URLs registered and revoked.
+                                 OcrJobMonitor publishes {jobId: status}.
+frontend/playwright.config.js    4th project `pwa` + a second webServer (build+preview).
+frontend/eslint.config.js        Node globals extended to src/**/*.test.js, scripts/.
+frontend/tests/                  helpers/imagePrep.js NEW; selectors + uploadFiles
+                                 extended; e2e/capture, e2e/queue, e2e/privacy,
+                                 pwa/pwa.spec.js NEW; README updated.
+```
+
+### Decisions the next package must know
+
+1. **`capture="environment"` is on a SECOND input, not the existing one.** The
+   brief's snippet puts `capture` on the one file input. On a phone `capture`
+   *replaces* the photo library with the camera — so a single input carrying it
+   would have removed the ability to pick an existing file, a feature the app
+   has today, and would have contradicted the brief's own "HEIC mainly appears
+   from the library picker; both paths must work." The drop zone keeps the
+   picker (`SELECTORS.fileInput`); a « Prendre une photo » button beside it owns
+   the capture input (`SELECTORS.cameraInput`). Both carry `multiple` and the
+   same `accept`.
+2. **`accept` grew, it never shrank:** `image/png, image/jpeg, image/jpg,
+   image/heic, image/heif, application/pdf`. PDFs are still accepted and are
+   never compressed.
+3. **The compression thresholds are stated, not implicit.** Long edge 2500 px,
+   JPEG quality 0.85, and files **≤ 1 Mo that need no rotation are uploaded
+   byte-for-byte** (`SKIP_BYTES` in `imagePrep.js`). A file that needs rotating
+   is processed at any size — that is a correctness fix, not an optimisation.
+4. **The stated compressed budget is WebKit's number, not Chromium's.** The same
+   4 349 263-byte fixture at the same 2500×1666 comes out 1 122 349 bytes on
+   Chromium and 1 259 009 on WebKit. The spec asserts < 1 400 000 so it holds on
+   both. Do not tighten it to the Chromium figure.
+5. **EXIF is handled per file, from ground truth, not from a browser sniff.**
+   `readJpegDimensions()` reads the SOF segment for the size the file is *stored*
+   at; if the decode comes back with those two the other way round, the browser
+   applied the orientation and applying it again would rotate twice. Only when
+   that comparison cannot decide (a square image, or orientations 2/3/4, which
+   leave no dimensional trace) does a cached one-off probe answer.
+6. **`createImageBitmap(blob, {imageOrientation: 'none'})` does not work any
+   more** — the value was dropped from the specification and current Chromium
+   ignores it, returning an oriented bitmap regardless. The explicit fallback is
+   therefore entered by **stripping the APP1/Exif segment** (`stripExifSegments`)
+   and rotating with our own transform. `prepareFileForUpload(file,
+   {letBrowserOrient: false})` forces that path, and a spec asserts it produces
+   pixel-identical output to the automatic one.
+7. **`onUpload` is now a Promise.** `CrudManager.handleUpload(formData, file,
+   onProgress)` resolves `{jobId}` on 2xx and rejects otherwise. A
+   `RetriableUploadError` (transport failure or a stalled transfer) is retried
+   twice with 1 s then 3 s of backoff; **an HTTP answer is never retried** —
+   « Crédits insuffisants » repeated three times would spend credits for nothing.
+8. **Three `alert()` calls in the upload path are gone**, replaced by the per-
+   document error line in the queue (same French text). With a batch of ten, one
+   modal per failure per attempt was not usable. Nothing else about the upload
+   changed: same endpoint, same multipart shape, same one-file-per-request.
+9. **`OcrJobMonitor` dispatches `ocr-jobs-snapshot`** (a `{jobId: status}` map,
+   ids and statuses only) after every poll. That is how a queue item reaches
+   « Terminé » rather than stopping at « Traitement ». It uses the same window-
+   event bus the SSE code already used, so `CrudManager` does not re-render every
+   2 s. If you move the job monitor, keep that event.
+10. **The service worker's config is an allow-list and `runtimeCaching` is
+    empty.** The built worker registers exactly one route: a NavigationRoute for
+    the shell, with `denylist: [/^\/api\//, /^\/events/]`. Adding a runtime
+    caching strategy — any at all — is how this stops being true. The
+    `heic2any` chunk (1.3 Mo) is excluded via `globIgnores` and fetched on demand.
+11. **The PWA suite runs on a production build, on its own port.** Project `pwa`,
+    `testDir: tests/pwa`, `baseURL: http://127.0.0.1:4173`, served by a second
+    `webServer` entry running `npm run build && npm run preview`. The service
+    worker, the manifest and the icons do not exist in dev, and `devOptions` is
+    deliberately off.
+12. **`page.waitForFunction` with an `async` callback is a trap** and cost real
+    debugging time here: the callback returns a Promise, which is truthy, so the
+    wait resolves on the first poll without ever reading the result. Every wait
+    in `tests/pwa/` uses `expect.poll` instead. Do not "simplify" it back.
+13. **The token is still in `localStorage`** — reported, not changed, exactly as
+    the brief instructs. Moving it to an HttpOnly cookie is Package C.
+
+### The one thing this package could not fix — Package C owns it
+
+**`GET /events` carries the session token in its query string.**
+`App.jsx` opens `new EventSource(\`${API_URL}/events?token=${token}\`)` because
+`EventSource` cannot set headers, and `backend/main.py:570` declares
+`token: str = Query(...)` — **mandatory server-side**. A front-end-only change to
+a `fetch`-based SSE reader with an `Authorization` header would be rejected by
+the current endpoint, and touching the backend is outside this package. This is
+flagged rather than half-applied, as the "no orphaned work" rule requires.
+
+`tests/e2e/privacy.spec.js` asserts the current, honest state: across a full
+session **every** URL carrying the token is `/events`, and nothing else. When
+Package C accepts the token from a header or a short-lived ticket, that spec's
+`expect(leaking.length).toBeGreaterThan(0)` goes red and is deleted — the test is
+written so the fix cannot pass unnoticed.
+
+### Verified by tests I ran
+
+Numbers below are printed by the suites themselves on every run, not quoted from
+memory.
+
+**Compression, measured end to end**
+
+| | Chromium | WebKit |
+|---|---|---|
+| 4 349 263 B, 3200×2133 | → **1 122 349 B**, 2500×1666 | → **1 259 009 B**, 2500×1666 |
+| multipart body actually POSTed | **1 122 542 B** | not measurable (see below) |
+| `small.jpg` 59 544 B | untouched | untouched |
+| `document.pdf` | untouched | untouched |
+| `document.png` 339 038 B | untouched (under threshold) | untouched |
+
+**EXIF orientation, proven on pixels and not on dimensions**
+
+| Orientation | Output | Edge-strip luminance | Reading |
+|---|---|---|---|
+| 6 (90° CW) | 1600×1200 (portrait → landscape) | left **161.5**, right **220.0** | the MRZ band moved from the bottom to the **left**, as a 90° CW rotation requires |
+| 3 (180°) | 1200×1600 — **unchanged** | top **161.6**, bottom **220.0** | the dimensions prove nothing here; the band moved bottom → **top** |
+| 1 | untouched | — | nothing to rotate |
+| 6, fallback forced | identical to row 1, `orientationSource: 'exif'` | | the stripped-EXIF path really ran |
+
+**Queue, against the real XHR**: the configured backoff is `RETRY_DELAYS_MS =
+[1000, 3000]`, and the spec asserts *strictly increasing*, not exact values,
+because the observed delays carry scheduler jitter — **1064 ms then 3029 ms** on
+the implementation run, **1029 ms then 3016 ms** on the verification re-run.
+Three attempts either way; the item reached `failed` with
+« Connexion interrompue pendant le téléchargement. » on a `.sid-chip--failed`.
+In a mixed batch of three, `small.jpg` and `document.pdf` were sent **once each**
+and finished, `document.png` was sent three times and failed; « Réessayer les
+échecs » then sent **`['document.png']` and nothing else**. A 403
+« Crédits insuffisants » was sent **once** and never retried.
+
+**Storage after a full session** (10 uploads, results viewed, both exports
+downloaded, on the built app with the worker running):
+`localStorage=['token']`, `sessionStorage` empty, **0** IndexedDB databases,
+**48** Cache Storage entries — every one matching
+`\.(js|css|html|svg|woff2|png|webmanifest)$`, none containing `upload-and-extract`,
+`/passports`, `/export`, `/ocr/jobs` or `/users/me`. Each cached response body
+was then read and searched for all 18 identity strings the session displayed
+(the five seeded names and numbers plus the extracted one): **no match**.
+
+Also proven by a run: the picker accepts HEIC/HEIF and still accepts PNG/JPG/PDF,
+and carries `multiple`; the camera input carries `capture="environment"` and the
+picker does not; the guide link points at `https://scanid.fr/guide-photo.html`,
+opens in a new tab and is `rel="noopener"`; a genuine iPhone `ftyp` box is
+detected as HEIC while an AVIF sharing the `mif1` brand is not; a `.HEIC` file
+that fails conversion is uploaded **as the original object**, byte count intact;
+a JPEG named `.HEIC` is treated as a JPEG; the manifest is served as
+`application/manifest+json` with every required field; all three icons return 200
+and measure exactly what they declare; the worker precaches exactly the 48 shell
+entries in `dist/sw.js` and nothing more; an upload plus a results read plus a
+download add **zero** cache entries; a second visit still loads; offline, the
+shell reloads from the worker while **no** result comes back; a network blip
+keeps the session and the dashboard mounted; a 401 shows
+« Votre session a expiré… »; every object URL created by an export or by image
+preparation is revoked; the queue is empty after a reload; the upload control is
+reachable with no navigation tap at 375 px; and neither the queue nor the offline
+screen overflows horizontally at 360 px, with a ≥ 44 px retry button.
+
+### Cannot be automated
+
+1. **The size of a large multipart body on WebKit.** Playwright's WebKit does not
+   report it — `postData()` returns 193 bytes for a 1.2 Mo upload,
+   `postDataBuffer()` returns `null`, `sizes().requestBodySize` returns 0. The
+   end-to-end "the compressed bytes are what is actually sent" assertion is
+   therefore **skipped on `mobile-375`**, with that reason in the spec, rather
+   than left to pass vacuously. Compression itself *is* proven there, in-page.
+2. **A real HEIC from a physical iPhone photo library.** The suite proves the
+   *detection* against a genuine `ftyp` box and proves the never-drop failure
+   path. `heic2any` has never decoded a real iPhone HEIC in this repository.
+3. **Real 4G timing, and the under-ten-second target.** Playwright cannot
+   reproduce a cellular link. What is known is the payload: 4.3 Mo → 1.1 Mo.
+4. **OCR accuracy on real documents after compression.** Whether Vision still
+   reads a genuine MRZ at 2500 px and quality 0.85 needs specimen documents. The
+   fixtures carry no readable MRZ by design.
+5. **« Add to Home Screen » producing a standalone window**, and everything else
+   about installation: Playwright never installs the PWA. The manifest is
+   validated field by field and every icon fetched and measured — that is the
+   limit of automation here.
+6. **iOS Safari storage behaviour.** WebKit in Playwright is not Mobile Safari:
+   different eviction rules, different PWA storage limits, no real Photos picker.
+7. **Lighthouse PWA and performance scores.** No Lighthouse CI exists in this
+   repository and setting one up was outside this package, so **no score is
+   claimed**.
+8. **The update-on-deploy path end to end.** `registerServiceWorker()` reloads on
+   `controllerchange`, deferred while an upload is in flight. The deferral logic
+   is small and readable but is not covered by a test: producing a genuine second
+   deploy mid-upload inside a Playwright run was not something I could do
+   honestly, and a mocked `controllerchange` would only test the mock.
+
+### Findings — observed, deliberately not fixed
+
+1. **`index.html` still says `<html lang="en">` and `<title>Vite + React</title>`.**
+   The brief limits this file to the manifest link and the theme-color meta, so
+   only those (plus the apple-touch-icon, part of the icon step) were touched.
+   The manifest now declares `lang: "fr"` while the document says `en` — a real
+   accessibility defect that is now also an inconsistency. It is two lines.
+2. **The PWA icons carry Vite's logo.** There is no ScanID mark anywhere in the
+   repository, `scanid.fr` answers 403 with no favicon, and inventing one was
+   forbidden. Asked, the operator chose to use the existing `public/vite.svg`
+   source as-is. `scripts/generate-icons.mjs` carries a note: drop a real logo in
+   and rerun `npm run icons`. **This should not ship to production as is.**
+3. **`ProgressBar` still renders « 12% - Upload »** — Package A's finding, still
+   the one English word in the UI.
+4. **The card view still has no sort control and no « tout sélectionner ».**
+   Package A asked Package B to decide. This brief says « Do not touch the
+   results table or card list. Finished. », so it was not touched. The decision
+   is still open, and `features.spec.js` still has the spec that asserts their
+   absence, ready to be flipped.
+5. **No upload size limit anywhere**, still — Package 0's finding. The upload
+   card now says « PNG, JPG, HEIC ou PDF jusqu'à 10Mo » and nothing enforces it.
+   Client-side compression makes an oversized *photo* much less likely, but a
+   large PDF still goes through untouched.
+6. Package 0's other findings (server-side file-type validation, the per-IP login
+   throttle, the plaintext key in `backend/.env`) all still stand.
+
+### Anything unresolved
+
+- **Nothing is committed on this branch.** `feat/mobile-pwa` holds the work in the
+  working tree, awaiting review. Package A *was* committed (`05c40e8`) so this
+  branch had a clean base — the one thing this session changed about history.
+- **`npm run lint` still fails on the same 7 pre-existing errors** in `App.jsx`.
+  Untouched: out of scope, and reported by both previous packages.
+
+### Handed to a human
+
+Everything under "Cannot be automated", plus finding #2 — **the icons must be
+regenerated from a real ScanID logo before this reaches production**. See
+`SCANID-HUMAN-ONLY.md` and the "What these tests cannot cover" section of
+`frontend/tests/README.md`, which now lists the WebKit multipart limitation, the
+install-time gap and the absent Lighthouse numbers.

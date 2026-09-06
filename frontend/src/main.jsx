@@ -16,8 +16,16 @@ import '@fontsource/inter/400-italic.css'
 
 // The design system, imported once and globally, after the fonts it references.
 import './scanid-app.css'
+// Package B additions only (upload queue, capture row, offline screen). It
+// redefines no .sid-* rule from the design system — see the header of the file.
+import './mobile-pwa.css'
 import './index.css'
 import App from './App.jsx'
+import { registerServiceWorker } from './pwa.js'
+
+// Shell-only service worker; a no-op in dev. See vite.config.js for what it is
+// allowed to cache, which is the built shell and nothing else.
+registerServiceWorker()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

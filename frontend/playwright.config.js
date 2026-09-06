@@ -39,6 +39,27 @@ if (!skipWebkit) {
     });
 }
 
+// The PWA suite needs the BUILT app: the service worker, the manifest and the
+// icons only exist after `vite build`, and a worker in front of Vite's dev
+// server would hide HMR updates. It therefore runs against `vite preview` on
+// its own port, in its own directory, and is skipped when someone points the
+// run at an external server without also providing a built one.
+const PREVIEW_URL = process.env.E2E_PREVIEW_URL || 'http://127.0.0.1:4173';
+const managedPreview = !process.env.E2E_BASE_URL && !process.env.E2E_PREVIEW_URL;
+if (managedPreview || process.env.E2E_PREVIEW_URL) {
+    projects.push({
+        name: 'pwa',
+        testDir: './tests/pwa',
+        use: {
+            ...devices['Desktop Chrome'],
+            viewport: { width: 390, height: 844 },
+            baseURL: PREVIEW_URL,
+            // A worker registered by one spec must not survive into the next.
+            serviceWorkers: 'allow',
+        },
+    });
+}
+
 export default defineConfig({
     testDir: './tests/e2e',
     globalSetup: './tests/global-setup.js',
@@ -69,12 +90,24 @@ export default defineConfig({
     projects,
 
     // Started automatically unless E2E_BASE_URL points somewhere already running.
-    webServer: process.env.E2E_BASE_URL ? undefined : {
-        command: 'npm run dev -- --port 5173 --strictPort',
-        url: 'http://127.0.0.1:5173',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-        stdout: 'ignore',
-        stderr: 'pipe',
-    },
+    // Two servers: Vite's dev server for the app suites, and a production
+    // preview for the PWA suite, which has no service worker without a build.
+    webServer: process.env.E2E_BASE_URL ? undefined : [
+        {
+            command: 'npm run dev -- --port 5173 --strictPort',
+            url: 'http://127.0.0.1:5173',
+            reuseExistingServer: !process.env.CI,
+            timeout: 120_000,
+            stdout: 'ignore',
+            stderr: 'pipe',
+        },
+        ...(managedPreview ? [{
+            command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+            url: PREVIEW_URL,
+            reuseExistingServer: !process.env.CI,
+            timeout: 180_000,
+            stdout: 'ignore',
+            stderr: 'pipe',
+        }] : []),
+    ],
 });

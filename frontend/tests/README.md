@@ -22,28 +22,33 @@ npx playwright install chromium webkit   # once
 
 npm test              # unit tests only — no browser needed (this is what CI runs)
 npm run test:unit     # same thing, explicit
-npm run test:e2e      # all three Playwright projects
+npm run test:e2e      # all four Playwright projects
 npm run test:e2e:mobile     # mobile-small + mobile-375 only
 npm run test:e2e:desktop    # desktop only
+npm run test:e2e:pwa        # the PWA suite, against a production build
 npm run test:e2e:ui         # Playwright's interactive UI
 npm run test:fixtures       # force-regenerate the fixture binaries
+npm run icons               # regenerate public/icons/*.png from public/vite.svg
 ```
 
 `npm test` is deliberately **browser-free**. The repository's CI workflow runs
 `npm test` in the frontend job on a runner with no browsers installed; making
 `test` launch Playwright would turn that job red. Run `test:e2e` explicitly.
 
-`test:e2e` starts the Vite dev server itself (`webServer` in
-`playwright.config.js`) and shuts it down afterwards. Point `E2E_BASE_URL` at a
-server you started yourself to skip that.
+`test:e2e` starts **two** servers itself (`webServer` in
+`playwright.config.js`) and shuts them down afterwards: Vite's dev server on
+5173 for the app suites, and `vite build && vite preview` on 4173 for the PWA
+suite. Point `E2E_BASE_URL` / `E2E_PREVIEW_URL` at servers you started yourself
+to skip either.
 
-### The three projects
+### The four projects
 
-| Project | Viewport | Engine | Why |
-|---|---|---|---|
-| `desktop` | 1280×800 | Chromium | The agency-desk baseline |
-| `mobile-small` | 360×640 | Chromium | The narrowest phone still in real use |
-| `mobile-375` | 375×667, DPR 2 | **WebKit** | iPhone-class. Safari differs from Chromium in file input handling, EXIF, sticky positioning and downloads |
+| Project | Viewport | Engine | Server | Why |
+|---|---|---|---|---|
+| `desktop` | 1280×800 | Chromium | dev | The agency-desk baseline |
+| `mobile-small` | 360×640 | Chromium | dev | The narrowest phone still in real use |
+| `mobile-375` | 375×667, DPR 2 | **WebKit** | dev | iPhone-class. Safari differs from Chromium in file input handling, EXIF, sticky positioning and downloads |
+| `pwa` | 390×844 | Chromium | **preview (built)** | The service worker, the manifest and the icons only exist after a build, and a worker in front of Vite's dev server would hide HMR. `testDir: tests/pwa`. |
 
 Traces, videos and screenshots are kept on failure (`test-results/`).
 
@@ -57,6 +62,7 @@ Traces, videos and screenshots are kept on failure (`test-results/`).
 | `E2E_USERNAME` | `alice` | Login used by `login(page)` |
 | `E2E_PASSWORD` | `test-password` | Its password |
 | `E2E_BASE_URL` | `http://127.0.0.1:5173` | Front end under test; set it to skip the managed dev server |
+| `E2E_PREVIEW_URL` | `http://127.0.0.1:4173` | The **built** app the `pwa` project drives; set it to skip the managed `build && preview` server |
 | `E2E_MOCK_PROCESSING_MS` | `1200` | How long a mocked OCR job "runs" |
 | `E2E_LOGIN_RETRY_MS` | `62000` | How long `login()` waits out the server's login throttle |
 | `E2E_SKIP_WEBKIT` | *(unset)* | `1` drops the `mobile-375` project — a real loss of coverage, never silent |
@@ -229,7 +235,13 @@ same way instead of counting columns by position.
 | `e2e/responsive.spec.js` | The 720 px switch, **table/card parity**, uppercase/centring, no horizontal overflow at 360/375 |
 | `e2e/design-system.spec.js` | Badges and chips driven by real data, download column order and accents, no English strings, the top bar |
 | `e2e/features.spec.js` | Everything else the app can do: sorting, selection, bulk edit, multi-delete, manual create/edit, job removal, export preview and selection exports, password toggle, registration, account edit, navigation — plus what the cards can and cannot do on a phone |
+| `e2e/capture.spec.js` | Capture controls (`multiple`, `capture="environment"`, the HEIC accept types, the photo-guide link), compression against a stated byte budget, **EXIF orientation proven on pixels**, HEIC magic-byte detection and its never-drop failure path, two-tap reachability |
+| `e2e/queue.spec.js` | The batch queue against the real transport: retry twice with a growing delay, `failed` reached, « Réessayer les échecs » touching only the failures, a mixed batch leaving the successes alone, a server refusal never retried, nothing persisted across a reload |
+| `e2e/privacy.spec.js` | The token never in a URL (except the documented `/events` case), blob URLs revoked, a network blip no longer discarding the session, an expired session prompting for re-auth, web storage after a full session |
+| `pwa/pwa.spec.js` | **Runs on the built app.** Manifest fields and content type, every icon 200 at its declared size, the worker registering and precaching exactly the shell, uploads and results creating no cache entry, the French offline screen, and the full-session storage audit (key *and* value contents, cache entry bodies included) |
 | `build/no-google-fonts.test.js` | Scans the shipped `dist/` — runs under `npm test`, not Playwright |
+| `src/upload/fileSniff.test.js` | Magic-byte detection (a real iPhone `ftyp` box, AVIF told apart from HEIC), EXIF orientation in both byte orders, EXIF stripping, the orientation transforms checked corner by corner, the resize arithmetic — all under `node --test`, no browser |
+| `src/upload/uploadQueue.test.js` | The retry policy with simulated delays: attempt counts, growing backoff, retriable vs final, `retryFailed` scope, job-status folding — `node --test` |
 
 The parity spec is the load-bearing one: the results table and the mobile card
 list render from one column definition (`PASSPORT_COLUMN_ORDER`) and one cell
@@ -260,7 +272,9 @@ If it cannot fetch them it says so and names the `sudo apt-get install` command.
 A green suite here is not full coverage. In particular:
 
 1. **Real HEIC from an iPhone.** Not generatable in CI; a synthetic file would
-   not reproduce what iOS actually uploads. Device test only.
+   not reproduce what iOS actually uploads. The suite proves that a genuine HEIC
+   `ftyp` box is *detected* and that a conversion failure uploads the original
+   rather than dropping it — it has never decoded a real HEIC. Device test only.
 2. **Real 4G / poor-network timing.** Playwright can throttle CPU and stub the
    network, but it cannot reproduce a real cellular link — packet loss, radio
    wake-up latency, a carrier proxy re-encoding images. The 60-second upload
@@ -287,3 +301,15 @@ A green suite here is not full coverage. In particular:
    completely with this suite still green.
 9. **The upload rejection paths**, because there is nothing to reject yet — see
    the fixture caveat above.
+10. **The size of a large multipart body on WebKit.** Playwright's WebKit does
+    not report it: `postData()` returns 193 bytes for a 1.2 Mo upload,
+    `postDataBuffer()` returns null and `sizes().requestBodySize` returns 0. The
+    end-to-end « the compressed bytes are what is actually sent » assertion is
+    therefore **skipped on `mobile-375`**, with the skip reason in the spec.
+    Compression itself is still proven there, in the page.
+11. **« Add to Home Screen » producing a standalone window**, and every other
+    install-time behaviour: Playwright never installs the PWA. The manifest is
+    validated field by field and every icon is fetched and measured, which is as
+    far as automation goes.
+12. **Lighthouse PWA and performance scores.** No Lighthouse CI is set up in
+    this repository, and adding one was outside this package.

@@ -38,7 +38,13 @@ export default defineConfig([
     // The test harness: Node scripts and Playwright specs. They run in Node but
     // also contain page.evaluate() callbacks that execute in the browser, so
     // both global sets apply. Nothing here renders a React component.
-    files: ['tests/**/*.js', 'tests/**/*.mjs', 'playwright.config.js'],
+    // `src/**/*.test.js` and `scripts/` are here for the same reason: unit
+    // tests beside the module they cover run under `node --test`, and the icon
+    // generator is a Node script.
+    files: [
+      'tests/**/*.js', 'tests/**/*.mjs', 'playwright.config.js',
+      'src/**/*.test.js', 'scripts/**/*.mjs',
+    ],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
     },

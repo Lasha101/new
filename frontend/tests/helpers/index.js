@@ -10,4 +10,5 @@ export {
     isLargeText, wcagAAThreshold,
 } from './color.js';
 export { readXlsx, readCsv, unzip } from './spreadsheet.js';
+export { serveFixtures, fixtureUrl, prepareInBrowser, withExifOrientation, FIXTURE_URL_PREFIX } from './imagePrep.js';
 export { SELECTORS, TEXT, TERMINAL_JOB_LABELS } from './selectors.js';

@@ -8,38 +8,29 @@ import { SELECTORS, TEXT, TERMINAL_JOB_LABELS } from './selectors.js';
  *
  * @param {import('@playwright/test').Page} page
  * @param {string[]} paths Absolute paths, e.g. from tests/fixtures.
- * @param {{submit?:boolean, destination?:string}} [options]
+ * @param {{submit?:boolean, destination?:string, camera?:boolean}} [options]
  *   `submit` also clicks « Lancer l'analyse ».
+ *   `camera` uses the capture="environment" input instead of the picker.
  *
- * The input is display:none (the drop zone forwards clicks to it), which
- * setInputFiles handles; it carries no `multiple` attribute, so more than one
- * path is rejected here with a clear message instead of a Playwright internal
- * error.
+ * Both inputs are display:none (the drop zone forwards clicks to the picker,
+ * a button to the camera), which setInputFiles handles. Package B added
+ * `multiple` to both, so a list of paths is a batch.
  */
 export async function uploadFiles(page, paths, options = {}) {
     const list = Array.isArray(paths) ? paths : [paths];
     if (list.length === 0) throw new Error('uploadFiles: no file given');
 
-    const input = page.locator(SELECTORS.fileInput);
+    const input = page.locator(options.camera ? SELECTORS.cameraInput : SELECTORS.fileInput);
     await expect(input).toBeAttached();
-
-    if (list.length > 1) {
-        const multiple = await input.evaluate(node => node.hasAttribute('multiple'));
-        if (!multiple) {
-            throw new Error(
-                `uploadFiles: ${list.length} files given, but the upload input accepts one at a time `
-                + '(no `multiple` attribute on .drop-zone input[type="file"]). '
-                + 'Upload them one by one, or update this helper when multi-file upload ships.',
-            );
-        }
-    }
 
     if (options.destination !== undefined) {
         await page.locator(SELECTORS.destinationInput).fill(options.destination);
     }
 
     await input.setInputFiles(list);
-    await expect(page.locator(SELECTORS.uploadCard)).toContainText('Fichier prêt');
+    // « Fichier prêt : nom.jpg » for one, « Fichiers prêts : 3 » for a batch.
+    await expect(page.locator(SELECTORS.uploadCard))
+        .toContainText(list.length === 1 ? 'Fichier prêt' : 'Fichiers prêts');
 
     if (options.submit) {
         await page.getByRole('button', { name: TEXT.startAnalysis }).click();
