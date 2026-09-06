@@ -71,7 +71,41 @@ export async function logout(page) {
     await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
 }
 
-/** The JWT the app stored, or null. */
+/**
+ * The session token as JAVASCRIPT can see it — which, since package C, is
+ * nothing at all.
+ *
+ * The JWT lives in an HttpOnly cookie now, so `document.cookie` and
+ * `localStorage` both come back empty by design. This helper keeps its name
+ * and its contract ("what a script on this page could steal") and therefore
+ * returns null on a healthy session: that is the security property, and the
+ * specs assert it.
+ *
+ * Use `hasSessionCookie(page)` to ask whether a session actually exists.
+ */
 export async function storedToken(page) {
-    return page.evaluate(() => window.localStorage.getItem('token'));
+    return page.evaluate(() => {
+        const stored = window.localStorage.getItem('token')
+            || window.sessionStorage.getItem('token');
+        if (stored) return stored;
+        // document.cookie cannot see an HttpOnly cookie; this is here so a
+        // regression that dropped the flag would be caught rather than pass.
+        const readable = document.cookie
+            .split(';')
+            .map(part => part.trim())
+            .find(part => part.startsWith('scanid_session='));
+        return readable ? readable.slice('scanid_session='.length) : null;
+    });
+}
+
+/** Whether the browser holds the session cookie, HttpOnly included. */
+export async function hasSessionCookie(page) {
+    const cookies = await page.context().cookies();
+    return cookies.some(cookie => cookie.name === 'scanid_session' && cookie.value);
+}
+
+/** The session cookie itself, for asserting on its flags. */
+export async function sessionCookie(page) {
+    const cookies = await page.context().cookies();
+    return cookies.find(cookie => cookie.name === 'scanid_session') || null;
 }

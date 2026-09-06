@@ -51,10 +51,50 @@ def db_session():
         engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    """Empties the shared rate-limit counters between tests.
+
+    POST /token is limited to 5/minute per IP, and every test here arrives from
+    the same address, so without this the sixth test that logs in fails with a
+    429 that has nothing to do with what it is checking. The per-account
+    lockout counter is cleared for the same reason.
+    """
+    import auth as auth_module
+    import main as main_module
+
+    def clear():
+        storage = getattr(main_module.limiter, "_storage", None)
+        reset = getattr(storage, "reset", None)
+        if callable(reset):
+            try:
+                reset()
+            except Exception:
+                pass
+        with auth_module._failures_lock:
+            auth_module._failures.clear()
+
+    clear()
+    yield
+    clear()
+
+
 @pytest.fixture()
 def client(db_session):
     # No `with` block: the lifespan (PostgreSQL bootstrap) must not run.
     return TestClient(app)
+
+
+@pytest.fixture()
+def tolerant_client(db_session):
+    """A client that returns the 500 instead of re-raising it.
+
+    TestClient defaults to raise_server_exceptions=True, which re-raises the
+    original exception in the test process — useful normally, but it makes the
+    real production response body unobservable, and that body is exactly what
+    the error-leakage test is about.
+    """
+    return TestClient(app, raise_server_exceptions=False)
 
 
 @pytest.fixture()

@@ -124,6 +124,20 @@ def update_user(db: Session, user_id: str, user_update: schemas.UserUpdate) -> O
     return get_user(db, user_id)
 
 
+def update_user_password_hash(db: Session, user_id: str, hashed_password: str) -> None:
+    """Replaces a stored password hash in place.
+
+    Used only by the transparent argon2 upgrade in auth.authenticate_user: the
+    password itself has just been verified, so this writes the new hash without
+    touching any other column. Never logs anything.
+    """
+    row = db.get(models.User, str(user_id))
+    if row is None:
+        return
+    row.hashed_password = hashed_password
+    db.commit()
+
+
 def delete_user(db: Session, user_id: str) -> Optional[Dict[str, Any]]:
     row = db.get(models.User, str(user_id))
     if row is not None:

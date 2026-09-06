@@ -26,12 +26,20 @@ const EXPORT_HEADERS = {
     destination: 'Destination', confidence_score: 'Score de Confiance',
 };
 
-const CORS_HEADERS = {
-    'access-control-allow-origin': '*',
+// The session now travels in a cookie, so every request is credentialed — and
+// a credentialed response may NOT carry `access-control-allow-origin: *`. The
+// browser drops it before the app ever sees it, which looks exactly like a
+// network failure. The real server echoes the single configured origin; the
+// mock echoes the page's own, which is the same thing under test.
+const corsHeaders = (request) => ({
+    'access-control-allow-origin': (() => {
+        try { return new URL(request.frame().url()).origin; } catch { return 'http://localhost:5173'; }
+    })(),
+    'access-control-allow-credentials': 'true',
     'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'access-control-allow-headers': '*',
+    'access-control-allow-headers': 'Authorization, Content-Type, Accept, X-Requested-With',
     'access-control-expose-headers': 'Content-Disposition',
-};
+});
 
 /** ISO date -> DD/MM/YYYY, as _format_display_date does server-side. */
 const displayDate = (value) => {
@@ -73,9 +81,27 @@ function apiPath(url) {
 }
 
 const API_PATHS = [
-    '/token', '/users/me', '/users/register', '/events', '/destinations',
+    '/token', '/logout', '/users/me', '/users/register', '/events', '/destinations',
     '/admin/filterable-users', '/admin/users', '/passports', '/ocr/jobs', '/export/data',
 ];
+
+
+/**
+ * The four composition rules of backend/password_policy.py, with the same
+ * French messages. The blocklist is not mirrored — it is a 380-entry file on
+ * the server — so the mock refuses only what composition can decide, which is
+ * every case the E2E suites exercise.
+ */
+function passwordPolicyErrors(password) {
+    const errors = [];
+    if (password.length < 12) errors.push('Le mot de passe doit contenir au moins 12 caractères.');
+    if ((password.match(/\p{Lu}/gu) || []).length < 1) errors.push('Le mot de passe doit contenir au moins 1 majuscule.');
+    if ((password.match(/\d/g) || []).length < 2) errors.push('Le mot de passe doit contenir au moins 2 chiffres.');
+    if ((password.match(/[^\p{L}\p{N}]/gu) || []).length < 2) {
+        errors.push('Le mot de passe doit contenir au moins 2 caractères spéciaux (! ? @ # $ % & * -).');
+    }
+    return errors;
+}
 
 /** True for a request the mocked backend owns (never for a Vite asset). */
 export function isApiRequest(url) {
@@ -99,11 +125,38 @@ export async function installMockApi(context, options = {}) {
     const json = (route, status, body, headers = {}) => route.fulfill({
         status,
         contentType: 'application/json',
-        headers: { ...CORS_HEADERS, ...headers },
+        headers: { ...corsHeaders(route.request()), ...headers },
         body: JSON.stringify(body),
     });
 
-    const authorized = request => request.headers().authorization === `Bearer ${state.token}`;
+    // Either credential is accepted, exactly as backend/auth.py does: the
+    // cookie is what the browser sends now, and the Bearer header is still
+    // honoured for any client that presents one.
+    //
+    // `allHeaders()`, NOT `headers()`. Playwright's `headers()` returns the
+    // non-security view of the headers and OMITS `cookie` — on Chromium it
+    // happened to be there anyway, on WebKit it never is. Reading the wrong
+    // one made every request after login look anonymous in Safari while
+    // passing in Chrome, which is the exact shape of bug the WebKit project
+    // exists to catch. `allHeaders()` is async, hence the await below.
+    //
+    // WebKit does not expose `cookie` on an INTERCEPTED request — neither
+    // `headers()` nor `allHeaders()` shows it, because Playwright reports the
+    // headers before the network stack attaches them, and a routed request
+    // never reaches that stack. Chromium happens to include it, which is why
+    // this passed there and failed in Safari. So the mock cannot validate the
+    // cookie by reading it; it tracks the session it issued instead, which is
+    // what a stand-in is for. That the cookie is genuinely what authenticates
+    // is proven server-side, against the real app, by
+    // backend/tests/test_security_hardening.py::
+    // test_the_cookie_alone_authenticates_a_request.
+    const authorized = async (request) => {
+        if (state.session) return true;
+        const headers = await request.allHeaders();
+        if (headers.authorization === `Bearer ${state.token}`) return true;
+        const cookie = headers.cookie || '';
+        return cookie.split(';').some(part => part.trim() === `scanid_session=${state.token}`);
+    };
     const unauthorized = route => json(route, 401,
         { detail: "Impossible de valider les informations d'identification" });
 
@@ -144,16 +197,41 @@ export async function installMockApi(context, options = {}) {
         state.requests.push({ method, path, search: url.search });
 
         if (method === 'OPTIONS') {
-            return route.fulfill({ status: 204, headers: CORS_HEADERS, body: '' });
+            return route.fulfill({ status: 204, headers: corsHeaders(request), body: '' });
         }
 
         // --- Authentication ---
         if (path === '/token' && method === 'POST') {
             const form = new URLSearchParams(request.postData() || '');
             if (form.get('username') === credentials.username && form.get('password') === credentials.password) {
-                return json(route, 200, { access_token: state.token, token_type: 'bearer' });
+                // The body is unchanged — the API contract did not move — but
+                // the session now also arrives as an HttpOnly cookie, which is
+                // what the app actually authenticates with from here on.
+                // No `Secure`: the tests run over plain-HTTP localhost.
+                // Two cookies, as backend/auth.py sets: the HttpOnly session
+                // itself, and the readable marker that lets the app tell an
+                // expired session from a first visit.
+                state.session = true;
+                return json(route, 200, { access_token: state.token, token_type: 'bearer' }, {
+                    'set-cookie': [
+                        `scanid_session=${state.token}; Path=/; HttpOnly; SameSite=Lax`,
+                        'scanid_has_session=1; Path=/; SameSite=Lax; Max-Age=2592000',
+                    ].join('\n'),
+                });
             }
             return json(route, 401, { detail: "Nom d'utilisateur ou mot de passe incorrect" });
+        }
+
+        // Logging out is a server round-trip now: an HttpOnly cookie cannot be
+        // deleted from JavaScript.
+        if (path === '/logout' && method === 'POST') {
+            state.session = false;
+            return json(route, 200, { detail: 'Déconnexion réussie' }, {
+                'set-cookie': [
+                    'scanid_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+                    'scanid_has_session=; Path=/; SameSite=Lax; Max-Age=0',
+                ].join('\n'),
+            });
         }
 
         // --- Server-sent events: an open, silent stream. The app treats a
@@ -161,7 +239,7 @@ export async function installMockApi(context, options = {}) {
         if (path === '/events') {
             return route.fulfill({
                 status: 200,
-                headers: { ...CORS_HEADERS, 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+                headers: { ...corsHeaders(request), 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
                 body: ': keep-alive\n\n',
             });
         }
@@ -176,13 +254,21 @@ export async function installMockApi(context, options = {}) {
             if (body.user_name === state.user.user_name) {
                 return json(route, 400, { detail: "Nom d'utilisateur déjà enregistré" });
             }
+            // The password policy is enforced server-side (package C,
+            // backend/password_policy.py). The mock mirrors main.py, so it
+            // must refuse what the real endpoint refuses — and in the same
+            // ORDER: main.py checks the two conflicts first, so a duplicate
+            // username is reported as a duplicate even when the password is
+            // also weak.
+            const policyErrors = passwordPolicyErrors(body.password || '');
+            if (policyErrors.length) return json(route, 422, { detail: policyErrors.join(' ') });
             return json(route, 200, {
                 ...body, id: 'u-new', role: 'user', password: undefined,
                 uploaded_pages_count: 0, page_credits: 10, passports: [], voyages: [],
             });
         }
 
-        if (!authorized(request)) return unauthorized(route);
+        if (!(await authorized(request))) return unauthorized(route);
 
         if (path === '/users/me' && method === 'PUT') {
             const body = JSON.parse(request.postData() || '{}');
@@ -331,7 +417,7 @@ export async function installMockApi(context, options = {}) {
         return route.fulfill({
             status: 200,
             headers: {
-                ...CORS_HEADERS,
+                ...corsHeaders(route.request()),
                 'content-type': format === 'csv'
                     ? 'text/csv; charset=utf-8'
                     : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

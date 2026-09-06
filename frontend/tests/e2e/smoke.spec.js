@@ -6,7 +6,7 @@
 // reported, not accommodated.
 import { test, expect, LIVE, EXPECTED_ROW_COUNTS } from './test-base.js';
 import {
-    login, storedToken, uploadFiles, waitForProcessing, countResultRows, resultsRows,
+    login, storedToken, hasSessionCookie, uploadFiles, waitForProcessing, countResultRows, resultsRows,
     selectDocType, SELECTORS, TEXT,
 } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
@@ -18,7 +18,10 @@ test.describe('ScanID — baseline', () => {
         await expect(page.locator(SELECTORS.creditBadge)).toBeVisible();
         await expect(page.getByRole('button', { name: TEXT.logout })).toBeVisible();
         await expect(page.locator(SELECTORS.loginForm)).toHaveCount(0);
-        expect(await storedToken(page)).toBeTruthy();
+        // Le jeton n'est plus lisible par un script (cookie HttpOnly, paquet C) :
+        // la preuve qu'une session existe est le cookie, pas une valeur en JS.
+        expect(await hasSessionCookie(page)).toBe(true);
+        expect(await storedToken(page)).toBeNull();
     });
 
     test('des identifiants incorrects affichent le message d’erreur existant', async ({ page }) => {

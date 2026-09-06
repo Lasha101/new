@@ -185,7 +185,8 @@ does not exist. The fixtures are ready for the package that adds the checks.
 | Helper | Returns |
 |---|---|
 | `login(page, opts)` | Authenticates through the real form; absorbs the server's login throttle |
-| `logout(page)`, `storedToken(page)` | Session teardown; the stored JWT |
+| `logout(page)`, `storedToken(page)` | Session teardown; **what a script could steal** — since package C the JWT is in an HttpOnly cookie, so `storedToken` returns `null` on a healthy session, and that is the assertion |
+| `hasSessionCookie(page)`, `sessionCookie(page)` | Whether a session exists, and the cookie itself for asserting on its flags |
 | `uploadFiles(page, paths, opts)` | Drives the real file input (`opts.submit` also clicks « Lancer l'analyse ») |
 | `waitForProcessing(page, opts)` | Waits until every job reaches « Terminé » / « Échoué »; returns the labels |
 | `countResultRows(page)`, `resultsRows(page)` | The rows **on screen** — table rows above 720 px, cards below |
@@ -237,11 +238,13 @@ same way instead of counting columns by position.
 | `e2e/features.spec.js` | Everything else the app can do: sorting, selection, bulk edit, multi-delete, manual create/edit, job removal, export preview and selection exports, password toggle, registration, account edit, navigation — plus what the cards can and cannot do on a phone |
 | `e2e/capture.spec.js` | Capture controls (`multiple`, `capture="environment"`, the HEIC accept types, the photo-guide link), compression against a stated byte budget, **EXIF orientation proven on pixels**, HEIC magic-byte detection and its never-drop failure path, two-tap reachability |
 | `e2e/queue.spec.js` | The batch queue against the real transport: retry twice with a growing delay, `failed` reached, « Réessayer les échecs » touching only the failures, a mixed batch leaving the successes alone, a server refusal never retried, nothing persisted across a reload |
-| `e2e/privacy.spec.js` | The token never in a URL (except the documented `/events` case), blob URLs revoked, a network blip no longer discarding the session, an expired session prompting for re-auth, web storage after a full session |
+| `e2e/privacy.spec.js` | The token never in **any** URL — the `/events` exception package B documented is gone, package C made that endpoint accept the cookie — blob URLs revoked, a network blip no longer discarding the session, an expired session prompting for re-auth, web storage after a full session (now **empty**: the token moved to an HttpOnly cookie) |
+| `e2e/password-policy.spec.js` | The four rules visible before typing, each indicator flipping only for its own rule, the example generated rather than hardcoded (and itself compliant), the server's French rejection naming the failed rule, no overflow at 375 px |
 | `pwa/pwa.spec.js` | **Runs on the built app.** Manifest fields and content type, every icon 200 at its declared size, the worker registering and precaching exactly the shell, uploads and results creating no cache entry, the French offline screen, and the full-session storage audit (key *and* value contents, cache entry bodies included) |
 | `build/no-google-fonts.test.js` | Scans the shipped `dist/` — runs under `npm test`, not Playwright |
 | `src/upload/fileSniff.test.js` | Magic-byte detection (a real iPhone `ftyp` box, AVIF told apart from HEIC), EXIF orientation in both byte orders, EXIF stripping, the orientation transforms checked corner by corner, the resize arithmetic — all under `node --test`, no browser |
 | `src/upload/uploadQueue.test.js` | The retry policy with simulated delays: attempt counts, growing backoff, retriable vs final, `retryFailed` scope, job-status folding — `node --test` |
+| `src/passwordRules.test.js` | The four rules at their boundaries, accented capitals, and 500 generated examples all satisfying the policy they illustrate — `node --test` |
 
 The parity spec is the load-bearing one: the results table and the mobile card
 list render from one column definition (`PASSPORT_COLUMN_ORDER`) and one cell

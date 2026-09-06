@@ -3,11 +3,20 @@ import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilena
 import { prepareFileForUpload } from './upload/imagePrep.js';
 import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUEUE_STATUS_LABEL } from './upload/uploadQueue.js';
 import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
+import { PASSWORD_RULES, evaluatePassword, generateExamplePassword } from './passwordRules.js';
 import OfflineScreen from './OfflineScreen.jsx';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+// The readable marker cookie the server sets beside the HttpOnly session
+// cookie. It says only "this browser has logged in before" and is what lets
+// « Votre session a expiré » be told apart from a first visit.
+const SESSION_HINT_COOKIE = 'scanid_has_session';
+const hasSessionHint = () => document.cookie
+    .split(';')
+    .some(part => part.trim().startsWith(`${SESSION_HINT_COOKIE}=`));
 
 // The file types the picker offers. HEIC/HEIF are added because that is what an
 // iPhone's photo library hands over; nothing that was accepted before has been
@@ -36,6 +45,31 @@ const GlobalStyles = () => (
         /* 'clip' (not 'hidden') so no scroll container is created and
            position: sticky keeps working on the header and sidebar. */
         html, body { max-width: 100%; overflow-x: clip; }
+
+        /* PASSWORD RULES (package C). Scoped to .sid-pwrules and built only
+           from existing design tokens — scanid-app.css is not modified. */
+        .sid-pwrules { margin-top: .6rem; font-size: .8125rem; line-height: 1.5; }
+        .sid-pwrules__intro { margin: 0 0 .35rem; color: var(--sid-muted-strong); font-weight: 600; }
+        .sid-pwrules__list { list-style: none; margin: 0; padding: 0; }
+        .sid-pwrules__item {
+            display: flex; align-items: flex-start; gap: .45rem;
+            color: var(--sid-muted-strong); padding: .1rem 0;
+        }
+        /* Colour is not the only signal: the leading mark changes from a
+           bullet to a check, so the state survives a colour-blind reader and
+           a greyscale print. */
+        .sid-pwrules__item.is-ok { color: var(--sid-info); font-weight: 600; }
+        .sid-pwrules__mark { flex: 0 0 auto; width: .9rem; text-align: center; }
+        .sid-pwrules__example {
+            margin: .5rem 0 0; color: var(--sid-muted-strong);
+            /* The example can be long; it must not push the card sideways. */
+            overflow-wrap: anywhere;
+        }
+        .sid-pwrules__example code {
+            background: var(--sid-surface-2, #eef2f7); border-radius: 6px;
+            padding: .1rem .35rem; font-size: .8125rem;
+        }
+        .sid-pwrules__warn { display: block; font-style: italic; }
 
         /* DASHBOARD GRID — two columns: on the passports tab the welcome card
            (nav) and the « Ajouter un Passeport » card share row 1 (left/right);
@@ -193,6 +227,39 @@ function PasswordInput({ value, onChange, name, placeholder, required = false })
     );
 }
 
+// The password policy, shown BEFORE the user types rather than revealed by a
+// rejection afterwards. The server enforces every one of these again
+// (backend/password_policy.py) — this is guidance, never the gate.
+function PasswordRules({ value }) {
+    const satisfied = evaluatePassword(value || '');
+    // Generated once per mount: a fixed example printed by a public app is a
+    // password real users type verbatim, which makes it a known credential.
+    const [example] = useState(generateExamplePassword);
+
+    return (
+        <div className="sid-pwrules">
+            <p className="sid-pwrules__intro">Votre mot de passe doit contenir :</p>
+            <ul className="sid-pwrules__list">
+                {PASSWORD_RULES.map((rule) => (
+                    <li
+                        key={rule.id}
+                        className={`sid-pwrules__item ${satisfied[rule.id] ? 'is-ok' : ''}`}
+                        data-rule={rule.id}
+                        data-satisfied={satisfied[rule.id] ? 'true' : 'false'}
+                    >
+                        <span aria-hidden="true" className="sid-pwrules__mark">{satisfied[rule.id] ? '\u2713' : '\u2022'}</span>
+                        <span>{rule.label}</span>
+                    </li>
+                ))}
+            </ul>
+            <p className="sid-pwrules__example">
+                Exemple : <code data-testid="password-example">{example}</code>
+                <span className="sid-pwrules__warn"> (à titre d'exemple uniquement — n'utilisez pas ce mot de passe)</span>
+            </p>
+        </div>
+    );
+}
+
 const SuccessIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>);
 const FailureIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>);
 
@@ -233,37 +300,59 @@ const ProgressBar = ({ progress, status }) => {
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
-    const [token, setToken] = useState(localStorage.getItem('token'));
+    // `token` is no longer the JWT — it is a boolean "there is a session".
+    // The JWT now lives in an HttpOnly cookie that JavaScript cannot read, so
+    // an XSS can no longer exfiltrate it. The variable and every prop keep
+    // their names and their shape, so no component below changed: they used
+    // the value only to build an Authorization header, which the cookie
+    // replaces.
+    const [token, setToken] = useState(false);
     const [user, setUser] = useState(null);
     const [view, setView] = useState('login');
     const [sessionExpired, setSessionExpired] = useState(false);
+    // Whether this browser ever had a session. A first visit answers 401 to
+    // /users/me exactly as an expired one does, and only this tells them apart
+    // — without it every anonymous visitor would be greeted by « Votre session
+    // a expiré », and a returning user whose session lapsed would get no
+    // explanation at all.
+    //
+    // The signal is a second, deliberately readable cookie the server sets
+    // beside the HttpOnly one (config.SESSION_HINT_COOKIE_NAME). It holds "1"
+    // and no secret; the credential itself stays unreadable.
+    const hadSessionRef = useRef(hasSessionHint());
     const online = useOnlineStatus();
     const logout = useCallback(({ expired = false } = {}) => {
-        localStorage.removeItem('token'); setToken(null); setUser(null);
+        // The cookie is HttpOnly, so only the server can clear it.
+        fetch(`${API_URL}/logout`, { credentials: 'include', method: 'POST' }).catch(() => {});
+        hadSessionRef.current = false;
+        setToken(false); setUser(null);
         setSessionExpired(!!expired);
         window.history.pushState({}, '', '/'); setView('login');
     }, []);
     const fetchUser = useCallback(async () => {
-        const currentToken = localStorage.getItem('token');
-        if (currentToken) {
-            try {
-                const response = await fetch(`${API_URL}/users/me`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
-                reportNetworkResult(true);
-                if (response.ok) { const data = await response.json(); setUser(data); setView('dashboard'); setSessionExpired(false); }
-                // The server answered and refused: the session really is over.
-                // Say so on the login screen instead of dropping the user there
-                // with no explanation.
-                else { logout({ expired: true }); }
-            } catch (error) {
-                // A transport failure is NOT an expired session. This used to
-                // log the user out, so a lift or a tunnel discarded the session
-                // and everything on screen. The token is kept, the « hors ligne »
-                // screen appears, and the session resumes when the link is back.
-                console.error("Échec de la récupération de l'utilisateur:", error);
-                reportNetworkResult(false);
+        try {
+            // Sent unconditionally now: there is no readable token to test
+            // first, and the cookie is what answers. `credentials: 'include'`
+            // is required — a cross-origin fetch does not send cookies without it.
+            const response = await fetch(`${API_URL}/users/me`, { credentials: 'include' });
+            reportNetworkResult(true);
+            if (response.ok) {
+                const data = await response.json();
+                hadSessionRef.current = true;
+                setUser(data); setToken(true); setView('dashboard'); setSessionExpired(false);
             }
-        } else {
-            setView('login');
+            // The server answered and refused: the session really is over.
+            // Say so on the login screen instead of dropping the user there
+            // with no explanation — but only if there was a session to lose.
+            else if (hadSessionRef.current) { logout({ expired: true }); }
+            else { setToken(false); setView('login'); }
+        } catch (error) {
+            // A transport failure is NOT an expired session. This used to
+            // log the user out, so a lift or a tunnel discarded the session
+            // and everything on screen. The session is kept, the « hors ligne »
+            // screen appears, and it resumes when the link is back.
+            console.error("Échec de la récupération de l'utilisateur:", error);
+            reportNetworkResult(false);
         }
     }, [logout]);
     useEffect(() => {
@@ -317,11 +406,14 @@ function Login({ setToken, fetchUser, onShowRegistration, sessionExpired = false
         setIsLoading(true);
         const formData = new URLSearchParams({ username, password });
         try {
-            const response = await fetch(`${API_URL}/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData, });
+            const response = await fetch(`${API_URL}/token`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData, });
             if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('token', data.access_token);
-                setToken(data.access_token);
+                // The response still carries the token — the API contract is
+                // unchanged — but it is deliberately not read or stored. The
+                // same token arrived as an HttpOnly cookie, which is what
+                // every later request now uses.
+                await response.json();
+                setToken(true);
                 reportNetworkResult(true);
                 fetchUser();
             } else {
@@ -395,12 +487,12 @@ function SelfRegistrationPage({ onBackToLogin }) {
     const handleSubmit = async (e) => {
         e.preventDefault(); setError(''); setSuccess('');
         try {
-            const response = await fetch(`${API_URL}/users/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+            const response = await fetch(`${API_URL}/users/register`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
             if (response.ok) { setSuccess('Inscription réussie ! Vous allez être redirigé vers la page de connexion.'); setTimeout(() => { window.history.pushState({}, '', '/'); window.location.reload(); }, 2000); } else { const detail = (await response.json()).detail; setError(typeof detail === 'string' ? detail : "Échec de l'inscription. Veuillez vérifier les champs saisis."); }
         } catch (err) { setError("Une erreur est survenue lors de l'inscription."); }
     };
     if (success) return <div className="sid-card"><p className="sid-alert sid-alert--ok">{success}</p></div>
-    return (<div className="sid-card"><h2>Créer un nouveau compte</h2>{error && <p className="sid-alert sid-alert--err">{error}</p>}<form onSubmit={handleSubmit}><div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom d'utilisateur</label><input type="text" name="user_name" value={formData.user_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Mot de passe</label><PasswordInput name="password" value={formData.password} onChange={handleChange} required={true} /></div><button type="submit" className="sid-btn" style={{ width: '100%' }}>S'inscrire</button></form><button type="button" onClick={onBackToLogin} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>Retour à la connexion</button></div>);
+    return (<div className="sid-card"><h2>Créer un nouveau compte</h2>{error && <p className="sid-alert sid-alert--err">{error}</p>}<form onSubmit={handleSubmit}><div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom d'utilisateur</label><input type="text" name="user_name" value={formData.user_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Mot de passe</label><PasswordInput name="password" value={formData.password} onChange={handleChange} required={true} /><PasswordRules value={formData.password} /></div><button type="submit" className="sid-btn" style={{ width: '100%' }}>S'inscrire</button></form><button type="button" onClick={onBackToLogin} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>Retour à la connexion</button></div>);
 }
 
 // Static field configurations, at module scope so their identity is stable:
@@ -431,8 +523,12 @@ function Dashboard({ user, token, fetchUser }) {
         if (!token) return;
 
         // Establish SSE connection
-        // We pass the token in the query string because EventSource doesn't support headers
-        const eventSource = new EventSource(`${API_URL}/events?token=${token}`);
+        // The token used to be in this URL, because EventSource cannot set an
+        // Authorization header — which put the session credential in the
+        // access log, the browser history and every proxy in between. It now
+        // travels in the HttpOnly cookie: withCredentials is what sends it on
+        // a cross-origin EventSource, and the URL carries nothing.
+        const eventSource = new EventSource(`${API_URL}/events`, { withCredentials: true });
 
         eventSource.onmessage = (event) => {
             try {
@@ -464,14 +560,14 @@ function Dashboard({ user, token, fetchUser }) {
     const fetchAdminData = useCallback(async () => {
         if (user.role !== 'admin') return;
         try {
-            const filterableUsersRes = await fetch(`${API_URL}/admin/filterable-users`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const filterableUsersRes = await fetch(`${API_URL}/admin/filterable-users`, { credentials: 'include' });
             if (filterableUsersRes.ok) setFilterableUsers(await filterableUsersRes.json());
         } catch (error) { console.error("Échec de la récupération des données admin:", error); }
     }, [user, token]);
 
     const fetchUserDestinations = useCallback(async () => {
         try {
-            const response = await fetch(`${API_URL}/destinations/`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`${API_URL}/destinations/`, { credentials: 'include' });
             if (response.ok) {
                 setUserSpecificDestinations(await response.json());
             }
@@ -507,7 +603,7 @@ function Dashboard({ user, token, fetchUser }) {
                         fields={passportFields}
                         filterConfig={passportFilterConfig}
                        />;
-            case 'account': return <AccountEditor user={user} token={token} fetchUser={fetchUser} />;
+            case 'account': return <AccountEditor user={user} fetchUser={fetchUser} />;
             case 'admin_manage':
                 return <AdminManagementPage
                         token={token}
@@ -566,7 +662,7 @@ function AdminManagementPage({ token, user, userFields }) {
     );
 }
 
-function AccountEditor({ user, token, fetchUser }) {
+function AccountEditor({ user, fetchUser }) {
     const [formData, setFormData] = useState({ 
         first_name: '', 
         last_name: '', 
@@ -605,7 +701,7 @@ function AccountEditor({ user, token, fetchUser }) {
             payload.uploaded_pages_count = parseInt(payload.uploaded_pages_count, 10) || 0;
             payload.page_credits = parseInt(payload.page_credits, 10) || 0;
         }
-        const response = await fetch(`${API_URL}/users/me`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+        const response = await fetch(`${API_URL}/users/me`, { credentials: 'include', method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (response.ok) { setMessage('Compte mis à jour avec succès !'); fetchUser(); } else { setMessage('Échec de la mise à jour du compte.'); }
     };
     
@@ -628,7 +724,7 @@ function AccountEditor({ user, token, fetchUser }) {
                         <input type="number" name="page_credits" value={formData.page_credits} onChange={handleChange} className="sid-input" readOnly={user.role !== 'admin'} disabled={user.role !== 'admin'} style={{ backgroundColor: user.role !== 'admin' ? '#eef2f7' : undefined }} />
                     </div>
                 </div>
-                <div className="form-group"><label className="sid-label">Nouveau mot de passe (optionnel)</label><PasswordInput name="password" value={formData.password} onChange={handleChange} placeholder="Laisser vide pour conserver le mot de passe actuel" /></div>
+                <div className="form-group"><label className="sid-label">Nouveau mot de passe (optionnel)</label><PasswordInput name="password" value={formData.password} onChange={handleChange} placeholder="Laisser vide pour conserver le mot de passe actuel" />{formData.password && <PasswordRules value={formData.password} />}</div>
                 <button type="submit" className="sid-btn" style={{ marginTop: '1rem' }}>Enregistrer les modifications</button>
             </form>
         </div>
@@ -702,7 +798,7 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
     useEffect(() => {
         const fetchDestinations = async () => {
             try {
-                const response = await fetch(`${API_URL}/destinations/`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const response = await fetch(`${API_URL}/destinations/`, { credentials: 'include' });
                 if (response.ok) { setDestinations(await response.json()); }
             } catch (error) { console.error("Échec de la récupération des destinations:", error); }
         };
@@ -856,7 +952,7 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, up
 
     const fetchJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${API_URL}/ocr/jobs/`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`${API_URL}/ocr/jobs/`, { credentials: 'include' });
             if (response.ok) {
                 const data = await response.json();
                 // Merge monotonically: an in-flight poll response must not
@@ -931,7 +1027,7 @@ function OcrJobMonitor({ token, refreshTrigger, onJobComplete, uploadingFile, up
     const handleRemoveJob = async (jobIdToRemove) => {
         if (!window.confirm("Voulez-vous vraiment supprimer ce job ?")) return;
         try {
-            const response = await fetch(`${API_URL}/ocr/jobs/${jobIdToRemove}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`${API_URL}/ocr/jobs/${jobIdToRemove}`, { credentials: 'include', method: 'DELETE' });
             if (response.ok) { setJobs(prevJobs => prevJobs.filter(job => job.id !== jobIdToRemove)); } else { setError("Échec de la suppression du job."); }
         } catch (err) { setError("Une erreur est survenue lors de la suppression du job."); }
     };
@@ -1007,7 +1103,7 @@ function CrudForm({ item, isCreating, onSave, onCancel, fields, endpoint, token 
         if (endpoint === 'passports') {
             const fetchDestinations = async () => {
                 try {
-                    const response = await fetch(`${API_URL}/destinations/`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const response = await fetch(`${API_URL}/destinations/`, { credentials: 'include' });
                     if (response.ok) setDestinations(await response.json());
                 } catch (error) { console.error("Échec de la récupération des destinations:", error); }
             };
@@ -1030,7 +1126,7 @@ function CrudForm({ item, isCreating, onSave, onCancel, fields, endpoint, token 
         }
 
         try {
-            const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(body), });
+            const response = await fetch(url, { credentials: 'include', method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), });
             if (response.ok) { onSave(); return; }
             // The body may be plain text (500) or a 422 whose detail is an
             // array — never let the error path itself throw silently.
@@ -1123,7 +1219,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const fetchDestinationsForUser = useCallback(async (userId) => {
         const query = userId ? `?user_id=${userId}` : '';
         try {
-            const response = await fetch(`${API_URL}/destinations/${query}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`${API_URL}/destinations/${query}`, { credentials: 'include' });
             if (response.ok) { setDynamicDestinations(await response.json()); }
         } catch (error) { console.error("Échec de la récupération des destinations:", error); }
     }, [token]);
@@ -1152,7 +1248,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         const query = new URLSearchParams(activeFilters);
         const url = `${API_URL}/${endpoint}/?${query.toString()}`;
         try {
-            const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(url, { credentials: 'include' });
             if (response.ok) setItems(await response.json()); else console.error("Échec de la récupération des données pour", endpoint);
         } catch (error) { console.error("Erreur lors de la récupération des données:", error); }
         setSelectedIds(new Set()); setIsBulkEditingDest(false); setBulkDestination('');
@@ -1162,7 +1258,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
 
     const handleDelete = async (id) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
-            await fetch(`${API_URL}/${endpoint}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            await fetch(`${API_URL}/${endpoint}/${id}`, { credentials: 'include', method: 'DELETE' });
             fetchData();
         }
     };
@@ -1180,7 +1276,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         const xhr = new XMLHttpRequest();
         uploadXhrRef.current = xhr;
         xhr.open('POST', `${API_URL}/passports/upload-and-extract/`);
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        // The session cookie is HttpOnly; withCredentials is what sends it.
+        xhr.withCredentials = true;
         // Stall watchdog instead of a flat total timeout: a slow-but-moving
         // large upload must never be aborted, only one with no bytes moving.
         let lastProgressAt = Date.now();
@@ -1249,7 +1346,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedIds.size} passeports ?`)) {
             const payload = { passport_ids: Array.from(selectedIds) };
             try {
-                const response = await fetch(`${API_URL}/passports/delete-multiple`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const response = await fetch(`${API_URL}/passports/delete-multiple`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (response.ok) { fetchData(); } else { const errorData = await response.json(); alert(`Échec de la suppression multiple: ${errorData.detail}`); }
             } catch (err) { alert(`Une erreur est survenue: ${err.message}`); }
         }
@@ -1261,7 +1358,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const getServerExportData = async (preview = false, format = 'xlsx') => {
         const query = buildExportQuery({ exportFilters, tableFilters: filters, role: user.role, docTypeFilter, format, preview });
         try {
-            const response = await fetch(`${API_URL}/export/data?${query}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`${API_URL}/export/data?${query}`, { credentials: 'include' });
             if (!response.ok) { const err = await response.json(); alert(`Échec de la récupération des données: ${err.detail}`); return null; }
             return response;
         } catch (error) { alert('Une erreur est survenue lors de la récupération des données.'); return null; }
@@ -1278,7 +1375,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         if (selectedIds.size > 0) {
             // -- EXPORT SELECTION (file built server-side, CSV or Excel) --
             try {
-                const response = await fetch(`${API_URL}/export/data/selection?format=${format}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ passport_ids: Array.from(selectedIds) }) });
+                const response = await fetch(`${API_URL}/export/data/selection?format=${format}`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passport_ids: Array.from(selectedIds) }) });
                 if (!response.ok) { const err = await response.json(); alert(`Échec de l'exportation: ${err.detail}`); return; }
                 const blob = await response.blob();
                 const url = trackObjectUrl(URL.createObjectURL(blob));
@@ -1304,7 +1401,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         const promises = Array.from(selectedIds).map(async (id) => {
             const item = items.find(i => i.id === id); if (!item) return;
             const payload = { first_name: item.first_name, last_name: item.last_name, birth_date: item.birth_date, expiration_date: item.expiration_date, nationality: item.nationality, passport_number: item.passport_number, confidence_score: item.confidence_score, destination: bulkDestination };
-            return fetch(`${API_URL}/passports/${id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            return fetch(`${API_URL}/passports/${id}`, { credentials: 'include', method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         });
         await Promise.all(promises); fetchData();
     };

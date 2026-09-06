@@ -60,6 +60,25 @@ if (managedPreview || process.env.E2E_PREVIEW_URL) {
     });
 }
 
+// The app talks to the API on ITS OWN ORIGIN, at /api — which is what ships:
+// deploy/nginx-travelapp.conf serves the frontend at `/` and proxies `/api/` to
+// the backend on 127.0.0.1:8001, so the browser only ever sees one origin.
+//
+// This has to be set here because `frontend/.env.local` points VITE_API_URL at
+// http://127.0.0.1:8001 for local development, which is a DIFFERENT ORIGIN, and
+// since package C the session travels in a cookie. WebKit (Safari, and the
+// mobile-375 project) refuses to send a cookie on a cross-origin subresource
+// request — it treats it as third-party — so every request after login arrived
+// without credentials and answered 401. Chromium is more permissive and passed,
+// which is exactly the kind of difference the WebKit project exists to catch.
+//
+// Vite gives a real environment variable priority over a .env file, so this
+// wins over .env.local without editing it. E2E_MODE=live sets its own value and
+// is left alone.
+const SERVER_ENV = process.env.VITE_API_URL
+    ? { VITE_API_URL: process.env.VITE_API_URL }
+    : { VITE_API_URL: '/api' };
+
 export default defineConfig({
     testDir: './tests/e2e',
     globalSetup: './tests/global-setup.js',
@@ -100,6 +119,7 @@ export default defineConfig({
             timeout: 120_000,
             stdout: 'ignore',
             stderr: 'pipe',
+            env: SERVER_ENV,
         },
         ...(managedPreview ? [{
             command: 'npm run build && npm run preview -- --port 4173 --strictPort',
@@ -108,6 +128,9 @@ export default defineConfig({
             timeout: 180_000,
             stdout: 'ignore',
             stderr: 'pipe',
+            // Baked in at build time for the preview server, so it has to be
+            // on the command that builds.
+            env: SERVER_ENV,
         }] : []),
     ],
 });

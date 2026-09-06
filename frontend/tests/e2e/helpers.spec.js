@@ -4,9 +4,10 @@
 // — that is for the packages that change them.
 import { test, expect } from './test-base.js';
 import {
-    login, logout, getStorageState, isStorageEmpty, measureTapTargets, tapTargetsBelow,
+    login, logout, getStorageState, measureTapTargets, tapTargetsBelow,
     hasHorizontalOverflow, findOverflowingElements, getComputedColorPair, contrastRatio,
     SELECTORS,
+    hasSessionCookie,
 } from '../helpers/index.js';
 
 test.describe('helpers', () => {
@@ -28,15 +29,20 @@ test.describe('helpers', () => {
                 .toContain(name);
         }
 
+        // Depuis le paquet C, se connecter n'écrit RIEN dans le stockage web :
+        // le jeton est dans un cookie HttpOnly, que getStorageState ne voit pas
+        // et qu'aucun script ne peut lire. C'est la propriété recherchée, donc
+        // le test l'affirme au lieu de chercher un jeton stocké.
         await login(page);
         const afterLogin = await getStorageState(page);
-        expect(afterLogin.localStorage).toHaveProperty('token');
-        expect(afterLogin.localStorage.token).toBeTruthy();
-        expect(isStorageEmpty(afterLogin)).toBe(false);
+        expect(afterLogin.localStorage).not.toHaveProperty('token');
+        expect(afterLogin.sessionStorage).not.toHaveProperty('token');
+        expect(await hasSessionCookie(page), 'la session existe bien').toBe(true);
 
         await logout(page);
         const afterLogout = await getStorageState(page);
         expect(afterLogout.localStorage.token).toBeUndefined();
+        expect(await hasSessionCookie(page), 'la déconnexion vide le cookie').toBe(false);
     });
 
     test('measureTapTargets returns a box per visible match, in DOM order', async ({ page }) => {

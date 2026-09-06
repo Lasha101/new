@@ -268,7 +268,9 @@ test.describe('Stockage après une session complète', () => {
         const state = await getStorageState(page);
 
         // 1. Web storage : le jeton, et rien d'autre.
-        expect(Object.keys(state.localStorage)).toEqual(['token']);
+        // Le jeton a quitté le stockage local pour un cookie HttpOnly
+        // (paquet C) : plus aucune clé ne subsiste.
+        expect(Object.keys(state.localStorage)).toEqual([]);
         expect(Object.keys(state.sessionStorage)).toEqual([]);
         for (const [key, value] of [...Object.entries(state.localStorage),
             ...Object.entries(state.sessionStorage)]) {

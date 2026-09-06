@@ -74,6 +74,10 @@ export function createMockState(overrides = {}) {
         passports: structuredClone(MOCK_PASSPORTS),
         jobs: [],
         token: 'mock-jwt-token',
+        // Whether POST /token has issued a session in this context. The mock
+        // authorises on this rather than on the cookie, because WebKit does not
+        // expose `cookie` on an intercepted request — see mock/api.js.
+        session: false,
         requests: [],
         ...overrides,
     };

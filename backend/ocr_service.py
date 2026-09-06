@@ -26,15 +26,28 @@ from datetime import datetime
 from typing import Any, Awaitable, Callable, List, Dict, Optional
 from google.cloud import vision
 from fastapi import HTTPException
+
+import config
 import logging
 import fitz  # PyMuPDF
 import unicodedata
 
 logger = logging.getLogger(__name__)
 
-# Initialize Vision client at module level for efficiency
+# Initialize Vision client at module level for efficiency.
+#
+# DATA RESIDENCY: the endpoint is pinned to the EU (eu-vision.googleapis.com by
+# default, config.VISION_API_ENDPOINT). Left unset, the library uses the global
+# endpoint (vision.googleapis.com), which may process the request in any Google
+# region — an image of a French identity document could be handled outside the
+# EU. Pinning it here is what backs the residency commitment in the client DPA.
 try:
-    vision_client = vision.ImageAnnotatorClient()
+    from google.api_core.client_options import ClientOptions
+
+    vision_client = vision.ImageAnnotatorClient(
+        client_options=ClientOptions(api_endpoint=config.VISION_API_ENDPOINT)
+    )
+    logger.info("Google Vision client bound to %s", config.VISION_API_ENDPOINT)
 except Exception as e:
     logger.error(f"🔴 Failed to initialize Google Vision client: {e}")
     vision_client = None
@@ -60,7 +73,7 @@ def clean_and_parse_date(date_str: str) -> datetime | None:
     try:
         return datetime.strptime(cleaned_str, "%d %m %Y")
     except ValueError:
-        logger.warning(f"Impossible d'analyser la date : '{date_str}' (nettoyée en: '{cleaned_str}')")
+        logger.warning("Impossible d'analyser une date du document (%d caractères).", len(date_str or ""))
         return None
 
 
@@ -84,7 +97,7 @@ def _parse_mrz_date(yymmdd: str, is_birth_date: bool) -> Optional[str]:
             prefix = "20"
         return datetime.strptime(f"{prefix}{yymmdd}", "%Y%m%d").strftime("%Y-%m-%d")
     except ValueError:
-        logger.warning(f"Impossible d'analyser la date MRZ : {yymmdd}")
+        logger.warning("Impossible d'analyser une date MRZ (%d caractères).", len(yymmdd or ""))
         return None
 
 
@@ -624,9 +637,12 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes, retry_empty: boo
     clean_text = re.sub(r'[\n/]', ' ', raw_text)
     full_text = re.sub(r'\s+', ' ', clean_text).strip()
 
-    logger.info("--- Texte OCR extrait complet ---")
-    logger.info(full_text)
-    logger.info("-----------------------------")
+    # The OCR text of an identity document is the document: MRZ, names, dates
+    # of birth and the document number, all in one string. It used to be logged
+    # in full. Only its length is logged now — enough to tell "Vision returned
+    # nothing" from "Vision returned a page" while debugging, which is all the
+    # line was ever used for.
+    logger.info("Texte OCR reçu : %d caractères.", len(full_text))
 
     # A passport MRZ wins over everything else (one document per page); the
     # CNI parsers are tried from the most to the least reliable source.
@@ -661,7 +677,12 @@ def _extract_document_data_from_image_bytes(image_bytes: bytes, retry_empty: boo
         raise HTTPException(status_code=422, detail=_UNRECOGNIZED_DOCUMENT_DETAIL)
 
     data["confidence_score"] = _compute_confidence_score(data, full_text_annotation)
-    logger.info(f"--- Données analysées ---\n{data}\n--------------------")
+    # Which fields were found, never what they contain.
+    logger.info(
+        "Données analysées : %s champs renseignés (score %.4f).",
+        sum(1 for key, value in data.items() if key != "confidence_score" and value),
+        data.get("confidence_score", 0.0),
+    )
     return data
 
 

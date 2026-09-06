@@ -5,7 +5,7 @@
 // l'application construite — celui qui inclut le service worker et le Cache
 // Storage — est dans tests/pwa/pwa.spec.js.
 import { test, expect } from './test-base.js';
-import { login, logout, uploadFiles, storedToken, getStorageState, SELECTORS, TEXT } from '../helpers/index.js';
+import { login, logout, uploadFiles, storedToken, hasSessionCookie, sessionCookie, getStorageState, SELECTORS, TEXT } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 import { EXTRACTED_PASSPORT } from '../mock/data.js';
 
@@ -36,7 +36,7 @@ async function trackObjectUrls(page) {
 const objectUrls = page => page.evaluate(() => window.__objectUrls);
 
 test.describe('Jeton de session', () => {
-    test("le jeton n'apparaît dans aucune URL, sauf le flux SSE", async ({ page }) => {
+    test("le jeton n'apparaît dans aucune URL — l'exception /events a disparu", async ({ page }) => {
         const urls = [];
         page.on('request', request => urls.push(request.url()));
 
@@ -47,47 +47,72 @@ test.describe('Jeton de session', () => {
         await page.getByRole('button', { name: TEXT.preview }).click();
         await page.getByRole('button', { name: TEXT.downloadCsv }).click();
 
-        const token = await storedToken(page);
-        expect(token).toBeTruthy();
+        // Le jeton est désormais dans un cookie HttpOnly : aucun script ne peut
+        // le lire, donc on le récupère depuis le contexte du navigateur.
+        const cookie = await sessionCookie(page);
+        expect(cookie, 'la session doit exister').toBeTruthy();
+        const token = cookie.value;
 
+        // Le paquet B signalait GET /events comme la seule URL portant encore
+        // le jeton : EventSource ne sait pas poser d'en-tête et l'endpoint
+        // déclarait `token: str = Query(...)`. Le paquet C accepte maintenant
+        // le cookie sur /events (withCredentials), donc l'exception a disparu
+        // et PLUS AUCUNE URL ne transporte le jeton.
         const leaking = urls.filter(url => url.includes(token));
-        // GET /events est la seule exception, et elle n'est pas réparable ici :
-        // EventSource ne sait pas poser d'en-tête, et backend/main.py:570
-        // déclare `token: str = Query(...)`, donc la corriger demande une
-        // modification du backend — paquet C. Le test la nomme pour qu'elle
-        // devienne rouge le jour où elle est corrigée ailleurs.
-        for (const url of leaking) {
-            expect(new URL(url).pathname).toMatch(/\/events$/);
-        }
-        expect(leaking.length).toBeGreaterThan(0); // le flux SSE existe bien
+        expect(leaking, 'aucune URL ne doit transporter le jeton').toEqual([]);
+
+        // Le flux SSE est bien ouvert — sans jeton dans l'URL.
+        const sse = urls.filter(url => new URL(url).pathname.endsWith('/events'));
+        expect(sse.length, 'le flux SSE doit exister').toBeGreaterThan(0);
+        for (const url of sse) expect(new URL(url).search).toBe('');
+
         console.log(`  ${urls.length} requêtes ; jeton présent dans ${leaking.length} `
-            + '(toutes /events — voir SCANID-HANDOVER.md, paquet C)');
+            + `(${sse.length} appel(s) /events, sans query string)`);
     });
 
-    test('les autres appels portent le jeton en en-tête, pas en query string', async ({ page }) => {
-        const authorized = [];
+    test('les appels portent le jeton en cookie, jamais en en-tête ni en query string', async ({ page }) => {
+        // Le paquet C a déplacé le jeton de localStorage vers un cookie
+        // HttpOnly : plus aucune requête ne pose d'en-tête Authorization, et
+        // c'est précisément ce qui rend le jeton illisible par un script.
+        const withAuthHeader = [];
         page.on('request', (request) => {
-            const header = request.headers().authorization;
-            if (header) authorized.push(new URL(request.url()).pathname);
+            if (request.headers().authorization) {
+                withAuthHeader.push(new URL(request.url()).pathname);
+            }
         });
         await login(page);
         await expect(page.locator(SELECTORS.creditBadge)).toBeVisible();
-        expect(authorized.some(path => path.endsWith('/users/me'))).toBe(true);
-        expect(authorized.some(path => path.includes('/passports'))).toBe(true);
+
+        // Ce qui est observable et qui compte : plus AUCUNE requête ne pose
+        // d'en-tête Authorization. C'est ce qui rend le jeton illisible depuis
+        // un script.
+        expect(withAuthHeader, "aucun en-tête Authorization n'est envoyé").toEqual([]);
+
+        // La présence du cookie se vérifie sur le contexte, pas sur les
+        // requêtes : WebKit n'expose pas `cookie` sur une requête INTERCEPTÉE
+        // (ni via headers(), ni via allHeaders()), parce que Playwright rapporte
+        // les en-têtes avant que la pile réseau ne les ajoute. Chromium l'expose,
+        // ce qui masquait la différence. Que le cookie soit bien ce qui
+        // authentifie est prouvé côté serveur, contre la vraie application, par
+        // backend/tests/test_security_hardening.py.
+        const cookie = await sessionCookie(page);
+        expect(cookie, 'la session est bien portée par un cookie').toBeTruthy();
+        expect(cookie.httpOnly, 'le cookie de session est HttpOnly').toBe(true);
     });
 
     test("une coupure réseau ne déconnecte plus la session", async ({ page, context }) => {
         // Avant : toute erreur de /users/me appelait logout(), donc un tunnel
         // vidait le jeton et le travail en cours avec lui.
         await login(page);
-        const before = await storedToken(page);
+        const before = await hasSessionCookie(page);
+        expect(before).toBe(true);
 
         const offline = page.locator(SELECTORS.offlineScreen);
         await context.setOffline(true);
         await expect(offline).toBeVisible({ timeout: 20_000 });
         // Le jeton reste, et le tableau de bord reste MONTÉ sous la couche :
         // c'est ce qui fait qu'un tunnel ne coûte aucun travail en cours.
-        expect(await storedToken(page)).toBe(before);
+        expect(await hasSessionCookie(page)).toBe(before);
         await expect(page.locator(SELECTORS.uploadCard)).toBeAttached();
         await expect(offline.getByRole('button', { name: 'Réessayer' })).toBeVisible();
 
@@ -170,7 +195,9 @@ test.describe('Stockage local', () => {
             ...Object.entries(state.localStorage), ...Object.entries(state.sessionStorage),
         ];
         // Le jeton a le droit d'être là (voir SCANID-HANDOVER.md) ; rien d'autre.
-        expect(Object.keys(state.localStorage)).toEqual(['token']);
+        // Depuis le paquet C, le jeton est dans un cookie HttpOnly :
+        // le stockage local ne contient plus RIEN du tout.
+        expect(Object.keys(state.localStorage)).toEqual([]);
         expect(Object.keys(state.sessionStorage)).toEqual([]);
         for (const [key, value] of values) {
             for (const secret of IDENTITY_STRINGS) {

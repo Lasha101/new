@@ -22,9 +22,9 @@ import pandas as pd
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 from pydantic import ValidationError
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query, Form, Request, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query, Form, Request, Response, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from jose import jwt, JWTError
@@ -35,11 +35,20 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+import config
 import crud, models, schemas, auth
+import file_validation
+import log_redaction
 import ocr_service
+import password_policy
 from database import get_db, engine, SessionLocal
 
 logging.basicConfig(level=logging.INFO)
+# Identity data must not reach the logs. The call sites in the upload and OCR
+# paths were reviewed and no longer pass a name, a document number or a raw
+# filename; this filter is the safety net behind that review, and it also
+# covers third-party libraries, which nobody reviewed.
+log_redaction.install()
 logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
@@ -154,8 +163,12 @@ async def run_ocr_extraction_task(
     """Entry point: owns the task's database session (the background task
     outlives the request, so it cannot reuse the request-scoped session) and
     the spooled upload file, which is deleted when the job ends."""
-    db = SessionLocal()
+    db = None
     try:
+        # Inside the try: if opening the session raises, the outer finally must
+        # still run, or the spooled document stays on disk with nothing left
+        # holding a reference to it.
+        db = SessionLocal()
         await _run_ocr_extraction_job(db, job_id, file_path, content_type, destination, user_id)
     finally:
         # Unlink first: it cannot raise past the except, while db.close (an
@@ -164,7 +177,8 @@ async def run_ocr_extraction_task(
             os.unlink(file_path)
         except OSError:
             pass
-        await asyncio.to_thread(db.close)
+        if db is not None:
+            await asyncio.to_thread(db.close)
 
 
 async def _run_ocr_extraction_job(
@@ -295,12 +309,49 @@ async def _run_ocr_extraction_job(
     logger.info(f"Job {job_id} completed. Saved to DB.")
 
 
+# The prefix every spooled upload is created with (tempfile.mkstemp below).
+# Named here so the startup sweep and the endpoint cannot drift apart.
+OCR_SPOOL_PREFIX = "ocr_upload_"
+
+
+def sweep_orphaned_spool_files() -> int:
+    """Deletes spooled documents left behind by a previous process.
+
+    The background task unlinks its own file on every in-process exit path, but
+    a process that is killed — and the deploy workflow restarts the service on
+    every push — cannot run a finally block. Without this, a document caught
+    mid-job stays on disk indefinitely, which is exactly what the product
+    promises never happens. Runs once at startup and logs a count only.
+    """
+    removed = 0
+    try:
+        spool_dir = tempfile.gettempdir()
+        for name in os.listdir(spool_dir):
+            if not name.startswith(OCR_SPOOL_PREFIX):
+                continue
+            path = os.path.join(spool_dir, name)
+            try:
+                if os.path.isfile(path):
+                    os.unlink(path)
+                    removed += 1
+            except OSError:
+                # Another worker booting at the same instant may have won the
+                # race, or the file may not be ours to remove. Neither is fatal.
+                pass
+    except OSError as e:
+        logger.warning("Spool sweep could not read the temp directory: %s", e)
+    if removed:
+        logger.info("Nettoyage au démarrage : %d fichier(s) d'import orphelin(s) supprimé(s).", removed)
+    return removed
+
+
 # --- Lifespan for application startup/shutdown ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         logger.info("🚀 Backend starting up (PostgreSQL).")
+        await asyncio.to_thread(sweep_orphaned_spool_files)
         # Create any missing tables on boot (idempotent), then look up the admin.
         await asyncio.to_thread(models.Base.metadata.create_all, engine)
         admin_user = await asyncio.to_thread(crud.get_user_by_username, db, username="admin")
@@ -349,7 +400,19 @@ async def lifespan(app: FastAPI):
 
 
 # --- FastAPI App Initialization ---
-app = FastAPI(lifespan=lifespan)
+# In production the interactive documentation is closed: /docs, /redoc and
+# /openapi.json otherwise hand the entire API surface — every route, every
+# schema, every field — to anyone who asks. Passing None for all three makes
+# FastAPI not register the routes at all, so they 404 rather than 401; there is
+# nothing behind them to attack. In development all three stay exactly as they
+# were.
+_docs_enabled = not config.is_production()
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore
 
@@ -359,20 +422,43 @@ if not os.path.exists("static"):
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- CORS Middleware Configuration ---
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-]
+# The origin list comes from the environment (CORS_ORIGINS, comma separated):
+# one origin in production, the Vite dev server in development. Never a
+# wildcard — and a wildcard would in any case be refused by the browser now
+# that credentials are sent, because `Access-Control-Allow-Origin: *` and
+# `allow_credentials=True` are not a legal combination.
+#
+# Methods and headers are the ones this API actually uses, not "*", so a verb
+# or header the app does not implement is not pre-authorised for it.
+origins = config.cors_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Content-Disposition"],
+    allow_methods=config.CORS_METHODS,
+    allow_headers=config.CORS_HEADERS,
+    expose_headers=config.CORS_EXPOSE_HEADERS,
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """An unexpected failure returns a generic French message; the detail goes
+    to the log.
+
+    Without this, Starlette re-raises and the response depends on how the
+    server happens to be run: uvicorn with `--reload`, or any ASGI debug
+    middleware, will render the traceback into the response body — file paths,
+    source lines, local variables, and whatever identity data those locals held.
+
+    `exc_info=True` keeps the full traceback in the log, where the redaction
+    filter has already cleaned it.
+    """
+    logger.error("Unhandled error on %s %s", request.method, request.url.path, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Une erreur interne est survenue. Veuillez réessayer."},
+    )
 
 
 # --- Export helpers ---
@@ -552,24 +638,67 @@ def _export_rows_for_preview(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 
 # --- Authentication Routes ---
 @app.post("/token", response_model=schemas.Token)
-@limiter.limit("5/minute")
-def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit(config.LOGIN_RATE_LIMIT)
+def login_for_access_token(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Per-account lockout, layered on top of the per-IP limit above. The
+    # message is deliberately the same shape as a wrong password: telling an
+    # attacker "this account is locked" confirms the account exists.
+    if auth.is_locked_out(form_data.username):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Trop de tentatives de connexion. Réessayez dans quelques minutes.",
+        )
+
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        auth.record_login_failure(form_data.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Nom d'utilisateur ou mot de passe incorrect",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    auth.reset_login_failures(form_data.username)
     access_token = auth.create_access_token(data={"sub": user.get("user_name")})
+    # The token now also travels as an HttpOnly cookie, which is what the
+    # browser uses from here on. The response body is UNCHANGED — same shape,
+    # same fields — so every existing client, and the test suite, keep working.
+    auth.set_session_cookie(response, access_token)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/logout")
+def logout(response: Response):
+    """Clears the session cookie.
+
+    Necessary because the cookie is HttpOnly: the browser cannot delete it from
+    JavaScript any more, so logging out has to be something the server does.
+    Additive — no existing endpoint changed.
+    """
+    auth.clear_session_cookie(response)
+    return {"detail": "Déconnexion réussie"}
 
 
 # --- SSE ROUTE FOR REAL-TIME UPDATES ---
 @app.get("/events")
-async def events(request: Request, token: str = Query(...), db: Session = Depends(get_db)):
+async def events(request: Request, token: Optional[str] = Query(None), db: Session = Depends(get_db)):
     """Server-Sent Events endpoint. Gracefully handles disconnection and
-    server shutdown."""
+    server shutdown.
+
+    The token may now arrive in the session cookie instead of the query string.
+    EventSource cannot set an Authorization header, which is why the token was
+    in the URL — where it reached the access log, the browser history and any
+    proxy in between. With `new EventSource(url, {withCredentials: true})` the
+    cookie is sent instead and the URL carries nothing.
+
+    The query parameter is still accepted, so any client that passes it keeps
+    working; it is simply no longer required. Package B flagged this endpoint
+    as the one place a token still appeared in a URL — this is the fix.
+    """
+    if not token:
+        token = request.cookies.get(config.SESSION_COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid token")
     try:
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         username = payload.get("sub")
@@ -621,6 +750,14 @@ def self_register_user(request: Request, user: schemas.UserRegister, db: Session
     if crud.get_user_by_username(db, username=user.user_name):
         raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà enregistré")
 
+    # The server is the authority on the password policy. The registration form
+    # shows the same four rules live as the user types, but that is convenience
+    # only: a request posted straight to this endpoint is held to exactly the
+    # same standard. The rejected value is never logged and never echoed back.
+    password_policy.assert_valid_password(
+        user.password, email=user.email, user_name=user.user_name
+    )
+
     new_user = schemas.UserCreate(**user.model_dump(), page_credits=SIGNUP_PAGE_CREDITS)
     return crud.create_user(db=db, user=new_user, role="user")
 
@@ -639,6 +776,18 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
         user_update = schemas.UserUpdate(**user_update.model_dump(
             exclude_unset=True, exclude={"uploaded_pages_count", "page_credits", "user_name", "role"}
         ))
+
+    # A password change goes through the same policy as a registration. The
+    # field is optional here — an empty value means "leave it alone", which is
+    # what the account form sends when the user edits anything else — so the
+    # check runs only when a new password is actually supplied.
+    new_password = getattr(user_update, "password", None)
+    if new_password:
+        password_policy.assert_valid_password(
+            new_password,
+            email=user_update.email or current_user.get("email"),
+            user_name=current_user.get("user_name"),
+        )
 
     return crud.update_user(db=db, user_id=current_user["id"], user_update=user_update)
 
@@ -667,6 +816,14 @@ def read_user(user_id: str, db: Session = Depends(get_db)):
 
 @app.put("/admin/users/{user_id}", response_model=schemas.User, dependencies=[Depends(auth.require_admin)])
 async def update_user_admin(user_id: str, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
+    # Same policy when an admin resets somebody's password.
+    if getattr(user_update, "password", None):
+        target = crud.get_user(db, user_id)
+        password_policy.assert_valid_password(
+            user_update.password,
+            email=user_update.email or (target or {}).get("email"),
+            user_name=(target or {}).get("user_name"),
+        )
     db_user = crud.update_user(db=db, user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
@@ -682,6 +839,13 @@ def create_user_by_admin(user: schemas.UserCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="Email déjà enregistré")
     if crud.get_user_by_username(db, username=user.user_name):
         raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà enregistré")
+    # An admin-created account gets the same password policy as a self-service
+    # one: an account is only as strong as the password it ships with, and an
+    # administrator setting a weak one for a colleague is the likeliest way a
+    # weak password enters the system.
+    password_policy.assert_valid_password(
+        user.password, email=user.email, user_name=user.user_name
+    )
     return crud.create_user(db=db, user=user, role=getattr(user, 'role', 'user'))
 
 
@@ -697,7 +861,9 @@ def create_passport(passport: schemas.PassportCreate, db: Session = Depends(get_
 
 
 @app.post("/passports/upload-and-extract/", response_model=schemas.OcrJob)
+@limiter.limit(config.UPLOAD_RATE_LIMIT)
 async def upload_and_extract_passport(
+    request: Request,
     background_tasks: BackgroundTasks,
     destination: Optional[str] = Form(None),
     file: UploadFile = File(...),
@@ -707,23 +873,65 @@ async def upload_and_extract_passport(
     if current_user.get("page_credits", 0) <= 0:
         raise HTTPException(status_code=403, detail="Crédits insuffisants. Veuillez contacter l'administrateur.")
 
+    # The declared length lets an oversized upload be refused before a single
+    # byte of it is read. It is only a hint — a client can lie or omit it —
+    # so the real limit is enforced again while streaming, below.
+    declared_length = request.headers.get("content-length")
+    if declared_length and declared_length.isdigit() and int(declared_length) > config.MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Fichier trop volumineux. La taille maximale est de {config.MAX_UPLOAD_BYTES // (1024 * 1024)} Mo.",
+        )
+
+    # The filename is client-controlled and is used for display only. It is
+    # sanitised once, here, and the raw value is never stored, never logged and
+    # never used to build a path.
+    display_name = file_validation.safe_filename(file.filename)
+
     # Spool the upload to a temp file instead of reading it into memory: the
     # bytes would otherwise stay pinned in RAM for the whole background job.
     # The background task owns the file and deletes it when the job ends.
-    fd, tmp_path = tempfile.mkstemp(prefix="ocr_upload_")
+    fd, tmp_path = tempfile.mkstemp(prefix=OCR_SPOOL_PREFIX)
     file_size = 0
+    head = b""
     try:
         with os.fdopen(fd, "wb") as spool:
             while chunk := await file.read(1024 * 1024):
-                spool.write(chunk)
+                if not head:
+                    head = chunk[:file_validation.SNIFF_LENGTH]
                 file_size += len(chunk)
+                # Enforced mid-stream so a client that under-declares its
+                # Content-Length still cannot fill the disk: the write stops at
+                # the limit rather than after it.
+                if file_size > config.MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Fichier trop volumineux. La taille maximale est de {config.MAX_UPLOAD_BYTES // (1024 * 1024)} Mo.",
+                    )
+                spool.write(chunk)
 
         if file_size == 0:
             raise HTTPException(status_code=400, detail="The uploaded file is empty.")
 
+        # Type by MAGIC BYTES. The Content-Type header and the extension are
+        # both supplied by the client, so neither is consulted: a .pdf header
+        # on a ZIP used to reach fitz.open(), which sniffs the content itself
+        # and would happily open it as a document.
+        sniffed = file_validation.sniff_file_type(head)
+        if sniffed not in file_validation.ALLOWED_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail="Type de fichier non supporté. Veuillez télécharger une image ou un PDF.",
+            )
+        # Everything downstream branches on this, not on what the client said.
+        effective_content_type = file_validation.CANONICAL_MEDIA_TYPE[sniffed]
+
         job_id = str(uuid.uuid4())
-        job = await asyncio.to_thread(crud.create_ocr_job, db=db, job_id=job_id, user_id=current_user["id"], file_name=file.filename or "unknown")
-    except Exception:
+        job = await asyncio.to_thread(crud.create_ocr_job, db=db, job_id=job_id, user_id=current_user["id"], file_name=display_name)
+    except BaseException:
+        # BaseException, not Exception: a CancelledError — a client that hangs
+        # up mid-upload, or a shutdown — is not an Exception, and used to leave
+        # the spooled document on disk.
         try:
             os.unlink(tmp_path)
         except OSError:
@@ -736,7 +944,7 @@ async def upload_and_extract_passport(
         run_ocr_extraction_task,
         job_id=job_id,
         file_path=tmp_path,
-        content_type=file.content_type or "application/octet-stream",
+        content_type=effective_content_type,
         destination=destination,
         user_id=current_user["id"]
     )

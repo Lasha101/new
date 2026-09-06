@@ -319,7 +319,10 @@ test.describe('Formulaires', () => {
         // The username the mock already owns => the server's French error shows.
         await fill({
             first_name: 'Nouvelle', last_name: 'Agence', email: 'nouvelle@example.com',
-            phone_number: '0601020304', user_name: 'alice', password: 'motdepasse',
+            // Conforme à la politique du paquet C (12+, 1 majuscule, 2 chiffres,
+            // 2 spéciaux) : ce test porte sur les conflits d'identifiant,
+            // pas sur le mot de passe.
+            phone_number: '0601020304', user_name: 'alice', password: 'Girafe!!12Nuage',
         });
         await page.getByRole('button', { name: "S'inscrire" }).click();
         await expect(page.locator(SELECTORS.errorMessage))
