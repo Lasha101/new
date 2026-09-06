@@ -1035,3 +1035,390 @@ Plus, from this package specifically:
 Everything under "Cannot be automated" and the whole server checklist above.
 `ENVIRONMENT=production` and `CORS_ORIGINS` are the two that silently leave the
 application unhardened if forgotten.
+
+---
+---
+
+## Handover — Package D — Ops scripts
+
+- **Branch:** `feat/ops-scripts` (branched from `feat/security-app-layer`, whose
+  work is now committed as `8d19b38` — package C was uncommitted when this
+  session started and `git status` had to be clean before branching. Fourth
+  time the same situation, same resolution. C is committed on its own branch,
+  **not merged**; it is still awaiting review exactly as its handover says.)
+- **Date:** 2026-09-06
+- **Scope:** a new `ops/` directory and nothing else, plus this handover note.
+  No file anywhere else in the repository was created, edited or deleted.
+  > **Superseded on 2026-09-07.** The orphaned work listed at the end of this
+  > section was subsequently authorised and carried out, which *did* change
+  > files outside `ops/`. See **Follow-up — orphaned work closed** at the very
+  > bottom of this document for what changed and what it cost.
+
+### Nothing was executed against any server, and nothing was scheduled
+
+Stated plainly, because it is the first rule of this brief:
+
+- No `ssh`, no `scp` to a host, no remote `psql`, no `pg_dump` against anything
+  but a throwaway PostgreSQL created and destroyed locally.
+- **No cron entry was installed.** No `crontab` was read or written. The
+  crontab line exists only as a comment inside `backup.sh` and in the README.
+- No `systemctl`, no `nginx -s reload`, no `nginx -t` against a real config, no
+  package installed on any server.
+- No file was written outside the repository and the test temp directories.
+- No real credential, hostname, key or production path appears in `ops/`. Every
+  path is a placeholder (`/opt/scanid`, `/etc/scanid`, `/var/backups/scanid`);
+  the README flags that the repo actually deploys to `/opt/travelapp`, so the
+  human substitutes consistently.
+
+**A human must review these line by line, adapt every variable, and run
+`restore-test.sh` against a real backup before go-live. An untested backup is
+not a backup.**
+
+### Files created
+
+| File | Lines | What it is |
+|---|---|---|
+| `ops/backup.sh` | 300 | `pg_dump \| age` nightly backup, off-site copy, retention pruning |
+| `ops/restore-test.sh` | 279 | Restore rehearsal into a throwaway database |
+| `ops/nginx-security-headers.conf` | 199 | Header snippet incl. CSP. Not applied anywhere. |
+| `ops/README.md` | 358 | Prerequisites, variables, manual test procedure, verification |
+| `ops/tests/run-ops-tests.sh` | 438 | 94 assertions against a local throwaway PostgreSQL |
+| `ops/tests/test-nginx-headers.sh` | 199 | 29 assertions: parses **and** sends what it claims |
+
+### Verified by tests I ran
+
+```
+$ shellcheck --shell=bash ops/backup.sh ops/restore-test.sh \
+      ops/tests/run-ops-tests.sh ops/tests/test-nginx-headers.sh
+  0 warnings across all 4 scripts          # zero suppressions; see note below
+
+$ bash -n <each of the four>
+  OK ops/backup.sh
+  OK ops/restore-test.sh
+  OK ops/tests/run-ops-tests.sh
+  OK ops/tests/test-nginx-headers.sh
+
+$ ops/tests/run-ops-tests.sh
+  RESULTS: 94 passed, 0 failed
+
+$ ops/tests/test-nginx-headers.sh
+  RESULTS: 29 passed, 0 failed
+```
+
+shellcheck is clean with **no `# shellcheck disable` anywhere**. Three warnings
+appeared in the first draft and all three were fixed rather than justified: two
+`SC1090` (the `source=/dev/null` directive was on the line above `set -a;
+source …` and so applied to `set`, not to `source` — the lines were split), and
+`SC2221/SC2222` (`*prod*` already matched `*production*`, so the second pattern
+in the production-lookalike guard was dead code).
+
+`run-ops-tests.sh` builds its own PostgreSQL cluster with `initdb` into a temp
+directory, on a random loopback port, with `unix_socket_directories` emptied,
+seeds it with a schema mirroring `backend/models.py`, and destroys it. It never
+reads `/etc/scanid/backup.env` and never contacts a remote host.
+
+What the 94 assertions actually prove, grouped:
+
+**backup.sh** — preflight refuses a missing env file, an unset required
+variable (naming it), an age **private** key pasted into `AGE_RECIPIENT`, and
+`/var` as `BACKUP_DIR`. `--dry-run` creates no backup file, no `.part`, and
+copies nothing. A real run produces one file, mode 0600, no `.part` left. The
+file **starts with the age header, contains no `PGDMP` magic, and contains
+none of the seeded surname, email or passport number** — i.e. it is genuinely
+not readable as plain text. No unencrypted `.dump` or `.sql` exists anywhere in
+the workspace at any point. It **decrypts back to a dump `pg_restore --list`
+accepts**, whose listing names the real tables. The off-site copy arrives and
+is byte-identical. A dump against an unreachable database exits non-zero, logs
+`status=error` with the failing stage, leaves no `.part`, and creates no file.
+Retention pruning with a 14-day period **deletes the 30-, 20- and 15-day-old
+files, keeps the 13- and 2-day-old ones, keeps a foreign filename however old,
+and does not recurse into a subdirectory**. `--no-prune` keeps everything. A
+second concurrent run refuses on the lock. Exactly **one** log line per run, on
+success and on failure.
+
+**restore-test.sh** — refuses without `--confirm` (exit 2) and creates no
+database while printing what it would have done. Refuses when `PGDATABASE`
+itself contains the scratch prefix. Refuses a scratch name that looks like
+production. With `--confirm` it restores, reports `users=2 passports=3
+ocr_jobs=1 voyages=1`, **drops the scratch database**, and leaves the source
+database untouched. It picks the newest backup when `--file` is omitted. It
+**fails** when a sanity count is not met (naming the table and both numbers),
+when a required table is missing, on the wrong decryption key, and on a
+corrupted file — and the scratch database is dropped in every one of those
+failure paths. An end-to-end cycle proves a row inserted after the previous
+backup is present in the restore of the next one.
+
+**nginx snippet** — `nginx -t` passes; then nginx is actually started and a
+request made, asserting each of the four headers arrives, that **HSTS does not**
+(it ships commented out), and that the CSP contains each of its twelve
+directives verbatim and contains **no** `fonts.googleapis.com`,
+`fonts.gstatic.com`, any `googleapis.com`, or `'unsafe-eval'`. Finally the
+commented-out HSTS line is uncommented **in a copy** and proven to parse and to
+send a well-formed header — so a typo in a line that ships disabled cannot lie
+in wait.
+
+### The bug that test found — worth knowing about
+
+The first draft wrote the CSP across multiple lines with trailing backslashes,
+the way one would in a shell. **nginx is not a shell.** Inside a quoted string a
+trailing backslash is a literal backslash and the newline stays in the value.
+That version passed `nginx -t` cleanly and then emitted a broken multi-line
+header that `curl` rejected outright and a browser would discard — **no policy
+at all, silently, on a config that tests green.**
+
+This is exactly the failure the brief warned about for `font-src`, in a place
+nobody was looking. It is why `test-nginx-headers.sh` requests a page instead of
+trusting `nginx -t`, and why the snippet carries a `KEEP THIS ON ONE LINE`
+comment. If anyone later reformats that line for readability, the tests fail.
+
+### The font-src trap — checked against a real build, and the finding
+
+Checked, not assumed:
+
+```
+$ npm run build
+$ grep -o "url(data:" dist/assets/*.css dist/assets/index-*.js     # no matches
+$ find dist/assets -name '*.woff2' -printf '%s %f\n' | sort -n | head -1
+  4204 space-grotesk-vietnamese-700-normal-DMty7AZE.woff2
+```
+
+**No asset is inlined, so `font-src 'self'` is correct and the CSP stays tight.**
+
+But the margin is **108 bytes**: Vite's `assetsInlineLimit` defaults to 4096 and
+the smallest woff2 in the build is 4204. It is the *Vietnamese* subset of Space
+Grotesk that is closest to the line. A `@fontsource` bump that drops a few
+glyphs from that subset would cross it, the font would be inlined as a `data:`
+URI, `font-src 'self'` would block it, and the app would fall back to a system
+typeface **with no error anywhere**. The permanent fix is one line in
+`frontend/vite.config.js` (`build: { assetsInlineLimit: 0 }`) which this package
+must not touch — see below.
+
+### How the CSP was derived
+
+Every non-`'self'` token is traceable to a specific line of application code,
+and each is commented in the snippet with that line. No token is there
+defensively:
+
+| Directive | Why |
+|---|---|
+| `style-src 'self' 'unsafe-inline'` | `App.jsx:44` renders a literal `<style>` element and there are ~35 `style={{…}}` props. Without it the app renders unstyled. |
+| `img-src 'self' blob: data:` | `blob:` — `upload/imagePrep.js` and `App.jsx` load `URL.createObjectURL()` results into `<img>` to decode/rotate/compress. `data:` — `imagePrep.js:52` embeds a base64 JPEG EXIF-orientation probe. |
+| `connect-src 'self' data:` | `'self'` for `/api/` and the `/events` SSE stream, both same-origin. **`data:` because `imagePrep.js` reads that probe with `fetch()`, and `fetch()` on a `data:` URI is governed by connect-src, not img-src.** Easy to miss; fails silently. |
+| `worker-src 'self' blob:` | `'self'` for the PWA service worker; `blob:` because heic2any spawns `new Worker(URL.createObjectURL(…))`. |
+| `manifest-src 'self'` | Some browsers do not fall back to `default-src` for the PWA manifest. |
+
+And what is deliberately **absent**: no Google Fonts origins (fonts are
+self-hosted via `@fontsource`, per decision 2 — there is no third-party font
+request to allow), and no Vision API origin (Vision is called server-side; it
+does not belong in a policy that only constrains the browser).
+
+### Cannot be automated — reasons, not excuses
+
+Nothing below is tested, and none of it should be described as working.
+
+1. **Everything about the real server.** Nothing here has run against the VPS,
+   its PostgreSQL, its nginx or its cron. All of it is text awaiting review.
+2. **HEIC upload under this CSP, on a real iPhone.** `heic2any` is an Emscripten
+   build of libheif and its glue contains `new Function(…)` (verified by grep on
+   `dist/assets/heic2any-*.js`), which `script-src 'self'` blocks exactly as it
+   blocks `eval`. **Whether that code path actually executes during a conversion
+   was not determined.** Proving it needs a real HEIC photo decoded in a real
+   browser under this exact header, and heic2any runs inside a blob-URL Worker
+   whose violations do not surface to the page — this session had no way to run
+   that. It is reported as unverified rather than assumed either way. The
+   snippet documents the narrowest fix (`script-src 'self' 'unsafe-eval'`) and
+   says explicitly not to add it pre-emptively. **iPhones shoot HEIC by default
+   and this is a mobile-first product, so test it before go-live.**
+3. **That the off-site destination works.** Tested with a local directory as the
+   rsync target. A real `user@host:/path` needs a credential and a host, neither
+   of which exists here.
+4. **That `age` is installed on the VPS.** The preflight fails loudly if it is
+   not, which is the best a script can do from here.
+5. **Restore timing at production data volume.** The test database holds six
+   rows. How long a real restore takes, and whether the disk has room for it,
+   are numbers only the real server can give.
+6. **Whether `SANITY_MIN_ROWS` defaults suit the real database.** The default
+   asserts `users>=1` only. A human must set numbers the live data exceeds,
+   otherwise the check passes on a near-empty restore.
+
+### Findings — observed, deliberately not fixed
+
+1. `index.html` still says `<html lang="en">` and `<title>Vite + React</title>`.
+   Package A's finding, then B's, then C's. Still nobody's brief. Four packages.
+2. `ProgressBar` still renders « 12% - Upload ».
+3. The card view still has no sort control and no « tout sélectionner ».
+4. `GlobalStyles` is still an inline `<style>` in `App.jsx` — and it is now not
+   only a tidiness issue but the sole reason `style-src` needs `'unsafe-inline'`.
+   It has become a security finding rather than a cosmetic one.
+
+### Anything unresolved
+
+- **Nothing is committed on this branch yet** at the time of writing; `ops/` is
+  in the working tree awaiting review, matching how packages A–C were handed
+  over.
+- `frontend/dist/` was rebuilt to inspect the asset output for the `font-src`
+  check. It is gitignored and is not part of the change.
+
+### What the next package must know
+
+There is no next package — D is the last. For a human continuing the work:
+
+- `ops/tests/` is the regression suite for `ops/`. Run both after any edit.
+  They need `age`, `age-keygen`, `shellcheck`, PostgreSQL server binaries
+  (`initdb`/`pg_ctl`, found automatically under `/usr/lib/postgresql/*/bin`),
+  and either a local `nginx` or docker. Each exits 3 and says which tool is
+  missing rather than pretending to pass.
+- The CSP is derived from the built frontend. **Re-derive it whenever the
+  frontend changes**, using the two commands in the "font-src trap" section of
+  `ops/nginx-security-headers.conf`.
+- `restore-test.sh` needs the age **private** key, which by design is not on the
+  VPS. Run it from a workstation against a backup pulled from the off-site
+  destination — that tests the copy you would actually reach for.
+
+### Orphaned work — changes required outside this package's scope
+
+Per the "no orphaned work" rule, these are named rather than half-applied. None
+of them was made **by package D**.
+
+> **Status as of 2026-09-07:** items 1 and 2 have since been authorised and
+> done; item 3 is still open. Item 1 in particular did not go in as written —
+> applying the CSP exposed a real defect it would have caused. See **Follow-up —
+> orphaned work closed** at the bottom of this document.
+
+1. **`deploy/nginx-travelapp.conf` needs one line:
+   `include /opt/scanid/ops/nginx-security-headers.conf;` inside its `server`
+   block.** Without it the snippet does nothing at all. That file is the single
+   source of truth for the vhost and is rsynced by
+   `.github/workflows/deploy.yml`, so it belongs to the deploy configuration,
+   not to `ops/`. **This is the one change that makes the whole snippet real,
+   and it is deliberately not made.**
+   Watch the `add_header` inheritance trap when doing it: an `add_header` inside
+   any of that file's four `location` blocks silently drops *every* inherited
+   header for that path. The snippet documents this at the top.
+2. **`frontend/vite.config.js` — `build: { assetsInlineLimit: 0 }`.** Makes
+   `font-src 'self'` permanently safe instead of safe by 108 bytes. Owner:
+   whoever owns the frontend build; forbidden here.
+3. **`frontend/src/App.jsx` — move `GlobalStyles` into `scanid-app.css` and
+   replace the `style={{…}}` props**, to let `'unsafe-inline'` be dropped from
+   `style-src`. This is the one real CSP debt. Owner: a frontend package;
+   package A's brief forbids modifying `scanid-app.css` outside its changelog
+   process, so it needs its own scope.
+
+### Handed to a human
+
+Everything under "Cannot be automated", everything under "Orphaned work", and:
+
+- Create `/etc/scanid/backup.env` (mode 0640, root:scanid, outside the web root)
+  and replace every placeholder.
+- `age-keygen` the pair **off the server**. Public key to the VPS; **private key
+  stored twice**, never on the VPS. Lose it and every backup is landfill.
+- Choose and provision the off-site destination and its credential.
+- Install the cron entry or systemd timer, and point a monitor at the exit code.
+- **Run `restore-test.sh` against a real backup before go-live**, and put a
+  quarterly repeat in the calendar.
+- Confirm HTTPS works, *then* uncomment HSTS. Not before — it is unrecoverable.
+
+The whole human checklist from packages A–C still stands: HTTPS, UFW, SSH
+key-only auth, fail2ban, CloudPanel 2FA, restricting port 8443, binding
+PostgreSQL to localhost, encryption at rest, unattended-upgrades — plus
+`ENVIRONMENT=production` and `CORS_ORIGINS`, which package C flagged as the two
+lines that silently leave the application unhardened if forgotten.
+
+---
+---
+
+## Follow-up — orphaned work closed
+
+- **Date:** 2026-09-07
+- **Branch:** `feat/ops-scripts`
+- **Why this exists:** package D deliberately left three changes unmade because
+  they fell outside its scope. Two were then explicitly authorised, along with
+  reproducing package D's own test claims on this machine. This section records
+  what changed, and the one real defect the work uncovered.
+
+### What changed, and why
+
+| File | Change |
+|---|---|
+| `deploy/nginx-travelapp.conf` | `include /opt/travelapp/ops/nginx-security-headers.conf;` at **server** level (orphaned item 1) |
+| `.github/workflows/deploy.yml` | rsync `ops/` → `/opt/travelapp/ops/`, ordered **before** `deploy/` |
+| `frontend/vite.config.js` | `build: { assetsInlineLimit: 0 }` (orphaned item 2) |
+| `ops/nginx-security-headers.conf` | `script-src` gained `'unsafe-eval'`; docs rewritten to match reality |
+| `ops/tests/test-nginx-headers.sh` | the `'unsafe-eval'` assertion inverted, and `'unsafe-inline'` now checked **within** `script-src` |
+| `frontend/tests/e2e/features.spec.js` | 11 `test.skip(LIVE, …)` guards |
+| `ops/README.md`, `frontend/tests/README.md` | brought in line with the above |
+
+**The include path is `/opt/travelapp/ops/`, not `/opt/scanid/ops/`.** The
+snippet is only real if the file is on the server, and `deploy.yml` runs
+`nginx -t` and **fails the deploy** when the config does not parse. So `ops/`
+is now rsynced, immediately before `deploy/`, and every `/opt/scanid` reference
+in `ops/` was corrected. Do not delete `ops/nginx-security-headers.conf` without
+first removing the include line.
+
+### The defect this uncovered — `script-src 'self'` hangs HEIC uploads
+
+Package D flagged the heic2any/`new Function` question as *unverified*. It was
+verified here, and the strict policy was not merely suboptimal — it was broken:
+
+```
+built bundle served over HTTP, headless Chromium, CSP on vs off
+  CSP off:  heic2any settles     -> "ERR_LIBHEIF format not supported"
+  CSP on:   NEVER SETTLES (hang) -> EvalError: ... 'unsafe-eval' is not an
+                                    allowed source of script
+```
+
+heic2any decodes in a blob worker, and a blob worker inherits the document's
+CSP. libheif's embind glue calls `new Function` while registering types, so the
+worker dies **during script evaluation, before its message handler exists**. The
+promise therefore never settles rather than rejecting — so the `try/catch` in
+`frontend/src/upload/imagePrep.js` never runs and its "on failure, upload the
+original" fallback never fires. `uploadQueue.js` drains serially with `await`
+and no timeout, so one HEIC stalls **every document queued behind it** until the
+page is reloaded.
+
+`script-src` therefore carries `'unsafe-eval'`. It is a genuine weakening and
+the one token in this policy that should not be permanent: removing it means
+replacing heic2any with a wasm-based decoder and moving to `'wasm-unsafe-eval'`,
+which is far narrower and — importantly — does **not** permit `new Function`, so
+it is not a drop-in substitute. The reasoning, the measurement and the removal
+path are all in the comment at the foot of `ops/nginx-security-headers.conf`.
+
+**Not measured:** real Safari on a real iPhone. Blob workers inheriting the
+document policy is spec-mandated, so Safari is expected to match Chromium, but
+that is reasoning, not a measurement. Confirm on a device before go-live.
+
+### Verified by tests I ran
+
+```
+frontend unit  (node --test)                     79 passed
+backend        (pytest)                          216 passed
+frontend E2E   (npm run test:e2e, 4 projects)    337 passed, 1 skipped
+                 — identical to the pre-change run
+ops suite      (ops/tests/run-ops-tests.sh)      94 passed, 0 failed
+ops nginx      (ops/tests/test-nginx-headers.sh) 30 passed, 0 failed
+shellcheck     (4 scripts, 0 suppressions)       0 warnings
+```
+
+`age` and `shellcheck` are not installable on the dev host (no passwordless
+sudo), so the ops suite and shellcheck were run in a throwaway container built
+from `ubuntu:24.04` with `age shellcheck postgresql rsync util-linux`, with the
+repository mounted **read-only**. This reproduced package D's claimed numbers
+exactly (94 and 0) — those claims were previously unverified on this machine.
+
+Additionally, and beyond what package D could do: the **real vhost** was run in
+nginx with the real snippet, the real build and the real backend, and the
+baseline suite driven through it. All 6 baseline specs passed under the live CSP,
+`document.fonts.check` returned true for both self-hosted families, and a full
+login-to-dashboard session recorded **zero** `securitypolicyviolation` events.
+
+### Still open
+
+1. **Orphaned item 3 is untouched** — `GlobalStyles` and the ~35 `style={{…}}`
+   props in `App.jsx` still force `'unsafe-inline'` in `style-src`. Unchanged.
+2. **`'unsafe-eval'`** should go once heic2any is replaced. See above.
+3. **`deploy.yml`'s health check is `curl -sf http://127.0.0.1:8001/docs`.**
+   That endpoint returns **404 when `ENVIRONMENT=production`** (package C closed
+   the docs deliberately), so setting the variable the security work depends on
+   will fail the deploy at that line. Not changed here — it is outside what was
+   authorised — but it will bite on the first hardened deploy. `/openapi.json`
+   is closed in production too; a route that exists in both modes is needed.

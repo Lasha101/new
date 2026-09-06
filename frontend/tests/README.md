@@ -111,7 +111,30 @@ E2E_MODE=live npx playwright test --project=desktop --workers=1
 — the same substitution `backend/tests/conftest.py` already performs for pytest.
 No application file is modified. It seeds the same five synthetic documents.
 
-Two things to know about live runs:
+Three things to know about live runs:
+
+* **Eleven specs skip themselves in live mode.** Each calls `test.skip(LIVE, …)`
+  on its first line with its reason, so a live run reports them as **skipped**
+  rather than red. They still run normally — and must stay green — in the default
+  mocked suite, which is what `npm run test:e2e` runs and what gates a merge.
+
+  Two distinct reasons:
+  - **Nine drive the mock's state directly** (`api.jobs = …`, `api.passports`,
+    `api.user`). The `api` fixture is `null` when `E2E_MODE=live`, so they would
+    throw a TypeError. There is simply no mock to drive against a real backend.
+  - **Two assume an untouched set of rows** (the first table row is a passport;
+    the destinations datalist contains `Rome`). `tests/live/serve.py` seeds the
+    *same* five documents as `tests/mock/data.js`, so this is **not** a
+    different dataset — it is that the live backend keeps **one database for the
+    whole run**, so any spec that creates or deletes rows changes what a later
+    spec sees. The mock is re-seeded per test and has no such coupling.
+
+  That second class is a property of live mode generally, not of these two specs.
+  If you add a spec that mutates rows, expect order-dependence in live runs.
+
+  If you add a spec that touches `api`, guard it the same way. A live run that
+  shows red for a mock-only spec is a harness artefact, not an application bug,
+  and hiding that distinction is how a real regression gets ignored.
 
 * **`POST /token` is rate limited to 5 per minute per IP** (`backend/main.py`).
   A suite hits that within two or three specs. `login()` detects the app's

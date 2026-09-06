@@ -75,6 +75,14 @@ jobs:
             backend/ "$VPS_USER@$VPS_HOST:/opt/travelapp/backend/"
           rsync -az --delete \
             frontend/dist/ "$VPS_USER@$VPS_HOST:/opt/travelapp/frontend-dist/"
+          # ops/ BEFORE deploy/: deploy/nginx-travelapp.conf now `include`s
+          # /opt/travelapp/ops/nginx-security-headers.conf, and nginx -t below
+          # fails the deploy if that file is not on disk. Syncing it first means
+          # the include target always exists by the time the vhost referencing
+          # it lands. The shell scripts in ops/ are operator tools; syncing them
+          # does not schedule or run anything.
+          rsync -az --delete \
+            ops/ "$VPS_USER@$VPS_HOST:/opt/travelapp/ops/"
           rsync -az --delete \
             deploy/ "$VPS_USER@$VPS_HOST:/opt/travelapp/deploy/"
 

@@ -4,6 +4,21 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    // Never inline an asset as a data: URI — every asset stays a real file.
+    //
+    // Vite's default is 4096 bytes, and the smallest font subset this app ships
+    // (space-grotesk-vietnamese-700) is 4204 bytes: a margin of 108 bytes. A
+    // @fontsource bump that shaved a few glyphs off that subset would push it
+    // under the limit, Vite would inline it, and `font-src 'self'` in
+    // ops/nginx-security-headers.conf would block it — the app would silently
+    // fall back to a system typeface with no error anywhere.
+    //
+    // Setting 0 makes that impossible, which is what keeps the CSP's font-src
+    // tight instead of needing `data:` added to it. See ops/README.md and the
+    // "font-src TRAP" section of ops/nginx-security-headers.conf.
+    assetsInlineLimit: 0,
+  },
   plugins: [
     react(),
     // --- PWA -------------------------------------------------------------

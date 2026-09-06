@@ -5,7 +5,7 @@
 // covers the rest — sorting, selection, bulk edit, multi-delete, manual create,
 // edit, job removal, the export preview, selection exports, the password toggle
 // and self-registration — so "nothing else broke" is a result, not a claim.
-import { test, expect } from './test-base.js';
+import { test, expect, LIVE } from './test-base.js';
 import {
     login, uploadFiles, resultsTable, resultsRows, countResultRows,
     SELECTORS, TEXT,
@@ -117,6 +117,7 @@ test.describe('Sélection de lignes', () => {
 
 test.describe('Actions groupées', () => {
     test('la modification groupée de destination écrit chaque ligne', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         await selectAll(page).check();
 
@@ -148,6 +149,7 @@ test.describe('Actions groupées', () => {
 
 test.describe('Création et modification manuelles', () => {
     test('« + Manuel » crée une ligne qui apparaît dans le tableau', async ({ page }) => {
+        test.skip(LIVE, 'suppose un jeu de lignes intact : en live la base est partagée par toute la série, un test qui crée ou supprime des lignes change ce que celui-ci voit ; le mock est réinitialisé à chaque test');
         await login(page);
         const before = await countResultRows(page);
 
@@ -172,6 +174,7 @@ test.describe('Création et modification manuelles', () => {
     });
 
     test('« Modifier » ouvre la ligne pré-remplie et enregistre', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         await resultsTable(page).locator('tbody tr').first()
             .getByRole('button', { name: 'Modifier' }).click();
@@ -189,6 +192,7 @@ test.describe('Création et modification manuelles', () => {
     });
 
     test('« Annuler » revient au tableau sans rien écrire', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         const original = api.passports[0].first_name;
 
@@ -204,6 +208,7 @@ test.describe('Création et modification manuelles', () => {
 
 test.describe('Moniteur de jobs', () => {
     test('le bouton X supprime le job après confirmation', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         api.jobs = [{
             id: 'job-x', user_id: api.user.id, file_name: 'a-supprimer.pdf', status: 'complete',
             progress: 100, created_at: new Date().toISOString(), committed: true,
@@ -223,6 +228,7 @@ test.describe('Moniteur de jobs', () => {
     });
 
     test('les échecs d’une page sont listés sous la barre', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         api.jobs = [{
             id: 'job-f', user_id: api.user.id, file_name: 'partiel.pdf', status: 'complete',
             progress: 100, created_at: new Date().toISOString(), committed: true,
@@ -279,6 +285,7 @@ test.describe('Panneau d’exportation', () => {
     });
 
     test('le filtre de type se propage à la requête d’export', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         await page.locator(SELECTORS.typeFilter).locator('button[value="PI"]').click();
 
@@ -335,6 +342,7 @@ test.describe('Formulaires', () => {
     });
 
     test('« Mon Compte » se pré-remplit et enregistre', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         await page.getByRole('button', { name: 'Mon Compte', exact: true }).click();
 
@@ -374,6 +382,7 @@ test.describe('Navigation et session', () => {
     });
 
     test('la liste de destinations alimente le champ d’import', async ({ page }) => {
+        test.skip(LIVE, 'suppose un jeu de lignes intact : en live la base est partagée par toute la série, un test qui crée ou supprime des lignes change ce que celui-ci voit ; le mock est réinitialisé à chaque test');
         await login(page);
         const listId = await page.locator(SELECTORS.destinationInput).getAttribute('list');
         const options = page.locator(`#${listId} option`);
@@ -402,6 +411,7 @@ test.describe('Ce que les cartes permettent sur mobile', () => {
     });
 
     test('« Modifier » depuis une carte ouvre le même formulaire', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         await page.locator(SELECTORS.cardItem).first()
             .getByRole('button', { name: 'Modifier' }).click();
@@ -412,6 +422,7 @@ test.describe('Ce que les cartes permettent sur mobile', () => {
     });
 
     test('la modification groupée de destination marche depuis les cartes', async ({ page, api }) => {
+        test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
         await page.locator(SELECTORS.cardItem).first().locator('input[type="checkbox"]').check();
 
