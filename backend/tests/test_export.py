@@ -238,8 +238,13 @@ def test_xlsx_export_headers_type_column_uppercase_no_ids(client, user_with_docu
 
 
 def test_xlsx_dates_displayed_as_dd_mm_yyyy(client, user_with_documents):
-    """Every date cell carries the DD/MM/YYYY number format, so Excel shows
-    17/05/1990 (never 1990-05-17) while keeping a real date value."""
+    """Every date cell carries the jour/mois/année number format, so a reader
+    shows 17/05/1990 (never 1990-05-17) while keeping a real date value.
+
+    The exact casing is asserted on purpose: 'DD'/'YYYY' mean day-of-year and
+    week-numbering year in the Unicode/ICU date grammar that iOS uses to preview
+    an .xlsx, which showed 5 July 1983 as '186/07/1983' on an iPhone. Only
+    'dd/MM/yyyy' reads as day/month/year in both that grammar and Excel's."""
     ws = read_xlsx(client.get("/export/data", headers=user_with_documents["headers"]))
     header = [cell.value for cell in ws[1]]
     date_columns = [header.index("Date de Naissance") + 1, header.index("Date d'Expiration") + 1]
@@ -247,7 +252,7 @@ def test_xlsx_dates_displayed_as_dd_mm_yyyy(client, user_with_documents):
         for column in date_columns:
             cell = row[column - 1]
             assert isinstance(cell.value, (date, datetime)), cell.coordinate
-            assert cell.number_format == "DD/MM/YYYY", f"{cell.coordinate}: {cell.number_format}"
+            assert cell.number_format == "dd/MM/yyyy", f"{cell.coordinate}: {cell.number_format}"
             assert cell.is_date
     # and no other cell is formatted as a date
     for row in ws.iter_rows(min_row=2):

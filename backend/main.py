@@ -73,10 +73,19 @@ DOC_TYPE_PASSPORT = "PASS"
 DOC_TYPE_ID_CARD = "PI"
 DocumentType = Literal["PASS", "PI"]
 ExportFormat = Literal["xlsx", "csv"]
-# Dates are displayed the French way (jour/mois/année, DD/MM/YYYY) everywhere
-# the export is seen: on-screen preview, CSV text (_format_display_date) and
-# the number format of XLSX date cells.
-XLSX_DATE_NUMBER_FORMAT = "DD/MM/YYYY"
+# Dates are displayed the French way (jour/mois/année) everywhere the export is
+# seen: on-screen preview, CSV text (_format_display_date) and the number format
+# of XLSX date cells.
+#
+# The casing of this format code is not cosmetic. Excel's number-format grammar
+# is case-insensitive, but a spreadsheet viewer built on Unicode/ICU date
+# patterns (UTS #35) — which is what iOS uses to preview an .xlsx — reads the
+# very same string as a date pattern, and there 'D' means DAY OF THE YEAR and
+# 'Y' means the week-numbering year. Written "DD/MM/YYYY", 5 July 1983 rendered
+# as "186/07/1983" on an iPhone while Excel showed it correctly. Only 'd' (day
+# of the month), 'M' (month) and 'y' (calendar year) mean the same thing in both
+# grammars, so this code must stay lowercase-d / uppercase-M / lowercase-y.
+XLSX_DATE_NUMBER_FORMAT = "dd/MM/yyyy"
 # ASCII digit class on purpose: the frontend regex (JS \d) is ASCII-only, and
 # both sides must classify every value identically.
 _PASSPORT_NUMBER_RE = re.compile(r"^[0-9]{2}[A-Z]{2}[0-9]{5}$")
