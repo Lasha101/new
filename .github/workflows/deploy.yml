@@ -114,7 +114,23 @@ jobs:
               exit 1
             fi
             sleep 3
-            curl -sf http://127.0.0.1:8001/docs >/dev/null
-            curl -sf http://127.0.0.1/api/openapi.json >/dev/null
+            # Health check on an endpoint that behaves the SAME in development
+            # and in production.
+            #
+            # This used to probe /docs and /api/openapi.json with `curl -sf`.
+            # Both return 200 in development but 404 once ENVIRONMENT=production
+            # (the backend closes its docs deliberately), and -f treats 404 as
+            # failure — so turning on the hardening would have failed the deploy
+            # on a perfectly healthy release.
+            #
+            # /destinations/ is 401 in BOTH modes, and asserting the exact code
+            # checks more than the old probe did: 401 proves the route exists,
+            # the auth dependency actually ran, and — on the second line — that
+            # nginx proxied /api/ through to uvicorn. A dead backend gives 000
+            # or 502, a broken proxy 404, and either fails this.
+            api_code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8001/destinations/)
+            [ "$api_code" = "401" ] || { echo "ERROR: backend health check returned $api_code, expected 401"; exit 1; }
+            proxy_code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/destinations/)
+            [ "$proxy_code" = "401" ] || { echo "ERROR: nginx /api/ proxy returned $proxy_code, expected 401"; exit 1; }
             echo "Deployed; service and nginx routing are answering."
           '
