@@ -174,7 +174,7 @@ fi
 # a system root, and a relative path that resolves against cron's $HOME.
 [[ "$BACKUP_DIR" = /* ]] || die "BACKUP_DIR must be an absolute path, got: ${BACKUP_DIR}"
 case "${BACKUP_DIR%/}" in
-    ""|/root|/home|/etc|/var|/usr|/opt|/srv|/tmp|"${HOME%/}")
+    ""|/root|/home|/etc|/var|/usr|/opt|/srv|/tmp|"${HOME:+${HOME%/}}")
         die "refusing to use ${BACKUP_DIR} as BACKUP_DIR: use a dedicated directory such as /var/backups/scanid" ;;
 esac
 [[ -d "$BACKUP_DIR" ]] || die "BACKUP_DIR does not exist: ${BACKUP_DIR} (create it: install -d -m 0700 ${BACKUP_DIR})"
