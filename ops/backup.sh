@@ -166,7 +166,20 @@ done
 for cmd in pg_dump age find flock; do
     command -v "$cmd" >/dev/null 2>&1 || die "required command not found: ${cmd}"
 done
-if [[ "$OFFSITE_DEST" != "none" ]]; then
+# Two off-site transports. The `rclone:` prefix is REQUIRED to select rclone
+# rather than inferred, because an rclone remote (`remote:bucket/path`) and an
+# rsync target (`user@host:/path`) are not reliably distinguishable — both are
+# "something, a colon, something". An explicit prefix cannot be guessed wrong.
+if [[ "$OFFSITE_DEST" == rclone:* ]]; then
+    command -v rclone >/dev/null 2>&1 || die "required command not found: rclone"
+    # rclone finds its config via $HOME when --config is not given, and systemd
+    # does not set HOME for a Type=oneshot unit — the same trap that already
+    # broke the BACKUP_DIR guard below. So the path is required explicitly and
+    # checked here, rather than discovered at upload time on a night when
+    # nobody is watching.
+    [[ -n "${RCLONE_CONFIG:-}" ]] || die "OFFSITE_DEST uses rclone but RCLONE_CONFIG is unset in ${OPS_ENV_FILE}"
+    [[ -r "$RCLONE_CONFIG" ]]     || die "RCLONE_CONFIG is not readable: ${RCLONE_CONFIG}"
+elif [[ "$OFFSITE_DEST" != "none" ]]; then
     command -v rsync >/dev/null 2>&1 || die "required command not found: rsync"
 fi
 
@@ -256,6 +269,24 @@ else
         # Deliberate opt-out, still surfaced every single night. A backup that
         # only exists on the machine it backs up is not an off-site backup.
         OFFSITE_STATUS="none-configured"
+    elif [[ "$OFFSITE_DEST" == rclone:* ]]; then
+        # Object storage. The dump is already encrypted to a recipient whose
+        # identity is not on this machine, so the bucket holds ciphertext and
+        # the provider cannot read it.
+        RCLONE_DEST="${OFFSITE_DEST#rclone:}"
+        rclone --config "$RCLONE_CONFIG" copy "$DUMP_FILE" "${RCLONE_DEST%/}/" \
+            || die "off-site copy to ${RCLONE_DEST} failed (the local copy at ${DUMP_FILE} is intact)"
+
+        # `rclone copy` is silent on success and exits 0 for an empty transfer,
+        # so the exit code alone does not prove the object arrived. Read the
+        # size back off the remote and compare. A backup you have not confirmed
+        # landed is the same class of mistake as one you have never restored.
+        REMOTE_BYTES=$(rclone --config "$RCLONE_CONFIG" \
+                          size --json "${RCLONE_DEST%/}/$(basename -- "$DUMP_FILE")" 2>/dev/null \
+                       | sed -nE 's/.*"bytes":[[:space:]]*([0-9]+).*/\1/p')
+        [[ "$REMOTE_BYTES" == "$DUMP_BYTES" ]] \
+            || die "off-site verification failed: local ${DUMP_BYTES} bytes, remote ${REMOTE_BYTES:-<object not found>}"
+        OFFSITE_STATUS="ok"
     else
         rsync --archive --partial --chmod=F600 -- "$DUMP_FILE" "${OFFSITE_DEST%/}/" \
             || die "off-site copy to ${OFFSITE_DEST} failed (the local copy at ${DUMP_FILE} is intact)"
