@@ -128,9 +128,20 @@ jobs:
             # the auth dependency actually ran, and — on the second line — that
             # nginx proxied /api/ through to uvicorn. A dead backend gives 000
             # or 502, a broken proxy 404, and either fails this.
+            #
+            # The second probe goes over HTTPS, not port 80. Since the vhost
+            # gained a TLS block, port 80 answers every path except the ACME
+            # challenge with a 301 to https://scanid.fr — so the old
+            # `http://127.0.0.1/api/...` probe would report 301 and fail the
+            # deploy on a healthy release, exactly the way the /docs probe
+            # described above did. `--resolve` pins the name to the loopback so
+            # the check never leaves the machine while still presenting the
+            # right SNI, which means it also proves the certificate is valid
+            # and the 443 server block is the one serving /api/.
             api_code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8001/destinations/)
             [ "$api_code" = "401" ] || { echo "ERROR: backend health check returned $api_code, expected 401"; exit 1; }
-            proxy_code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/destinations/)
-            [ "$proxy_code" = "401" ] || { echo "ERROR: nginx /api/ proxy returned $proxy_code, expected 401"; exit 1; }
+            proxy_code=$(curl -s -o /dev/null -w '%{http_code}' \
+              --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/api/destinations/)
+            [ "$proxy_code" = "401" ] || { echo "ERROR: nginx /api/ proxy over HTTPS returned $proxy_code, expected 401"; exit 1; }
             echo "Deployed; service and nginx routing are answering."
           '
