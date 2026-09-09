@@ -7,8 +7,7 @@
 // that is exactly what happened to the v1.0 palette.
 import { test, expect } from './test-base.js';
 import {
-    login, uploadFiles, measureTapTargets, getComputedColorPair, SELECTORS, TEXT,
-} from '../helpers/index.js';
+    login, uploadFiles, measureTapTargets, getComputedColorPair, SELECTORS, TEXT, APP_BASE } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 
 const BUTTON_SELECTOR = '.sid-btn, .sid-btn-outline, .sid-btn-ghost';
@@ -47,7 +46,7 @@ test.describe('Cibles tactiles', () => {
     });
 
     test('les boutons de l’écran de connexion aussi', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
 
         const targets = await measureTapTargets(page, BUTTON_SELECTOR);
@@ -63,7 +62,7 @@ test.describe('Zoom des champs sur iOS', () => {
             fontSizePx: parseFloat(getComputedStyle(node).fontSize),
         })));
 
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
         const onLogin = await measure();
         expect(onLogin.length).toBeGreaterThan(0);
@@ -182,7 +181,7 @@ test.describe('Navigation au clavier', () => {
     };
 
     test('chaque arrêt de tabulation sur la connexion montre un indicateur', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
 
         const stops = await tabThrough(page, 8);

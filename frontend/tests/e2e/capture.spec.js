@@ -7,7 +7,7 @@
 import { test, expect } from './test-base.js';
 import {
     login, uploadFiles, SELECTORS, serveFixtures, fixtureUrl, prepareInBrowser,
-    findOverflowingElements, measureTapTargets,
+    findOverflowingElements, measureTapTargets, appSrc,
 } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 
@@ -216,8 +216,8 @@ test.describe('HEIC', () => {
         // En-tête HEIC authentique (boîte ftyp d'un iPhone) suivi d'octets qui
         // ne sont pas une image : la détection réussit, la conversion échoue.
         // Le fichier doit quand même partir — le serveur sait décoder le HEIC.
-        const result = await page.evaluate(async () => {
-            const { prepareFileForUpload } = await import('/src/upload/imagePrep.js');
+        const result = await page.evaluate(async (module) => {
+            const { prepareFileForUpload } = await import(module);
             const header = [
                 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, // size + 'ftyp'
                 0x68, 0x65, 0x69, 0x63, 0x00, 0x00, 0x00, 0x00, // 'heic' + minor
@@ -235,7 +235,7 @@ test.describe('HEIC', () => {
                 name: outcome.file.name,
                 size: outcome.file.size,
             };
-        });
+        }, appSrc('upload/imagePrep.js'));
 
         expect(result.detectedType).toBe('heic');       // détecté par les octets
         expect(result.reason).toBe('heic-conversion-failed');
@@ -247,14 +247,14 @@ test.describe('HEIC', () => {
 
     test("un JPEG nommé .heic est traité comme un JPEG", async ({ page }) => {
         // La détection ne consulte ni le nom ni le type annoncé.
-        const result = await page.evaluate(async () => {
-            const { prepareFileForUpload } = await import('/src/upload/imagePrep.js');
+        const result = await page.evaluate(async (module) => {
+            const { prepareFileForUpload } = await import(module);
             const response = await fetch('/__fixture/large-landscape.jpg');
             const blob = await response.blob();
             const file = new File([blob], 'IMG_0001.HEIC', { type: 'image/heic' });
             const outcome = await prepareFileForUpload(file);
             return { detectedType: outcome.detectedType, reason: outcome.reason, name: outcome.file.name };
-        });
+        }, appSrc('upload/imagePrep.js'));
         expect(result.detectedType).toBe('jpeg');
         expect(result.reason).toBe('compressed');
         expect(result.name).toBe('IMG_0001.HEIC'); // extension inchangée : c'était déjà du JPEG

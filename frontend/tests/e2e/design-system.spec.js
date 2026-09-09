@@ -6,8 +6,7 @@
 import { test, expect } from './test-base.js';
 import {
     login, resultsTable, resultsCards, selectDocType, readCsv, readXlsx,
-    SELECTORS, TEXT,
-} from '../helpers/index.js';
+    SELECTORS, TEXT, APP_BASE } from '../helpers/index.js';
 import { DOC_TYPE_PASSPORT, DOC_TYPE_ID_CARD } from '../../src/resultsHelpers.js';
 
 /**
@@ -168,7 +167,7 @@ test.describe('Interface en français', () => {
     const EXEMPT = ['.progress-text'];
 
     test('aucun mot anglais visible sur la connexion', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
 
         const text = await visibleText(page, EXEMPT);

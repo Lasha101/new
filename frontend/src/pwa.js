@@ -10,8 +10,15 @@
 
 import { useEffect, useState } from 'react';
 
-/** Where vite-plugin-pwa writes the generated worker (workbox `filename`). */
-const SERVICE_WORKER_URL = '/sw.js';
+/**
+ * Where vite-plugin-pwa writes the generated worker (workbox `filename`).
+ *
+ * Built from the base path rather than hard-coded: the application is served
+ * under /app/ (see vite.config.js), so the worker is /app/sw.js. The URL is
+ * also what sets the scope — registering /app/sw.js scopes the worker to /app/,
+ * which is what keeps it away from the public site at the origin root.
+ */
+const SERVICE_WORKER_URL = `${import.meta.env.BASE_URL}sw.js`;
 
 /** At most one update check per this many ms, on top of the browser's own. */
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;

@@ -6,13 +6,13 @@
 // told what they are BEFORE being rejected for breaking them.
 import { expect } from '@playwright/test';
 import { test } from './test-base.js';
-import { SELECTORS } from '../helpers/index.js';
+import { SELECTORS, APP_BASE } from '../helpers/index.js';
 
 const RULES = ['length', 'uppercase', 'digits', 'specials'];
 
 /** Opens « Créer un nouveau compte » from the login screen. */
 async function openRegistration(page) {
-    await page.goto('/');
+    await page.goto(APP_BASE);
     await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
     await page.getByRole('button', { name: 'Créer un compte' }).click();
     await expect(page.getByRole('heading', { name: 'Créer un nouveau compte' })).toBeVisible();

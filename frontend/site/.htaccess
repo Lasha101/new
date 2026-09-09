@@ -1,0 +1,44 @@
+# ============================================================
+# ScanID — scanid.fr — configuration Apache (IONOS mutualisé)
+# ============================================================
+
+# --- Encodage ---
+AddDefaultCharset UTF-8
+
+# --- HTTPS + domaine canonique (sans www) ---
+# Prérequis : le certificat SSL doit être actif dans l'espace
+# client IONOS (inclus dans l'hébergement). Si le site devient
+# inaccessible après upload, commentez les 4 lignes RewriteXXX
+# ci-dessous le temps d'activer le SSL, puis réactivez-les.
+RewriteEngine On
+RewriteCond %{HTTPS} !=on [OR]
+RewriteCond %{HTTP_HOST} ^www\. [NC]
+RewriteRule ^(.*)$ https://scanid.fr/$1 [R=301,L]
+
+# --- Page 404 personnalisée ---
+ErrorDocument 404 /404.html
+
+# --- Compression ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+# --- Cache navigateur ---
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/png "access plus 6 months"
+  ExpiresByType image/svg+xml "access plus 6 months"
+  ExpiresByType image/x-icon "access plus 6 months"
+  ExpiresByType video/mp4 "access plus 6 months"
+  ExpiresByType application/pdf "access plus 1 month"
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# --- En-têtes de sécurité ---
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>

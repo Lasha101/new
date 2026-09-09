@@ -4,7 +4,25 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // The application is no longer what answers at scanid.fr/ — the public site
+  // in frontend/site/ is, and the application sits behind it at /app/. Two
+  // consequences, and they have to move together:
+  //
+  //   base    every URL the build emits (scripts, styles, fonts, the manifest,
+  //           the worker registration) is prefixed with /app/.
+  //   outDir  the built files go to dist/app/, leaving the root of dist/ for
+  //           scripts/assemble-site.mjs to fill with the site.
+  //
+  // Setting one without the other produces a build that looks fine and 404s
+  // everywhere. `npm run build` runs both halves in order.
+  //
+  // It also moves the service worker to /app/sw.js, which scopes it to /app/ —
+  // so the worker cannot intercept a single page of the public site. That is a
+  // property worth keeping: see scripts/legacy-sw-unregister.js for what had to
+  // be shipped because the old worker was NOT scoped that way.
+  base: '/app/',
   build: {
+    outDir: 'dist/app',
     // Never inline an asset as a data: URI — every asset stays a real file.
     //
     // Vite's default is 4096 bytes, and the smallest font subset this app ships

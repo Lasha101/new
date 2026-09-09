@@ -6,7 +6,7 @@
 // design system asks for — a wrong @fontsource path resolves to nothing and the
 // browser silently falls back to a system font, which looks like success.
 import { test, expect } from './test-base.js';
-import { login, uploadFiles, resultsRows, selectDocType, SELECTORS, TEXT } from '../helpers/index.js';
+import { login, uploadFiles, resultsRows, selectDocType, SELECTORS, TEXT, APP_BASE } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 
 /** Hosts that would mean a font request left this origin. */
@@ -39,7 +39,7 @@ test.describe('Polices auto-hébergées', () => {
     });
 
     test('les titres rendent en Space Grotesk et le texte en Inter', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
 

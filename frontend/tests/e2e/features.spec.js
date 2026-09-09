@@ -8,8 +8,7 @@
 import { test, expect, LIVE } from './test-base.js';
 import {
     login, uploadFiles, resultsTable, resultsRows, countResultRows,
-    SELECTORS, TEXT,
-} from '../helpers/index.js';
+    SELECTORS, TEXT, APP_BASE } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 
 // Sorting and select-all live in the TABLE header, which the design system
@@ -301,7 +300,7 @@ test.describe('Panneau d’exportation', () => {
 
 test.describe('Formulaires', () => {
     test('l’œil affiche et masque le mot de passe', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         const field = page.locator(SELECTORS.passwordInput);
         await field.fill('secret-visible');
         await expect(field).toHaveAttribute('type', 'password');
@@ -314,7 +313,7 @@ test.describe('Formulaires', () => {
     });
 
     test('l’inscription aboutit et signale un identifiant déjà pris', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await page.getByRole('button', { name: 'Créer un compte' }).click();
         await expect(page.getByRole('heading', { name: 'Créer un nouveau compte' })).toBeVisible();
 

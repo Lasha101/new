@@ -7,12 +7,11 @@ import {
     login, logout, getStorageState, measureTapTargets, tapTargetsBelow,
     hasHorizontalOverflow, findOverflowingElements, getComputedColorPair, contrastRatio,
     SELECTORS,
-    hasSessionCookie,
-} from '../helpers/index.js';
+    hasSessionCookie, APP_BASE } from '../helpers/index.js';
 
 test.describe('helpers', () => {
     test('getStorageState reports every store, and says so when one is unreadable', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         const before = await getStorageState(page);
 
         expect(before).toMatchObject({

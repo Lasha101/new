@@ -7,8 +7,7 @@
 import { test, expect } from './test-base.js';
 import {
     login, uploadFiles, waitForProcessing, resultsTable, resultsCards,
-    hasHorizontalOverflow, findOverflowingElements, SELECTORS, TEXT,
-} from '../helpers/index.js';
+    hasHorizontalOverflow, findOverflowingElements, SELECTORS, TEXT, APP_BASE } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 import { PASSPORT_COLUMN_ORDER } from '../../src/resultsHelpers.js';
 
@@ -134,7 +133,7 @@ test.describe('Pas de débordement horizontal', () => {
         test(`${viewport.width} px : connexion, import et résultats tiennent dans l’écran`, async ({ page }) => {
             await page.setViewportSize(viewport);
 
-            await page.goto('/');
+            await page.goto(APP_BASE);
             await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
             expect(await findOverflowingElements(page)).toEqual([]);
             expect(await hasHorizontalOverflow(page)).toBe(false);

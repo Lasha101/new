@@ -3,6 +3,7 @@
 // between mocked and live runs.
 import { expect } from '@playwright/test';
 import { SELECTORS, TEXT } from './selectors.js';
+import { APP_BASE } from './appBase.js';
 
 /** How long to wait out the server's login throttle before trying again. */
 const RATE_LIMIT_WINDOW_MS = Number(process.env.E2E_LOGIN_RETRY_MS || 62_000);
@@ -32,7 +33,7 @@ export async function login(page, options = {}) {
     const { username, password } = { ...credentials(), ...options };
     const retries = options.retries ?? 2;
 
-    if (!page.url().startsWith('http')) await page.goto('/');
+    if (!page.url().startsWith('http')) await page.goto(APP_BASE);
     await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
 
     await page.getByPlaceholder(TEXT.usernamePlaceholder).fill(username);

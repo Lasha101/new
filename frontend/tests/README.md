@@ -56,12 +56,19 @@ Traces, videos and screenshots are kept on failure (`test-results/`).
 
 ## Environment variables
 
+> **A production smoke test needs no path.** `E2E_BASE_URL=https://scanid.fr npx
+> playwright test --project=desktop` reaches the application at `/app/` on its
+> own. Do not set `E2E_BASE_URL=https://scanid.fr/app/` — Playwright resolves
+> `page.goto()` against the origin, so the path would be dropped and the run
+> would land on the marketing homepage.
+
 | Variable | Default | Meaning |
 |---|---|---|
 | `E2E_MODE` | *(unset)* | `live` drives a real backend instead of the mock |
 | `E2E_USERNAME` | `alice` | Login used by `login(page)` |
 | `E2E_PASSWORD` | `test-password` | Its password |
-| `E2E_BASE_URL` | `http://127.0.0.1:5173` | Front end under test; set it to skip the managed dev server |
+| `E2E_BASE_URL` | `http://127.0.0.1:5173` | Front end under test; set it to skip the managed dev server. Point it at an **origin**, not at `/app/` — the suites append the app base themselves |
+| `E2E_APP_BASE` | `/app/` | Where the application answers under that origin. The public site holds the origin root, so every navigation goes to `APP_BASE` (`tests/helpers/appBase.js`) rather than to `/` |
 | `E2E_PREVIEW_URL` | `http://127.0.0.1:4173` | The **built** app the `pwa` project drives; set it to skip the managed `build && preview` server |
 | `E2E_MOCK_PROCESSING_MS` | `1200` | How long a mocked OCR job "runs" |
 | `E2E_LOGIN_RETRY_MS` | `62000` | How long `login()` waits out the server's login throttle |

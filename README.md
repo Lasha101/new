@@ -52,7 +52,10 @@ original implementation, with these changes:
    error messages); Google Cloud is now used only for the Vision OCR API.
 
 ## Architecture
-- **Frontend:** React (Vite) — `frontend/`
+- **Public site:** static HTML — `frontend/site/` (**read-only**; copied into the
+  build by `frontend/scripts/assemble-site.mjs`). It is what answers
+  `https://scanid.fr/` and everything a visitor sees before logging in.
+- **Frontend:** React (Vite) — `frontend/`, served at `/app/` behind the site
 - **Backend:** Python (FastAPI) — `backend/`
 - **Database:** PostgreSQL (SQLAlchemy 2.0 + psycopg2; tables and the default
   `admin` user are created automatically at startup)
@@ -84,7 +87,15 @@ cd frontend
 npm install
 npm run dev -- --port 5174 --strictPort
 ```
+The app opens at **http://127.0.0.1:5174/app/** — `base` in `vite.config.js`,
+because the public site holds the origin root in production. Vite redirects
+`/` there, so the bare address still works.
+
 `frontend/.env.local` points the UI at the backend (`http://127.0.0.1:8001`).
+
+`npm run build` produces both halves: `vite build` writes the app to
+`dist/app/`, then `scripts/assemble-site.mjs` copies `site/` to the root of
+`dist/`. The deploy rsyncs `dist/` unchanged, so nothing else had to move.
 
 ### 4. Tests
 ```bash

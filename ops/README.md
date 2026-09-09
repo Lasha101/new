@@ -20,9 +20,10 @@
 |---|---|
 | `backup.sh` | Nightly encrypted PostgreSQL dump, off-site copy, retention pruning. |
 | `restore-test.sh` | Restores a backup into a throwaway database and proves it contains data. |
-| `nginx-security-headers.conf` | Response headers, including a CSP. **Included** by `deploy/nginx-travelapp.conf`; reaches browsers on the next deploy + nginx reload. |
+| `nginx-security-headers.conf` | Response headers, including the **application's** CSP. **Included** by `deploy/nginx-travelapp.conf` at server level; reaches browsers on the next deploy + nginx reload. |
+| `nginx-site-csp.conf` | The **public site's** CSP, and nothing else — one `set $scanid_csp`, no `add_header`. Included by `deploy/nginx-travelapp.conf` inside `location /`. |
 | `tests/run-ops-tests.sh` | Test suite for the two scripts. Self-contained, local only. |
-| `tests/test-nginx-headers.sh` | Validates the snippet parses **and** sends the headers it claims. |
+| `tests/test-nginx-headers.sh` | Validates both snippets parse **and** send the headers they claim, in **both zones** (`/` and `/app/`), including that neither policy leaks into the other. |
 
 ### A note on the paths in this document
 
@@ -244,6 +245,40 @@ mode this catches — backups that ran green for a year and restore to nothing �
 is common, and it is only ever discovered by trying.
 
 ---
+
+## Two zones, one server
+
+Since the public site (`frontend/site/`) became the front of scanid.fr, one
+server serves two things with different needs:
+
+| Path | What | Policy |
+|---|---|---|
+| `/` | the public site. Needs one thing the application does not: `https://formspree.io`, for the four lead forms | `nginx-site-csp.conf` |
+| `/app/`, `/api/`, everything else | the application, which handles identity documents | `nginx-security-headers.conf` (the default) |
+
+The site policy grants **one origin** and nothing else. It used to need three
+more things — `script-src 'unsafe-inline'` for two inline blocks, and both
+Google Fonts origins for the typefaces — and those were removed by fixing the
+cause instead of widening the policy: `frontend/scripts/assemble-site.mjs`
+externalises the inline scripts and self-hosts the faces from `@fontsource`, in
+the **build copy**, leaving the read-only `frontend/site/` untouched.
+
+That is worth stating plainly, because it is the difference between a policy and
+a formality: `'unsafe-inline'` in `script-src` is the single most dangerous token
+a CSP can carry, and neither zone carries it. It also means the pages render
+correctly under **any** policy that allows `'self'` — including an older one that
+is still loaded because nobody has reloaded nginx yet.
+
+They share **one** `add_header Content-Security-Policy $scanid_csp always;` at
+server level. `location /` overrides the *variable*, not the header.
+
+That is not a style choice. Sending a second `add_header` from the location —
+the obvious approach, and what the old comment in the snippet suggested — puts
+**two** CSP headers on the response, and browsers enforce two policies as their
+**intersection**. The looser policy would have no effect at all, the marketing
+pages would still render unstyled, and nothing in the config would say why.
+The strict application policy is the default, so any location added later
+inherits the protective one and has to opt out on purpose.
 
 ## `nginx-security-headers.conf`
 

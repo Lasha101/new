@@ -10,6 +10,13 @@ import OfflineScreen from './OfflineScreen.jsx';
 // otherwise fall back to '/api' for local development.
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Where the application itself lives — '/app/' in production, because the
+// public site occupies the origin root (see vite.config.js). Every history
+// rewrite below has to land here: pushing '/' would put the marketing site's
+// address in the bar, and the reload that follows registration would leave the
+// visitor on the home page instead of the login screen they just earned.
+const APP_ROOT = import.meta.env.BASE_URL;
+
 // The readable marker cookie the server sets beside the HttpOnly session
 // cookie. It says only "this browser has logged in before" and is what lets
 // « Votre session a expiré » be told apart from a first visit.
@@ -327,7 +334,7 @@ export default function App() {
         hadSessionRef.current = false;
         setToken(false); setUser(null);
         setSessionExpired(!!expired);
-        window.history.pushState({}, '', '/'); setView('login');
+        window.history.pushState({}, '', APP_ROOT); setView('login');
     }, []);
     const fetchUser = useCallback(async () => {
         try {
@@ -488,7 +495,7 @@ function SelfRegistrationPage({ onBackToLogin }) {
         e.preventDefault(); setError(''); setSuccess('');
         try {
             const response = await fetch(`${API_URL}/users/register`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
-            if (response.ok) { setSuccess('Inscription réussie ! Vous allez être redirigé vers la page de connexion.'); setTimeout(() => { window.history.pushState({}, '', '/'); window.location.reload(); }, 2000); } else { const detail = (await response.json()).detail; setError(typeof detail === 'string' ? detail : "Échec de l'inscription. Veuillez vérifier les champs saisis."); }
+            if (response.ok) { setSuccess('Inscription réussie ! Vous allez être redirigé vers la page de connexion.'); setTimeout(() => { window.history.pushState({}, '', APP_ROOT); window.location.reload(); }, 2000); } else { const detail = (await response.json()).detail; setError(typeof detail === 'string' ? detail : "Échec de l'inscription. Veuillez vérifier les champs saisis."); }
         } catch (err) { setError("Une erreur est survenue lors de l'inscription."); }
     };
     if (success) return <div className="sid-card"><p className="sid-alert sid-alert--ok">{success}</p></div>

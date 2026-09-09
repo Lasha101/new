@@ -97,14 +97,42 @@ jobs:
             [ -d venv ] || python3 -m venv venv
             venv/bin/pip install --quiet -r backend/requirements.txt
             sudo systemctl restart travelapp.service
+            # THE ONE SILENT-AND-FATAL FAILURE OF THIS ARRANGEMENT.
+            #
+            # deploy/nginx-travelapp.conf `include`s files from ops/. If one of
+            # them is not on disk, nothing looks wrong today: nginx keeps serving
+            # from the configuration already in memory. The bill arrives at the
+            # next reload or, far worse, the next REBOOT — a missing include is
+            # [emerg], so nginx refuses to START and the whole site goes down,
+            # with nothing having changed since the deploy that caused it.
+            #
+            # `nginx -t` would catch it, but on this server the deploy account
+            # sudo rule covers only travelapp.service, so that test is usually
+            # skipped. A plain readability check needs no privileges at all.
+            # The usual cause is a file under ops/ that was never committed.
+            missing_include=0
+            for inc in $(sed -n "s/^[[:space:]]*include[[:space:]]\+\([^;]*\);.*/\1/p" /opt/travelapp/deploy/nginx-travelapp.conf); do
+              if [ ! -r "$inc" ]; then
+                echo "ERROR: the vhost includes $inc, which is not on disk."
+                missing_include=1
+              fi
+            done
+            if [ "$missing_include" = "1" ]; then
+              echo "  nginx would refuse to START with that include missing, so the next reboot would take the site down."
+              echo "  Check that every file under ops/ referenced by deploy/nginx-travelapp.conf is committed."
+              exit 1
+            fi
+
             # Reload nginx so the synced deploy/nginx-travelapp.conf takes
             # effect. Three outcomes are kept distinct: a missing sudo
             # permission is a NOTE (deploy stays green), but a FAILING config
             # test must fail the deploy loudly — the broken file is already
             # synced to disk and would silently arm itself on the next reload.
+            nginx_reloaded=no
             nginx_test_output=$(sudo -n /usr/sbin/nginx -t 2>&1) && nginx_test_rc=0 || nginx_test_rc=$?
             if [ "$nginx_test_rc" -eq 0 ]; then
               sudo -n /bin/systemctl reload nginx
+              nginx_reloaded=yes
               echo "nginx config tested and reloaded."
             elif echo "$nginx_test_output" | grep -qi "password is required"; then
               echo "NOTE: nginx not reloaded (no passwordless sudo); reload manually if deploy/nginx-travelapp.conf changed."
@@ -143,5 +171,90 @@ jobs:
             proxy_code=$(curl -s -o /dev/null -w '%{http_code}' \
               --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/api/destinations/)
             [ "$proxy_code" = "401" ] || { echo "ERROR: nginx /api/ proxy over HTTPS returned $proxy_code, expected 401"; exit 1; }
-            echo "Deployed; service and nginx routing are answering."
+
+            # --- The two halves of the front end -------------------------
+            # Until these existed, every way of getting the front end wrong
+            # shipped green: the site missing from the build, the app shell
+            # winning the root, /app/ 404ing, the site erased by the dist rsync.
+            # `nginx -t` above catches a parse error and nothing more.
+            #
+            # They assert CONTENT, not a status code, because a status code
+            # proves nothing here: a misconfigured root answers 200 with the
+            # wrong page.
+            #
+            # NO APOSTROPHES ANYWHERE BELOW. The whole remote command is a
+            # single-quoted argument to ssh, so one apostrophe ends the quoting
+            # and kills the deploy on a syntax error. Double quotes are used for
+            # every grep pattern for the same reason.
+            #
+            # A FAILED PROBE IS NOT ALWAYS A FAILED DEPLOY. These assert the
+            # state the NEW vhost produces. On this server the deploy account
+            # sudo rule covers only travelapp.service, so nginx is NOT reloaded
+            # and the running config is still the previous one — which this file
+            # already treats as a NOTE rather than an error. Failing the deploy
+            # for it would be blaming the deploy for a permission it was never
+            # given. So: hard failure when nginx WAS reloaded, and a loud,
+            # unmissable action item when it was not.
+            front_end_pending=no
+            probe_failed() {
+              if [ "$nginx_reloaded" = "yes" ]; then
+                echo "ERROR: $1"
+                exit 1
+              fi
+              front_end_pending=yes
+              echo "PENDING (nginx not reloaded): $1"
+            }
+
+            # The root must be the MARKETING SITE. Matching the rewritten
+            # « Connexion » link proves two things at once: the site is what
+            # answers /, and scripts/assemble-site.mjs really ran (the source
+            # page says https://app.scanid.fr, which has no DNS record).
+            root_body=$(curl -s --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/)
+            echo "$root_body" | grep -q "href=\"/app/\"" \
+              || probe_failed "https://scanid.fr/ is not the assembled marketing site"
+
+            # /app/ must be the REACT SHELL, built with base /app/. Grepping the
+            # asset path proves the shell is present AND that the base is right,
+            # so a vite.config.js regression fails here too.
+            app_body=$(curl -s --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/app/)
+            echo "$app_body" | grep -q "/app/assets/index-" \
+              || probe_failed "https://scanid.fr/app/ is not the application shell"
+
+            # The self-hosted typefaces must be served from this origin. If this
+            # 404s the pages fall back to a system font with no visible error.
+            font_code=$(curl -s -o /dev/null -w "%{http_code}" \
+              --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/fonts/site.css)
+            [ "$font_code" = "200" ] \
+              || probe_failed "https://scanid.fr/fonts/site.css returned $font_code, expected 200 (the pages would render in a system typeface)"
+
+            # An unknown path must be a real 404, served from the 404.html the
+            # site ships. If 404.html ever went missing from the build,
+            # `error_page 404 /404.html` would redirect to a path that 404s in
+            # turn and nginx would answer 500 — a typo becoming a server error.
+            nf_code=$(curl -s -o /dev/null -w "%{http_code}" \
+              --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/__deploy_probe_404)
+            [ "$nf_code" = "404" ] \
+              || probe_failed "an unknown path returned $nf_code, expected 404 (404.html missing, or the old SPA catch-all is still loaded)"
+
+            if [ "$front_end_pending" = "yes" ]; then
+              echo ""
+              echo "=================================================================="
+              echo " ACTION REQUIRED ON THE SERVER - the deploy is not allowed to do it"
+              echo "=================================================================="
+              echo " The new vhost and header snippets are on disk under /opt/travelapp,"
+              echo " but nginx still has the previous configuration loaded. The deploy"
+              echo " account sudo rule covers only travelapp.service."
+              echo ""
+              echo " From an account with sudo, on the VPS:"
+              echo "     sudo nginx -t && sudo systemctl reload nginx"
+              echo ""
+              echo " Until that is run, the site is served and reads correctly - the"
+              echo " typefaces and the page scripts are self-hosted, so they are"
+              echo " unaffected - but the four Formspree lead forms are refused by the"
+              echo " old policy, and an unknown path answers 200 with the homepage"
+              echo " instead of 404.html."
+              echo "=================================================================="
+            fi
+
+            echo "Deployed; the site answers /, the app answers /app/, and the API proxies."
           '

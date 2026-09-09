@@ -9,8 +9,13 @@
 //     Paying that cost once here, serially, removes the whole class.
 import { ensureFixtures } from './fixtures/generate.mjs';
 import { FILES_DIR } from './fixtures/index.js';
+import { APP_BASE, appSrc } from './helpers/appBase.js';
 
-const WARMUP_PATHS = ['/', '/src/main.jsx', '/src/App.jsx'];
+// Under the application's base, and not at the root: Vite serves nothing outside
+// its base, so '/src/main.jsx' is a 404 there. The failure would be invisible —
+// every miss here is swallowed by the try/catch below and the `response.ok`
+// guard — and the flake described above would quietly come back.
+const WARMUP_PATHS = [APP_BASE, appSrc('main.jsx'), appSrc('App.jsx')];
 
 async function warmUpDevServer(baseURL) {
     for (const path of WARMUP_PATHS) {

@@ -6,7 +6,7 @@
 // icônes n'existent qu'après un build, et un worker devant le serveur de
 // développement masquerait le HMR. Le reste des suites reste sur le dev server.
 import { test, expect } from '../e2e/test-base.js';
-import { login, uploadFiles, getStorageState, SELECTORS, TEXT } from '../helpers/index.js';
+import { login, uploadFiles, getStorageState, SELECTORS, TEXT, APP_BASE } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,7 +36,11 @@ const pathOf = url => new URL(url).pathname;
  * remplissage pour une entrée ajoutée par l'application.
  */
 function expectedPrecacheCount() {
-    const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dist');
+    // dist/app, not dist: `vite build` writes the application under its base
+    // (frontend/vite.config.js), and the root of dist/ is the public site. A
+    // path error here would throw inside waitForServiceWorker and take down
+    // seven tests with a stack trace instead of a diagnosis.
+    const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dist', 'app');
     const source = fs.readFileSync(path.join(dist, 'sw.js'), 'utf8');
     return [...source.matchAll(/url:"/g)].length;
 }
@@ -87,7 +91,7 @@ const cachedUrls = page => page.evaluate(async () => {
 
 test.describe('Manifeste', () => {
     test('il est lié depuis index.html et servi avec le bon type', async ({ page, baseURL }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         const href = await page.locator('link[rel="manifest"]').getAttribute('href');
         expect(href).toBeTruthy();
 
@@ -97,7 +101,7 @@ test.describe('Manifeste', () => {
     });
 
     test('les champs requis sont présents et corrects', async ({ page, baseURL }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         const href = await page.locator('link[rel="manifest"]').getAttribute('href');
         const manifest = await (await page.request.get(new URL(href, baseURL).toString())).json();
 
@@ -112,13 +116,13 @@ test.describe('Manifeste', () => {
     });
 
     test('la meta theme-color est dans le document', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await expect(page.locator('meta[name="theme-color"]'))
             .toHaveAttribute('content', '#0B1628');
     });
 
     test('chaque icône répond 200 et fait la taille annoncée', async ({ page, baseURL }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         const href = await page.locator('link[rel="manifest"]').getAttribute('href');
         const manifestUrl = new URL(href, baseURL).toString();
         const manifest = await (await page.request.get(manifestUrl)).json();
@@ -146,29 +150,37 @@ test.describe('Manifeste', () => {
 
 test.describe('Service worker', () => {
     test("il s'enregistre et met en cache la coquille", async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
 
         const urls = await cachedUrls(page);
         expect(urls.length).toBeGreaterThan(0);
         // La coquille : le document, le bundle, la feuille de style.
         const paths = urls.map(pathOf);
-        expect(paths, 'le document lui-même').toContain('/index.html');
-        expect(paths.some(entry => /^\/assets\/index-.*\.js$/.test(entry)), 'le bundle').toBe(true);
-        expect(paths.some(entry => /^\/assets\/index-.*\.css$/.test(entry)), 'la feuille de style').toBe(true);
+        // Les clés de pré-cache sont relatives à la PORTÉE DU WORKER, pas à la
+        // racine du domaine : Workbox résout « index.html » contre l'URL du
+        // worker, qui est /app/sw.js. On lit donc la portée réellement
+        // enregistrée plutôt que d'écrire /app/ en dur — le jour où la base
+        // change, ce test suit au lieu de mentir.
+        const scope = new URL(await page.evaluate(async () =>
+            (await navigator.serviceWorker.getRegistration()).scope)).pathname;
+        expect(paths, 'le document lui-même').toContain(`${scope}index.html`);
+        const asset = extension => new RegExp(`^${scope}assets/index-.*\\.${extension}$`);
+        expect(paths.some(entry => asset('js').test(entry)), 'le bundle').toBe(true);
+        expect(paths.some(entry => asset('css').test(entry)), 'la feuille de style').toBe(true);
         expect(urls.length).toBe(expectedPrecacheCount());
         console.log(`  ${urls.length} entrées pré-cachées`);
     });
 
     test("le décodeur HEIC n'est pas poussé à tout le monde", async ({ page }) => {
         // 1,3 Mo pour une minorité d'envois : il est chargé à la demande.
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
         expect((await cachedUrls(page)).filter(url => url.includes('heic2any'))).toEqual([]);
     });
 
     test('un envoi et une lecture de résultats ne créent aucune entrée de cache', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
         const before = await cachedUrls(page);
 
@@ -191,7 +203,7 @@ test.describe('Service worker', () => {
     });
 
     test('la deuxième visite se charge encore', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
         await page.reload();
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
@@ -201,7 +213,7 @@ test.describe('Service worker', () => {
 
 test.describe('Hors ligne', () => {
     test("l'écran « hors ligne » apparaît, en français", async ({ page, context }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
         await login(page);
 
@@ -216,7 +228,7 @@ test.describe('Hors ligne', () => {
     });
 
     test('hors ligne, la coquille se recharge mais AUCUN résultat ne revient du cache', async ({ page, context }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
         await login(page);
         // Les résultats sont bien à l'écran avant la coupure.
@@ -246,7 +258,7 @@ test.describe('Hors ligne', () => {
 
 test.describe('Stockage après une session complète', () => {
     test('rien du document, du MRZ, du nom ni du numéro ne subsiste', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(APP_BASE);
         await waitForServiceWorker(page);
         await login(page);
 

@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FILES_DIR, FIXTURES } from '../fixtures/index.js';
+import { appSrc } from './appBase.js';
 
 /** URL prefix the page fetches fixture bytes from. Intercepted, never real. */
 export const FIXTURE_URL_PREFIX = '/__fixture';
@@ -86,8 +87,11 @@ export function fixtureUrl(fixtureKey, { orientation } = {}) {
  *   OUTPUT image — the only way to tell a correct rotation from a plausible one.
  */
 export async function prepareInBrowser(page, url, options = {}) {
-    return page.evaluate(async ({ url, options }) => {
-        const { prepareFileForUpload } = await import('/src/upload/imagePrep.js');
+    // The specifier is a REQUEST to the dev server, not a bundler
+    // instruction, and Vite serves nothing outside its base — so the path
+    // has to carry the application's base or the import rejects in the page.
+    return page.evaluate(async ({ url, options, module }) => {
+        const { prepareFileForUpload } = await import(module);
 
         const response = await fetch(url);
         const blob = await response.blob();
@@ -144,5 +148,5 @@ export async function prepareInBrowser(page, url, options = {}) {
             orientationSource: result.orientationSource ?? null,
             pixels,
         };
-    }, { url, options });
+    }, { url, options, module: appSrc('upload/imagePrep.js') });
 }

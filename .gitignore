@@ -53,3 +53,33 @@ backend/bench_ocr.py
 .coverage
 htmlcov/
 .ruff_cache/
+
+# Keys, certificates and database dumps — nothing in this repository is ever
+# supposed to hold one, and that is exactly why the patterns belong here.
+#
+# These are not hypothetical: ops/backup.sh writes an age-encrypted PostgreSQL
+# dump, ops/README.md tells you to create its private key with `age-keygen`,
+# ops/restore-test.sh restores a dump locally, .github/workflows/deploy.yml
+# authenticates with an SSH key, and deploy/nginx-travelapp.conf is served by a
+# certbot certificate. Every one of those artefacts has a natural way of landing
+# in a working directory by accident.
+#
+# A leaked key is not fixable by a revert — the file stays in the history and
+# the only real remedy is rotating the key. A pattern is cheaper.
+#
+# Verified when added: none of these matches any tracked or on-disk file.
+*.age
+*.pem
+*.crt
+*.cer
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+scanid-backup.key
+
+# PostgreSQL dumps — real passport data, the moment they are real.
+*.dump
+*.sql
+*.sql.gz
