@@ -22,6 +22,7 @@
 | `restore-test.sh` | Restores a backup into a throwaway database and proves it contains data. |
 | `nginx-security-headers.conf` | Response headers, including the **application's** CSP. **Included** by `deploy/nginx-travelapp.conf` at server level; reaches browsers on the next deploy + nginx reload. |
 | `nginx-site-csp.conf` | The **public site's** CSP, and nothing else — one `set $scanid_csp`, no `add_header`. Included by `deploy/nginx-travelapp.conf` inside `location /`. |
+| `verify-front-end.sh` | Read-only. Eight HTTPS checks that say whether the site, the app and BOTH policies are actually live — and, if not, whether the cause is a stale build or an unreloaded nginx. Needs no sudo. |
 | `tests/run-ops-tests.sh` | Test suite for the two scripts. Self-contained, local only. |
 | `tests/test-nginx-headers.sh` | Validates both snippets parse **and** send the headers they claim, in **both zones** (`/` and `/app/`), including that neither policy leaks into the other. |
 

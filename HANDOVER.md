@@ -4,7 +4,7 @@
 and carry on. It records what was asked, what has been done and verified, what
 is left, and the decisions that are already settled so they are not re-litigated.
 
-**Status:** implementation COMPLETE and verified. Two optional items are
+**Status:** LIVE AND VERIFIED IN PRODUCTION (2026-09-09). Implementation complete. Two optional items are
 awaiting a yes/no from the user (§10); one action is required from the user
 before the next push (§8).
 **Last updated:** 2026-09-09, after removing the dependency on an nginx reload
@@ -287,6 +287,21 @@ The fix for the reload itself, once, from an account with sudo (`lasha`):
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
+Then confirm it worked, from the same session — no sudo needed:
+
+```bash
+bash /opt/travelapp/ops/verify-front-end.sh
+```
+
+`ops/verify-front-end.sh` is new: eight read-only HTTPS checks that separate
+"the build is wrong" from "nginx has not been reloaded". It was tested against
+both vhosts in a container before being committed, and that testing caught a
+real defect in it — `curl … | grep -q` under `set -o pipefail` reports a
+SUCCESSFUL match as a failure, because `grep -q` exits early and SIGPIPEs curl.
+On small responses curl usually finishes first and it passes anyway, so the bug
+is an intermittent false alarm rather than a consistent one. Every check now
+reads into a variable and greps a here-string; there is not one pipeline left.
+
 Or permanently, one time, so no future deploy ever needs it — `visudo`:
 
 ```
@@ -424,6 +439,69 @@ test` **337 passed / 1 skipped**, `ops/tests/test-nginx-headers.sh` **57 passed*
 all 22 pages clean in Chromium under **both** the old and the new policy, and the
 real deploy-probe block exercised against both vhosts in all three states.
 
+## 13. LIVE — verified in production, 2026-09-09
+
+`c2cdd23` was deployed and nginx reloaded by hand as root
+(`nginx -t && systemctl reload nginx`). Verified **from outside the VPS**, over
+the public internet, not just on the loopback:
+
+| Check | Result |
+|---|---|
+| `https://scanid.fr/` | 200 — « Scanner de passeports et CNI pour agences de voyages \| ScanID » |
+| « Connexion » link | `href="/app/"` — the rewrite is live |
+| `https://scanid.fr/app/` | 200, `/app/assets/index-D1pk25fW.js` |
+| `https://scanid.fr/nope` | **404** — « Page introuvable » |
+| `https://scanid.fr/fonts/site.css` | 200 |
+| Site CSP | `script-src 'self'` + formspree — the tightened policy is live |
+| App CSP | `script-src 'self' 'unsafe-eval'` — unchanged |
+| 11 live pages in Chromium | all clean, **Space Grotesk + Inter loaded on every one** |
+| Calculator, on the live site | `2 988 €` → `6 939 €` — runs |
+| Certificate | `CN = scanid.fr`, Let's Encrypt, valid to **2026-12-07** |
+
+The certificate renewal hook was **confirmed missing** (`renewal-hooks/deploy/`
+was empty and the renewal conf had no hook line) and has been created, so §10
+item 3 is closed — pending one content check, below.
+
+**The renewal hook is confirmed working.** The first attempt was written with a
+heredoc that terminal echo mangled during the paste; it was rewritten with a
+single `printf` (which a paste cannot corrupt) and then proven behaviourally,
+not by inspection — nginx replaces its worker processes on reload, and running
+the hook moved them from `24001 24002` to `24076 24077` while the master stayed
+put. Exit status alone would NOT have proved this: a script containing only
+`#!/bin/sh` also exits 0, silently, and that is exactly the shape a lost heredoc
+body takes.
+
+**NOTHING REMAINS TO BE DONE ON THE VPS.**
+
+## 12. Found after the first push (c2cdd23)
+
+**`frontend/tests/build/` was gitignored — the build guard had never run in CI.**
+`.gitignore` carried a generic `build/` under "Build outputs", and that pattern
+matches a directory of that name at ANY depth, so it also swallowed
+`frontend/tests/build/`. The suite was on disk, passing locally, and
+`actions/checkout` had never received it: the pushed tree declares **76** tests,
+the working tree **81**.
+
+That matters more than a count. Those five tests are what backs the claim that
+no page of either half reaches Google — the guarantee this work introduced — plus
+the checks that the self-hosted faces are really bundled and referenced, and that
+no inline `<script>` survives into a site page. A guard that only runs on the
+author's machine is not a guard.
+
+Fixed with a negation, `!frontend/tests/build/`, and verified three ways: the
+file is no longer ignored, a genuine `frontend/build/output.js` is still ignored
+by the same generic rule, and a full CI simulation of the next commit builds and
+runs **81 passed, 0 failed**.
+
+Pre-existing, not introduced here — but it was hiding the very guard this change
+depends on.
+
+**Also verified against the pushed commit itself:** `git archive c2cdd23` was
+built and tested exactly as `actions/checkout` would deliver it — the build
+succeeds (33 files, 22 pages rewritten, 14 @font-face) and the 76 tests it
+contains pass. `ops/nginx-site-csp.conf` IS in the commit, so the vhost include
+guard passes and nginx will not fail at a reboot.
+
 ## 10. Two things deliberately left undone — ask the user
 
 Neither is a defect introduced by this work, and neither is needed for the site
@@ -445,7 +523,39 @@ to be the front of scanid.fr. Both are one-word decisions.
    how `PHOTO_GUIDE_URL` is already handled at `App.jsx:892`. **Not done**: the
    links were already dead before this work, so fixing them is not part of it.
 
-3. Worth passing to whoever owns the site content: all 22 pages hotlink Google
+3. **UNVERIFIED, AND A SITE-DOWN RISK — does anything reload nginx when the
+   certificate renews?** Same family as the reload problem, but pre-existing and
+   independent of this work. The certificate was issued with
+   `certonly --webroot` (PROGRESS.md:33), which does **not** reload the web
+   server after a renewal, and there is no renewal hook documented anywhere in
+   this repository. If none exists on the VPS, then: the certificate renews
+   around **7 November 2026**, nginx keeps serving the OLD one from memory, and
+   on **2026-12-07** it expires — every visitor gets a full-page browser
+   security warning, with nothing having changed that day to explain it.
+
+   Cannot be checked from here. On the VPS:
+
+   ```bash
+   sudo ls -l /etc/letsencrypt/renewal-hooks/deploy/
+   sudo grep -i hook /etc/letsencrypt/renewal/scanid.fr.conf
+   ```
+
+   If there is no hook, add one:
+
+   ```bash
+   sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh >/dev/null <<'EOF'
+   #!/bin/sh
+   systemctl reload nginx
+   EOF
+   sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+   sudo /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh   # prove it runs
+   sudo certbot renew --dry-run                                  # prove renewal works
+   ```
+
+   A useful side effect: that hook reloads nginx on every renewal, which would
+   also pick up any vhost change sitting on disk.
+
+4. Worth passing to whoever owns the site content: all 22 pages hotlink Google
    Fonts. That is what forces `fonts.googleapis.com` / `fonts.gstatic.com` into
    `ops/nginx-site-csp.conf`, and it is an EU personal-data transfer on every
    page load — on a French site that sells RGPD compliance. Self-hosting the two

@@ -38,7 +38,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content
 .nav-links a{color:#94A3B8;text-decoration:none;font-size:.9rem;font-weight:500;transition:color .2s}
 .nav-links a:hover,.nav-links a.active{color:#0EA5E9}
 .nav-cta{background:#0EA5E9 !important;color:#0B1628 !important;padding:.55rem 1.3rem;border-radius:8px;font-weight:600 !important}
-.pg-header{background:#0B1628;color:#fff;padding:8rem 6% 3rem;text-align:center}
+.pg-header{background:#0B1628;color:#fff;padding:8rem max(6%,calc((100% - 1200px)/2)) 3rem;text-align:center}
 .pg-header h1{font-size:clamp(1.9rem,4vw,2.5rem);letter-spacing:-.02em}
 .pg-header p{color:#94A3B8;margin-top:.7rem;font-size:1rem;max-width:560px;margin-left:auto;margin-right:auto}
 .pg-wrap{max-width:880px;margin:-1rem auto 4rem;padding:0 22px}
@@ -71,30 +71,39 @@ details.faq .a a{color:#0284C7}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Qu'est-ce que ScanID ?","acceptedAnswer":{"@type":"Answer","text":"ScanID est un outil en ligne qui lit automatiquement les passeports et cartes d'identité que vous importez, en extrait les informations (nom, prénom, date de naissance, numéro et validité du document…) et vous les restitue dans un fichier Excel ou CSV prêt à l'emploi. L'objectif : vous éviter la saisie manuelle et les erreurs qui vont avec."}},{"@type":"Question","name":"Quels documents sont pris en charge ?","acceptedAnswer":{"@type":"Answer","text":"Aujourd'hui : les passeports et les cartes nationales d'identité françaises . La prise en charge d'autres nationalités est prévue et sera ajoutée progressivement. Nous préférons annoncer un périmètre maîtrisé plutôt que de promettre une couverture que nous ne garantissons pas encore."}},{"@type":"Question","name":"Comment ça marche, concrètement ?","acceptedAnswer":{"@type":"Answer","text":"En quatre étapes : vous importez un ou plusieurs documents dans votre espace, ScanID les lit, vous vérifiez les données extraites, puis vous exportez votre fichier. Tout est détaillé dans notre guide pas à pas ."}},{"@type":"Question","name":"Puis-je traiter plusieurs documents en une seule fois ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Vous pouvez importer plusieurs documents, y compris regroupés dans un même fichier PDF ; ScanID les traite ensemble et vous renvoie un seul fichier."}},{"@type":"Question","name":"L'extraction est-elle fiable à 100 % ?","acceptedAnswer":{"@type":"Answer","text":"En toute honnêteté, aucune technologie de lecture ne peut garantir une exactitude absolue, et nous tenons à être transparents sur ce point. ScanID atteint un très bon niveau de précision sur les documents français, mais nous vous recommandons toujours de vérifier rapidement les données restituées avant de les utiliser. C'est précisément pour cela que l'étape de vérification fait partie intégrante du processus."}},{"@type":"Question","name":"Faut-il installer un logiciel ou acheter du matériel ?","acceptedAnswer":{"@type":"Answer","text":"Non. ScanID fonctionne entièrement dans votre navigateur, sur ordinateur, tablette ou smartphone. Aucun scanner ni installation nécessaire."}},{"@type":"Question","name":"Les données de mes clients sont-elles protégées ?","acceptedAnswer":{"@type":"Answer","text":"La protection des données est au cœur de ScanID. Les échanges sont chiffrés, les données sont hébergées dans l'Union européenne, et chaque client dispose d'un espace cloisonné, accessible uniquement à lui. Nous mettons en œuvre des mesures de sécurité conformes à l'état de l'art et nous les faisons évoluer en continu."}},{"@type":"Question","name":"Où sont hébergées les données ?","acceptedAnswer":{"@type":"Answer","text":"Dans l'Union européenne, chez IONOS, hébergeur professionnel certifié ISO 27001. Et surtout : vos pièces d'identité n'y sont jamais stockées — seuls les fichiers de résultats restent dans votre espace, sous votre contrôle."}},{"@type":"Question","name":"Combien de temps conservez-vous les documents importés ?","acceptedAnswer":{"@type":"Answer","text":"Elles ne sont pas conservées du tout : les pièces d'identité sont traitées en mémoire puis immédiatement détruites — jamais stockées sur nos serveurs. Seuls les résultats (votre fichier Excel/CSV) restent disponibles dans votre espace, sous votre contrôle, jusqu'à ce que vous les supprimiez. Le détail figure dans notre politique de confidentialité ."}},{"@type":"Question","name":"Utilisez-vous ou revendez-vous les données ?","acceptedAnswer":{"@type":"Answer","text":"Jamais. Vos données et celles de vos voyageurs ne sont ni revendues, ni cédées, ni utilisées à d'autres fins que de vous fournir le service. Nous ne nous en servons pas pour entraîner des modèles à des fins commerciales, ni pour quoi que ce soit d'autre. C'est un engagement ferme."}},{"@type":"Question","name":"Suis-je en conformité RGPD en utilisant ScanID ?","acceptedAnswer":{"@type":"Answer","text":"ScanID est conçu pour vous y aider, mais la conformité est une responsabilité partagée . Concrètement : vous êtes « responsable de traitement » des données de vos voyageurs, et ScanID agit comme « sous-traitant » qui traite ces données uniquement selon vos instructions. De votre côté, vous devez disposer d'une base légale pour traiter ces données (par exemple le consentement du voyageur ou l'exécution de votre contrat). Nous mettons à votre disposition les engagements nécessaires, ainsi qu'un accord de traitement des données (DPA) sur demande. En cas de doute, rapprochez-vous de votre conseil juridique."}},{"@type":"Question","name":"Qui peut accéder à mes documents ?","acceptedAnswer":{"@type":"Answer","text":"Uniquement vous, depuis votre espace sécurisé. Nos équipes n'accèdent pas à vos documents, sauf demande explicite de votre part dans le cadre d'une assistance — et toujours dans le strict respect de la confidentialité."}},{"@type":"Question","name":"Combien ça coûte ?","acceptedAnswer":{"@type":"Answer","text":"Vous pouvez payer à l'usage (1,50 € par scan) ou choisir un abonnement annuel à crédits, dont le prix au scan baisse avec le volume (jusqu'à 0,49 €). Le détail est sur notre page Tarifs ."}},{"@type":"Question","name":"Y a-t-il un engagement ?","acceptedAnswer":{"@type":"Answer","text":"Non. L'offre à la carte est sans engagement, et les packs annuels sont valables 12 mois."}},{"@type":"Question","name":"Les crédits expirent-ils ?","acceptedAnswer":{"@type":"Answer","text":"Les crédits des packs annuels sont valables 12 mois à compter de l'achat."}},{"@type":"Question","name":"Puis-je essayer avant d'acheter ?","acceptedAnswer":{"@type":"Answer","text":"Oui : 20 scans vous sont offerts à la création de votre compte — de quoi traiter un premier dossier groupe complet sur vos propres documents et constater le gain par vous-même. Sans engagement, sans carte bancaire."}},{"@type":"Question","name":"Sur quels appareils ScanID fonctionne-t-il ?","acceptedAnswer":{"@type":"Answer","text":"Sur tout appareil disposant d'un navigateur : ordinateur (Windows, Mac), tablette ou smartphone."}},{"@type":"Question","name":"Proposez-vous une application mobile ?","acceptedAnswer":{"@type":"Answer","text":"Une application est en cours de réflexion pour rendre le scan encore plus simple (capture directe par l'appareil photo). Pour l'instant, tout se fait depuis votre navigateur."}},{"@type":"Question","name":"Comment obtenir de l'aide ?","acceptedAnswer":{"@type":"Answer","text":"Écrivez-nous à contact@scanid.fr : nous vous répondons rapidement et avec plaisir."}}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://scanid.fr/"},{"@type":"ListItem","position":2,"name":"FAQ","item":"https://scanid.fr/faq.html"}]}</script>
+<style id="sid-center">nav{padding-left:24px !important;padding-right:24px !important;justify-content:center !important}.nav-inner{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;gap:2rem}@media(max-width:640px){.nav-inner{gap:1rem}}</style>
 </head>
 <body>
 <nav>
+  <div class="nav-inner">
   <a href="index.html" class="logo">
+    <!-- LOGO SVG -->
     <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="8" width="34" height="22" rx="4.5" fill="#162040" stroke="#0EA5E9" stroke-width="1.4"/>
+      <!-- Photo zone -->
       <rect x="6" y="12" width="11" height="14" rx="2" fill="#0B1628" stroke="#0EA5E9" stroke-width=".7" opacity=".8"/>
       <circle cx="11.5" cy="16.5" r="2.8" fill="rgba(14,165,233,.35)"/>
-      <rect x="20" y="14" width="11" height="1.8" rx=".9" fill="#64748B"/>
-      <rect x="20" y="18" width="8" height="1.6" rx=".8" fill="#0EA5E9" opacity=".6"/>
-      <rect x="20" y="22" width="9" height="1.6" rx=".8" fill="#64748B" opacity=".5"/>
+      <path d="M7 26 Q11.5 22.5 16 26" fill="rgba(14,165,233,.25)" stroke="none"/>
+      <!-- Data lines -->
+      <rect x="20" y="13" width="11" height="1.8" rx=".9" fill="#64748B" opacity=".7"/>
+      <rect x="20" y="16.5" width="7.5" height="1.5" rx=".75" fill="#0EA5E9" opacity=".5"/>
+      <rect x="20" y="20" width="9" height="1.5" rx=".75" fill="#64748B" opacity=".5"/>
+      <rect x="20" y="23" width="6" height="1.5" rx=".75" fill="#64748B" opacity=".4"/>
+      <!-- Scan line -->
       <line x1="2" y1="21.5" x2="36" y2="21.5" stroke="#0EA5E9" stroke-width="1" opacity=".45" stroke-dasharray="2 2"/>
     </svg>
     <span class="logo-text">Scan<span>ID</span></span>
   </a>
   <ul class="nav-links">
-    <li><a href="index.html">Accueil</a></li>
     <li><a href="presentation.html">Présentation</a></li>
+    <li><a href="ressources.html">Ressources</a></li>
     <li><a href="index.html#tarifs">Tarifs</a></li>
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="index.html#contact">Contact</a></li>
-    <li><a href="https://app.scanid.fr" rel="noopener">Connexion</a></li>
+    <li><a href="/app/">Connexion</a></li>
     <li><a href="essai.html" class="nav-cta">Essai gratuit</a></li>
   </ul>
+  </div>
 </nav>
 <header class="pg-header">
   <h1>Foire aux questions</h1>
@@ -133,7 +142,7 @@ details.faq .a a{color:#0284C7}
     <a href="securite.html">Sécurité</a>
     <a href="guide.html">Guide</a>
     <a href="faq.html">FAQ</a>
-    <a href="https://app.scanid.fr" rel="noopener">Connexion</a>
+    <a href="/app/" rel="noopener">Connexion</a>
     <a href="essai.html">Essai gratuit</a> <a href="politique-confidentialite.html">Confidentialité</a> <a href="mentions-legales.html">Mentions légales</a>
     <a href="cgv.html">CGV</a>
   </div>

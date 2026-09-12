@@ -43,7 +43,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content
 .nav-cta:hover{background:#fff !important}
 
 /* ── HERO ── */
-.hero{min-height:100vh;display:flex;align-items:center;padding:7rem 6% 4rem;position:relative;overflow:hidden}
+.hero{min-height:100vh;display:flex;align-items:center;padding:7rem max(6%,calc((100% - 1200px)/2)) 4rem;position:relative;overflow:hidden}
 .hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 72% 50%,rgba(14,165,233,.1) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 20% 70%,rgba(22,32,64,.8) 0%,transparent 60%)}
 .hero-content{max-width:560px;position:relative;z-index:2}
 .badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.3);border-radius:20px;padding:.35rem 1rem;font-size:.78rem;color:#0EA5E9;letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-bottom:1.6rem}
@@ -59,7 +59,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content
 .btn-s:hover{border-color:#0EA5E9;color:#0EA5E9}
 
 /* ── ID CARD VISUAL ── */
-.hero-visual{position:absolute;right:6%;top:50%;transform:translateY(-50%);width:420px;z-index:1;pointer-events:none}
+.hero-visual{position:absolute;right:max(6%,calc((100% - 1200px)/2));top:50%;transform:translateY(-50%);width:420px;z-index:1;pointer-events:none}
 .card-wrap{position:relative;width:390px}
 .id-card{width:390px;height:248px;background:linear-gradient(135deg,#162040 0%,#0B1628 100%);border-radius:18px;border:1px solid rgba(14,165,233,.25);position:relative;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(14,165,233,.08)}
 .scan-beam{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 0%,rgba(14,165,233,.6) 20%,#0EA5E9 50%,rgba(14,165,233,.6) 80%,transparent 100%);box-shadow:0 0 16px rgba(14,165,233,.9),0 0 32px rgba(14,165,233,.5);animation:scanMove 2.8s ease-in-out infinite;top:0}
@@ -156,12 +156,14 @@ footer p{color:#475569;font-size:.82rem}
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://scanid.fr/#organization","name":"ScanID","url":"https://scanid.fr/","logo":"https://scanid.fr/apple-touch-icon.png","email":"contact@scanid.fr","slogan":"Scanner · Vérifier · Sécuriser","description":"Extraction automatique des données de passeports et cartes d'identité françaises vers Excel/CSV, pour les agences de voyages.","areaServed":"FR","contactPoint":{"@type":"ContactPoint","email":"contact@scanid.fr","contactType":"customer service","availableLanguage":"fr"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","@id":"https://scanid.fr/#website","name":"ScanID","url":"https://scanid.fr/","inLanguage":"fr","publisher":{"@id":"https://scanid.fr/#organization"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ScanID","url":"https://scanid.fr/","applicationCategory":"BusinessApplication","operatingSystem":"Web","inLanguage":"fr","description":"Importez vos passeports et cartes d'identité françaises : ScanID en extrait les données et vous renvoie un fichier Excel/CSV prêt à l'emploi.","offers":[{"@type":"Offer","name":"À la carte","price":"1.50","priceCurrency":"EUR","description":"1,50 € par scan, sans engagement"},{"@type":"Offer","name":"Pack 100 scans","price":"99","priceCurrency":"EUR","description":"0,99 € par scan — crédits valables 12 mois"},{"@type":"Offer","name":"Pack 1 000 scans","price":"690","priceCurrency":"EUR","description":"0,69 € par scan — crédits valables 12 mois"},{"@type":"Offer","name":"Pack 3 000 scans","price":"1890","priceCurrency":"EUR","description":"0,63 € par scan — crédits valables 12 mois"},{"@type":"Offer","name":"Pack 5 000 scans","price":"2950","priceCurrency":"EUR","description":"0,59 € par scan — crédits valables 12 mois"}],"provider":{"@id":"https://scanid.fr/#organization"}}</script>
+<style id="sid-center">nav{padding-left:24px !important;padding-right:24px !important;justify-content:center !important}.nav-inner{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;gap:2rem}@media(max-width:640px){.nav-inner{gap:1rem}}</style>
 </head>
 <body>
 
 <!-- ══ NAV ══ -->
 <nav>
-  <a href="#" class="logo">
+  <div class="nav-inner">
+  <a href="index.html" class="logo">
     <!-- LOGO SVG -->
     <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="8" width="34" height="22" rx="4.5" fill="#162040" stroke="#0EA5E9" stroke-width="1.4"/>
@@ -185,9 +187,10 @@ footer p{color:#475569;font-size:.82rem}
     <li><a href="#tarifs">Tarifs</a></li>
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="https://app.scanid.fr" rel="noopener">Connexion</a></li>
+    <li><a href="/app/">Connexion</a></li>
     <li><a href="essai.html" class="nav-cta">Essai gratuit</a></li>
   </ul>
+  </div>
 </nav>
 
 <!-- ══ HERO ══ -->
@@ -283,7 +286,7 @@ footer p{color:#475569;font-size:.82rem}
   <div class="sec-center">
     <span class="sec-lbl">Tarifs</span>
     <h2 class="sec-title">Des formules adaptées à chaque agence</h2>
-    <p style="color:#64748B;margin-top:1rem;font-size:.95rem">Tous les abonnements sont valables 12 mois. Vos crédits ne se perdent pas.</p>
+    <p style="color:#64748B;margin-top:1rem;font-size:.95rem">Tous les crédits sont valables 12 mois. Ils ne se perdent pas. Prix hors taxes.</p>
   </div>
 
   <!-- Row 1 : À la carte / Pack 100 / Pack 1000 -->
@@ -293,12 +296,12 @@ footer p{color:#475569;font-size:.82rem}
     <div class="p-card">
       <div class="p-name">À la carte</div>
       <div class="p-price"><sup>€</sup>1,50</div>
-      <div class="p-unit">par scan · sans engagement</div>
+      <div class="p-unit">par scan HT · sans engagement</div>
       <div class="p-scans">Payez uniquement ce que vous utilisez</div>
       <ul class="p-feats">
         <li>Aucun abonnement requis</li>
         <li>Espace client inclus</li>
-        <li>Tous types de documents</li>
+        <li>Passeports et CNI françaises</li>
         <li>Support par email</li>
       </ul>
       <a href="#contact" class="btn-plan btn-outline">Commencer</a>
@@ -308,15 +311,15 @@ footer p{color:#475569;font-size:.82rem}
     <div class="p-card">
       <div class="p-name">Pack 100</div>
       <div class="p-price"><sup>€</sup>99</div>
-      <div class="p-unit">par an · 0,99 €/scan <span class="p-save">−34%</span></div>
+      <div class="p-unit">soit 0,99 € HT / scan <span class="p-save">−34%</span></div>
       <div class="p-scans">100 scans inclus · valables 12 mois</div>
       <ul class="p-feats">
         <li>Validité 12 mois</li>
         <li>Espace client dédié</li>
-        <li>Tous types de documents</li>
+        <li>Passeports et CNI françaises</li>
         <li>Support prioritaire par email</li>
       </ul>
-      <a href="https://buy.stripe.com/https://buy.stripe.com/9B64gy8XZfVycQFdiZebu00" class="btn-plan btn-outline">Souscrire</a>
+      <a href="https://buy.stripe.com/9B64gy8XZfVycQFdiZebu00" class="btn-plan btn-outline">Souscrire</a>
     </div>
 
     <!-- Pack 1000 - POPULAR -->
@@ -324,16 +327,16 @@ footer p{color:#475569;font-size:.82rem}
       <div class="pop-badge">⭐ Le plus populaire</div>
       <div class="p-name">Pack 1 000</div>
       <div class="p-price"><sup>€</sup>690</div>
-      <div class="p-unit">par an · 0,69 €/scan <span class="p-save">−54%</span></div>
+      <div class="p-unit">soit 0,69 € HT / scan <span class="p-save">−54%</span></div>
       <div class="p-scans">1 000 scans inclus · valables 12 mois</div>
       <ul class="p-feats">
         <li>Validité 12 mois</li>
         <li>Espace client dédié</li>
-        <li>Tous types de documents</li>
+        <li>Passeports et CNI françaises</li>
         <li>Support prioritaire</li>
         <li>Export CSV des données</li>
       </ul>
-      <a href="https://buy.stripe.com/https://buy.stripe.com/8x27sK0rtbFi8Apgvbebu01" class="btn-plan btn-fill">Souscrire</a>
+      <a href="https://buy.stripe.com/8x27sK0rtbFi8Apgvbebu01" class="btn-plan btn-fill">Souscrire</a>
     </div>
   </div>
 
@@ -344,33 +347,33 @@ footer p{color:#475569;font-size:.82rem}
     <div class="p-card">
       <div class="p-name">Pack 3 000</div>
       <div class="p-price"><sup>€</sup>1 890</div>
-      <div class="p-unit">par an · 0,63 €/scan <span class="p-save">−58%</span></div>
+      <div class="p-unit">soit 0,63 € HT / scan <span class="p-save">−58%</span></div>
       <div class="p-scans">3 000 scans inclus · valables 12 mois</div>
       <ul class="p-feats">
         <li>Validité 12 mois</li>
         <li>Espace client dédié</li>
-        <li>Tous types de documents</li>
+        <li>Passeports et CNI françaises</li>
         <li>Support téléphonique</li>
-        <li>Export CSV + accès API</li>
+        <li>Export Excel et CSV</li>
       </ul>
-      <a href="https://buy.stripe.com/https://buy.stripe.com/6oU8wOa2324I9Eta6Nebu02" class="btn-plan btn-outline">Souscrire</a>
+      <a href="https://buy.stripe.com/6oU8wOa2324I9Eta6Nebu02" class="btn-plan btn-outline">Souscrire</a>
     </div>
 
     <!-- Pack 5000 -->
     <div class="p-card">
       <div class="p-name">Pack 5 000</div>
       <div class="p-price"><sup>€</sup>2 950</div>
-      <div class="p-unit">par an · 0,59 €/scan <span class="p-save">−61%</span></div>
+      <div class="p-unit">soit 0,59 € HT / scan <span class="p-save">−61%</span></div>
       <div class="p-scans">5 000 scans inclus · valables 12 mois</div>
       <ul class="p-feats">
         <li>Validité 12 mois</li>
         <li>Espace client dédié</li>
-        <li>Tous types de documents</li>
+        <li>Passeports et CNI françaises</li>
         <li>Support téléphonique dédié</li>
-        <li>Export CSV + accès API</li>
-        <li>Rapport mensuel d'utilisation</li>
+        <li>Export Excel et CSV</li>
+        <li>Bilan d'utilisation sur demande</li>
       </ul>
-      <a href="https://buy.stripe.com/https://buy.stripe.com/6oU14mdefaBe3g5gvbebu03" class="btn-plan btn-outline">Souscrire</a>
+      <a href="https://buy.stripe.com/6oU14mdefaBe3g5gvbebu03" class="btn-plan btn-outline">Souscrire</a>
     </div>
 
     <!-- Pack 10 000+ -->
@@ -383,8 +386,8 @@ footer p{color:#475569;font-size:.82rem}
         <li>Volume sur mesure</li>
         <li>Espace multi-agences</li>
         <li>Account manager dédié</li>
-        <li>SLA garanti 99,9 %</li>
-        <li>Export CSV + API avancée</li>
+        <li>Accompagnement dédié</li>
+        <li>Export Excel et CSV</li>
         <li>Intégration sur mesure</li>
       </ul>
       <a href="#contact" class="btn-plan btn-gold">Nous contacter</a>
@@ -396,7 +399,7 @@ footer p{color:#475569;font-size:.82rem}
 <section class="cta" id="contact">
   <span class="sec-lbl">Prêt à démarrer ?</span>
   <h2>Votre espace ScanID est prêt en 2 minutes</h2>
-  <p>Rejoignez les agences de voyages qui utilisent ScanID pour vérifier leurs dossiers clients plus vite et sans erreur.</p>
+  <p>Rejoignez les agences de voyages qui utilisent ScanID pour remplir leurs dossiers groupes plus vite et sans erreur.</p>
   <a href="#tarifs" class="btn-p" style="font-size:1rem;padding:1rem 2.4rem">Choisir ma formule →</a>
 </section>
 
@@ -413,7 +416,7 @@ footer p{color:#475569;font-size:.82rem}
     <a href="securite.html">Sécurité</a>
     <a href="guide.html">Guide</a>
     <a href="faq.html">FAQ</a>
-    <a href="https://app.scanid.fr" rel="noopener">Connexion</a>
+    <a href="/app/" rel="noopener">Connexion</a>
     <a href="essai.html">Essai gratuit</a> <a href="politique-confidentialite.html">Confidentialité</a> <a href="mentions-legales.html">Mentions légales</a>
     <a href="cgv.html">CGV</a>
   </div>

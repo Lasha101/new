@@ -34,3 +34,9 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Local backups of the public site (site1/, site2/, ...). site/ is the source
+# of truth; a previous revision of it is already in git history, so committing
+# a copy duplicates ~1 MB per snapshot for nothing. Retrieve one instead with:
+#     git show <commit>:frontend/site/<page>
+site[0-9]*/

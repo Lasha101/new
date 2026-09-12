@@ -42,6 +42,20 @@ dist-ssr/
 build/
 coverage/
 
+# ...but frontend/tests/build/ is SOURCE, not output.
+#
+# `build/` above matches a directory of that name at ANY depth, so it also
+# swallowed frontend/tests/build/ — the suite that checks the SHIPPED artefact:
+# that no page of either half references Google's font hosts, that the
+# self-hosted faces are really bundled and really referenced, and that no inline
+# <script> survives into the site. Those tests were on disk, passing locally,
+# and had never once run in CI, because `actions/checkout` never received them.
+#
+# A guard that only runs on the author's machine is not a guard. Re-include the
+# directory itself, which is what makes the files inside reachable again — git
+# cannot re-include a file whose parent directory is excluded.
+!frontend/tests/build/
+
 # Test documents with personal identity data
 DUBROVNIK.pdf
 ITALIE 2 PIECES IDENTITE - copie.pdf
