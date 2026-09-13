@@ -97,3 +97,12 @@ scanid-backup.key
 *.dump
 *.sql
 *.sql.gz
+
+# Local visual-comparison files (site.html, site1.html, ...): each embeds one
+# revision of the public site to open side by side with Live Server. They are
+# generated from folders the repository already tracks, so committing them only
+# duplicates ~700 KB of pages per file. Anchored to the root with a leading
+# slash, so no page of the site itself (frontend/scanid-site-v5-deploy/, ...)
+# can ever match.
+/site.html
+/site[0-9]*.html

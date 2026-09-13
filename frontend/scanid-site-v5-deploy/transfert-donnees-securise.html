@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comment transférer les données d'identité de vos voyageurs en toute sécurité | ScanID</title>
+<meta name="description" content="Transférer des passeports et CNI par email est risqué. Découvrez les bonnes pratiques pour échanger les données d'identité de vos voyageurs en toute sécurité.">
+<link rel="canonical" href="https://scanid.fr/transfert-donnees-securise.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Transférer les données d'identité de vos voyageurs en toute sécurité">
+<meta property="og:description" content="Pourquoi l'email pose problème, et les bonnes pratiques pour échanger des passeports et CNI sans prendre de risque.">
+<meta property="og:url" content="https://scanid.fr/transfert-donnees-securise.html">
+<meta property="og:image" content="https://scanid.fr/og-image.png">
+<meta property="og:site_name" content="ScanID">
+  <meta property="article:published_time" content="2026-07-02">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://scanid.fr/og-image.png">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#0B1628">
+  <meta property="og:locale" content="fr_FR">
+  <meta name="twitter:title" content="Transférer les données d'identité de vos voyageurs en toute sécurité">
+  <meta name="twitter:description" content="Pourquoi l'email pose problème, et les bonnes pratiques pour échanger des passeports et CNI sans prendre de risque.">
+  <link rel="icon" href="https://scanid.fr/favicon.ico" sizes="32x32">
+  <link rel="icon" href="https://scanid.fr/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="https://scanid.fr/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@0,400;0,500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#eef4fb;color:#0B1628;line-height:1.7}
+h1,h2,h3,.logo-text,nav{font-family:'Space Grotesk',sans-serif}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1.1rem 6%;background:rgba(11,22,40,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(14,165,233,.12)}
+.logo{display:flex;align-items:center;gap:.7rem;text-decoration:none}
+.logo-text{font-size:1.35rem;font-weight:700;color:#fff;letter-spacing:-.02em}
+.logo-text span{color:#0EA5E9}
+.nav-links{display:flex;align-items:center;gap:1.7rem;list-style:none}
+.nav-links a{color:#94A3B8;text-decoration:none;font-size:.9rem;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:#0EA5E9}
+.nav-cta{background:#0EA5E9 !important;color:#0B1628 !important;padding:.55rem 1.3rem;border-radius:8px;font-weight:600 !important}
+.art-header{background:#0B1628;color:#fff;padding:7.5rem max(6%,calc((100% - 1200px)/2)) 3rem}
+.art-header .wrap{max-width:760px;margin:0 auto}
+.art-cat{font-family:'Space Grotesk',sans-serif;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#0EA5E9;font-weight:600}
+.art-header h1{font-size:clamp(1.8rem,4vw,2.6rem);letter-spacing:-.02em;line-height:1.2;margin:.8rem 0 .8rem}
+.art-meta{color:#64748b;font-size:.85rem}
+.art-wrap{max-width:760px;margin:2.5rem auto 4rem;padding:0 22px}
+.art-body{background:#fff;border:1px solid #e2edf8;border-radius:18px;padding:2.5rem clamp(1.2rem,4vw,3rem);box-shadow:0 20px 50px rgba(11,22,40,.06)}
+.art-body p{color:#334155;font-size:1.02rem;margin-bottom:1.1rem}
+.art-body h2{font-size:1.4rem;color:#0B1628;margin:2rem 0 .8rem}
+.art-body ul{margin:.4rem 0 1.1rem 1.3rem}
+.art-body li{color:#334155;margin-bottom:.4rem}
+.art-body a{color:#0284C7;font-weight:500}
+.art-body strong{color:#0B1628}
+.note-box{background:#f1f5fb;border-left:3px solid #0EA5E9;border-radius:8px;padding:1rem 1.2rem;margin:1.5rem 0;font-size:.95rem;color:#334155}
+.lead-box{background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(14,165,233,.03));border:1px solid #bfe3fb;border-radius:14px;padding:1.5rem;margin:2rem 0;text-align:center}
+.lead-box h3{color:#0B1628;margin:0 0 .4rem}
+.lead-box p{font-size:.92rem;margin-bottom:1rem}
+.btn{display:inline-block;background:#0EA5E9;color:#0B1628;font-family:'Space Grotesk',sans-serif;font-weight:700;padding:.8rem 1.7rem;border-radius:10px;text-decoration:none;transition:all .2s}
+.btn:hover{background:#0B1628;color:#fff}
+.disclaimer{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:1rem 1.2rem;margin-top:2rem;color:#9a3412;font-size:.85rem}
+.back{display:inline-block;margin-top:1.5rem;color:#0284C7;text-decoration:none;font-weight:500;font-size:.9rem}
+footer{background:#060E1F;padding:2.5rem 6%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;border-top:1px solid rgba(14,165,233,.08)}
+footer .ft-brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;color:#fff}
+footer .ft-brand span{color:#0EA5E9}
+footer p{color:#475569;font-size:.82rem;margin-top:.25rem}
+.ft-links{display:flex;gap:1.4rem;flex-wrap:wrap}
+.ft-links a{color:#475569;text-decoration:none;font-size:.82rem}
+.ft-links a:hover{color:#0EA5E9}
+@media(max-width:820px){.nav-links li:not(:last-child){display:none}}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Comment transférer les données d'identité de vos voyageurs en toute sécurité","description":"Transférer des passeports et CNI par email est risqué. Découvrez les bonnes pratiques pour échanger les données d'identité de vos voyageurs en toute sécurité.","inLanguage":"fr","image":"https://scanid.fr/og-image.png","author":{"@type":"Organization","name":"ScanID","url":"https://scanid.fr/"},"publisher":{"@type":"Organization","name":"ScanID","logo":{"@type":"ImageObject","url":"https://scanid.fr/apple-touch-icon.png"}},"datePublished":"2026-07-02","dateModified":"2026-07-02","mainEntityOfPage":{"@type":"WebPage","@id":"https://scanid.fr/transfert-donnees-securise.html"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://scanid.fr/"},{"@type":"ListItem","position":2,"name":"Ressources","item":"https://scanid.fr/ressources.html"},{"@type":"ListItem","position":3,"name":"Comment transférer les données d'identité de vos voyageurs en toute sécurité","item":"https://scanid.fr/transfert-donnees-securise.html"}]}</script>
+<style id="sid-center">nav{padding-left:24px !important;padding-right:24px !important;justify-content:center !important}.nav-inner{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;gap:2rem}@media(max-width:640px){.nav-inner{gap:1rem}}</style>
+
+<style>nav{flex-wrap:wrap}.trial-bar{width:100%;display:block;text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.82rem;letter-spacing:.01em;padding:.42rem 1rem;background:linear-gradient(90deg,#0EA5E9,#0284C7);color:#0B1628;text-decoration:none;margin-top:.55rem}.trial-bar:hover{filter:brightness(1.06)}.trial-bar span{text-decoration:underline;text-underline-offset:3px}@media(max-width:640px){.trial-bar{font-size:.74rem;padding:.4rem .6rem}}</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+  <a href="index.html" class="logo">
+    <!-- LOGO SVG -->
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="8" width="34" height="22" rx="4.5" fill="#162040" stroke="#0EA5E9" stroke-width="1.4"/>
+      <!-- Photo zone -->
+      <rect x="6" y="12" width="11" height="14" rx="2" fill="#0B1628" stroke="#0EA5E9" stroke-width=".7" opacity=".8"/>
+      <circle cx="11.5" cy="16.5" r="2.8" fill="rgba(14,165,233,.35)"/>
+      <path d="M7 26 Q11.5 22.5 16 26" fill="rgba(14,165,233,.25)" stroke="none"/>
+      <!-- Data lines -->
+      <rect x="20" y="13" width="11" height="1.8" rx=".9" fill="#64748B" opacity=".7"/>
+      <rect x="20" y="16.5" width="7.5" height="1.5" rx=".75" fill="#0EA5E9" opacity=".5"/>
+      <rect x="20" y="20" width="9" height="1.5" rx=".75" fill="#64748B" opacity=".5"/>
+      <rect x="20" y="23" width="6" height="1.5" rx=".75" fill="#64748B" opacity=".4"/>
+      <!-- Scan line -->
+      <line x1="2" y1="21.5" x2="36" y2="21.5" stroke="#0EA5E9" stroke-width="1" opacity=".45" stroke-dasharray="2 2"/>
+    </svg>
+    <span class="logo-text">Scan<span>ID</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="presentation.html">Présentation</a></li>
+    <li><a href="ressources.html">Ressources</a></li>
+    <li><a href="index.html#tarifs">Tarifs</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="/app/">Connexion</a></li>
+  </ul>
+  </div>
+
+<a class="trial-bar" href="essai.html">20 scans offerts pour tester ScanID sur un vrai dossier groupe &nbsp;·&nbsp; <span>Demander mon essai gratuit →</span></a>
+</nav>
+
+<header class="art-header">
+  <div class="wrap">
+    <span class="art-cat">Sécurité &amp; RGPD</span>
+    <h1>Comment transférer les données d'identité de vos voyageurs en toute sécurité</h1>
+    <div class="art-meta">Publié le 2 juillet 2026 · Lecture ~5 min · Par l'équipe ScanID</div>
+  </div>
+</header>
+
+<div class="art-wrap">
+  <article class="art-body">
+    <p>Recevoir et transmettre des passeports fait partie du quotidien d'une agence. Mais le faire par email ou messagerie classique, c'est prendre un risque bien réel. Voici comment échanger ces données sensibles en toute sécurité.</p>
+
+    <h2>Pourquoi l'email et les messageries classiques posent problème</h2>
+    <p>Envoyer un passeport en pièce jointe semble anodin. En réalité&nbsp;:</p>
+    <ul>
+      <li>Un <strong>email non chiffré</strong> peut être intercepté, et la pièce jointe reste indéfiniment dans les boîtes (envoyés, reçus, sauvegardes) — parfois transférée à d'autres.</li>
+      <li><strong>WhatsApp, SMS et messageries grand public</strong> ne sont pas conçus pour des données sensibles&nbsp;: les documents se dupliquent sur plusieurs téléphones.</li>
+    </ul>
+    <p>Résultat&nbsp;: le document circule, se copie, et <strong>échappe à votre contrôle</strong>. C'est exactement ce qu'il faut éviter avec des données d'identité.</p>
+
+    <h2>Les principes d'un transfert sécurisé</h2>
+    <ul>
+      <li><strong>Chiffrement</strong> des données, en transit comme au repos.</li>
+      <li><strong>Minimisation</strong>&nbsp;: ne transférer que ce qui est nécessaire.</li>
+      <li><strong>Accès restreint</strong>&nbsp;: seules les bonnes personnes y ont accès.</li>
+      <li><strong>Pas de traces inutiles</strong>&nbsp;: supprimer les copies une fois le besoin satisfait.</li>
+      <li><strong>Outils dédiés</strong>&nbsp;: éviter la messagerie personnelle pour ce type de document.</li>
+    </ul>
+
+    <h2>Les bonnes pratiques concrètes</h2>
+    <ul>
+      <li>Évitez d'envoyer des passeports complets par <strong>email non sécurisé</strong>.</li>
+      <li>Pour recevoir les documents de vos clients, privilégiez un <strong>canal chiffré ou un dépôt sécurisé</strong> plutôt qu'une pièce jointe.</li>
+      <li>Une fois les données utiles récupérées, <strong>supprimez les copies</strong>.</li>
+      <li>Ne stockez pas les documents dans des <strong>dossiers partagés non protégés</strong>.</li>
+    </ul>
+
+    <div class="note-box">Règle d'or&nbsp;: moins un document d'identité circule, plus vos clients — et votre agence — sont protégés.</div>
+
+    <h2>Le réflexe le plus efficace : traiter le document une seule fois, en sécurité</h2>
+    <p>Plutôt que de faire circuler l'image d'un passeport entre collègues, outils et boîtes mail, traitez-le <strong>une seule fois</strong>, dans un environnement sécurisé qui en extrait les données. Ensuite, vous ne manipulez plus qu'un <strong>fichier de données</strong> — pas le document sensible lui-même.</p>
+    <p>C'est la logique de <a href="index.html">ScanID</a>&nbsp;: vous importez le document dans un environnement chiffré, hébergé dans l'Union européenne&nbsp;; l'outil en extrait les données utiles&nbsp;; et rien n'est jamais revendu. Vous arrêtez de faire voyager les passeports d'une boîte mail à l'autre. <a href="securite.html">En savoir plus sur notre approche de la sécurité →</a></p>
+
+    <p>À lire aussi&nbsp;: <a href="rgpd-fuite-donnees.html">ce que vous risquez en cas de fuite de données</a> et <a href="rgpd-conserver-copies-passeport.html">faut-il garder les copies de passeports&nbsp;?</a></p>
+
+    <div class="lead-box">
+      <h3>📄 Votre checklist RGPD gratuite</h3>
+      <p>11 réflexes concrets pour gérer les données d'identité de vos voyageurs en toute sérénité.</p>
+      <a href="checklist.html" class="btn">Obtenir la checklist</a>
+    </div>
+
+    <div class="disclaimer">⚠️ Cet article est fourni à titre informatif et ne constitue pas un conseil juridique. Pour votre situation, rapprochez-vous d'un professionnel du droit ou consultez la CNIL (cnil.fr).</div>
+
+    <a href="ressources.html" class="back">← Retour aux ressources</a>
+  </article>
+</div>
+
+<footer>
+  <div>
+    <div class="ft-brand">Scan<span>ID</span></div>
+    <p>© 2026 ScanID · Tous droits réservés</p>
+  </div>
+  <div class="ft-links">
+    <a href="index.html">Accueil</a>
+    <a href="presentation.html">Présentation</a>
+    <a href="ressources.html">Ressources</a>
+    <a href="securite.html">Sécurité</a>
+    <a href="guide.html">Guide</a>
+    <a href="faq.html">FAQ</a>
+    <a href="contact.html">Contact</a>
+    <a href="/app/" rel="noopener">Connexion</a>
+    <a href="essai.html">Essai gratuit</a> <a href="politique-confidentialite.html">Confidentialité</a> <a href="mentions-legales.html">Mentions légales</a>
+    <a href="cgv.html">CGV</a>
+  </div>
+</footer>
+</body>
+</html>

@@ -40,7 +40,12 @@ import { join, dirname, extname, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const FRONTEND = dirname(dirname(fileURLToPath(import.meta.url)));
-const SITE = join(FRONTEND, 'site');
+// The site's source of truth. Since v5 it is scanid-site-v5-deploy/, which
+// replaces the content of site/; site/ (v4) stays in the repository untouched
+// and read-only, and nothing reads it any more. This constant is the only place
+// the source directory is named — the rest of this file says "site/" for
+// whichever directory it points at.
+const SITE = join(FRONTEND, 'scanid-site-v5-deploy');
 const DIST = join(FRONTEND, 'dist');
 const MODULES = join(FRONTEND, 'node_modules', '@fontsource');
 
