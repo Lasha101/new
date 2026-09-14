@@ -2,7 +2,7 @@
 // document numbers outside every real French series.
 //
 // Composition is deliberate — 2 passports and 3 identity cards — so the
-// Tous/PASS/PI filter has three distinct row counts to prove itself with.
+// Tous/PP/PI filter has three distinct row counts to prove itself with.
 
 export const MOCK_USER = {
     id: 'u-alice',
@@ -33,7 +33,7 @@ const passport = (id, overrides) => ({
     ...overrides,
 });
 
-// PASS = the French passport shape (2 digits, 2 letters, 5 digits);
+// PP = the French passport shape (2 digits, 2 letters, 5 digits);
 // PI = anything else (12-digit old CNI, 9-character new CNI).
 export const MOCK_PASSPORTS = [
     passport('p-1', {
@@ -65,7 +65,7 @@ export const EXTRACTED_PASSPORT = passport('p-new', {
     expiration_date: '2030-01-01',
 });
 
-export const EXPECTED_ROW_COUNTS = { '': 5, PASS: 2, PI: 3 };
+export const EXPECTED_ROW_COUNTS = { '': 5, PP: 2, PI: 3 };
 
 /** Fresh, isolated state for one browser context. */
 export function createMockState(overrides = {}) {

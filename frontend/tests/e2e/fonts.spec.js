@@ -75,7 +75,7 @@ test.describe('Polices auto-hébergées', () => {
         await uploadFiles(page, [fixturePath('smallJpeg')], { submit: true });
         await expect(page.locator(SELECTORS.jobMonitor)).toBeVisible();
 
-        await selectDocType(page, 'PASS');
+        await selectDocType(page, 'PP');
         await selectDocType(page, '');
 
         for (const label of [TEXT.downloadExcel, TEXT.downloadCsv]) {

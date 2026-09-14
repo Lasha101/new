@@ -13,8 +13,24 @@ import { createMockState, EXTRACTED_PASSPORT } from './data.js';
 import { buildXlsx } from './xlsx.js';
 
 const PASSPORT_NUMBER_RE = /^\d{2}[A-Z]{2}\d{5}$/;
+
+// backend/config.py _DEFAULT_PAYMENT_LINKS — the live links published on scanid.fr.
+const PAYMENT_LINKS = {
+    100: 'https://buy.stripe.com/9B64gy8XZfVycQFdiZebu00',
+    1000: 'https://buy.stripe.com/8x27sK0rtbFi8Apgvbebu01',
+    3000: 'https://buy.stripe.com/6oU8wOa2324I9Eta6Nebu02',
+    5000: 'https://buy.stripe.com/6oU14mdefaBe3g5gvbebu03',
+};
+/** billing.checkout_url() */
+const checkoutUrl = (pack, email, userId) =>
+    `${PAYMENT_LINKS[pack]}?${new URLSearchParams({ prefilled_email: email, client_reference_id: userId })}`;
+
+// ocr_service._UNRECOGNIZED_DOCUMENT_DETAIL. A file whose name starts with
+// « illisible » produces a failed job carrying this detail.
+const UNRECOGNIZED_DOCUMENT_DETAIL = "Document non reconnu : aucune MRZ de passeport français (P<FRA...), "
+    + "aucune MRZ de carte nationale d'identité (IDFRA...) ni aucun recto de CNI exploitable n'a été détecté sur cette page.";
 const documentType = number =>
-    (PASSPORT_NUMBER_RE.test(String(number ?? '').trim().toUpperCase()) ? 'PASS' : 'PI');
+    (PASSPORT_NUMBER_RE.test(String(number ?? '').trim().toUpperCase()) ? 'PP' : 'PI');
 
 // EXPORT_COLUMNS / EXPORT_HEADERS in backend/main.py.
 const EXPORT_COLUMNS = ['last_name', 'first_name', 'birth_date', 'expiration_date', 'nationality',
@@ -22,7 +38,7 @@ const EXPORT_COLUMNS = ['last_name', 'first_name', 'birth_date', 'expiration_dat
 const EXPORT_HEADERS = {
     last_name: 'Nom de famille', first_name: 'Prénom', birth_date: 'Date de Naissance',
     expiration_date: "Date d'Expiration", nationality: 'Nationalité',
-    passport_number: 'Numéro de Passeport', document_type: 'Type',
+    passport_number: 'Numéro de document', document_type: 'Type',
     destination: 'Destination', confidence_score: 'Score de Confiance',
 };
 
@@ -81,8 +97,9 @@ function apiPath(url) {
 }
 
 const API_PATHS = [
-    '/token', '/logout', '/users/me', '/users/register', '/events', '/destinations',
-    '/admin/filterable-users', '/admin/users', '/passports', '/ocr/jobs', '/export/data',
+    '/token', '/logout', '/users/me', '/users/register', '/events', '/destinations', '/auth',
+    '/admin/filterable-users', '/admin/users', '/admin/trial-requests', '/passports', '/ocr/jobs', '/export/data',
+    '/signup', '/orders', '/session',
 ];
 
 
@@ -119,8 +136,11 @@ export function isApiRequest(url) {
 export async function installMockApi(context, options = {}) {
     const state = options.state || createMockState();
     const processingMs = options.processingMs ?? 1200;
-    const credentials = options.credentials
-        || { username: process.env.E2E_USERNAME || 'alice', password: process.env.E2E_PASSWORD || 'test-password' };
+    // A copy, because a password reset changes the password this mock accepts.
+    const credentials = { ...(options.credentials
+        || { username: process.env.E2E_USERNAME || 'alice', password: process.env.E2E_PASSWORD || 'test-password' }) };
+    // The one password link this mock considers valid (backend: account_tokens.py).
+    state.passwordLinkToken = state.passwordLinkToken || 'jeton-valide-de-test';
 
     const json = (route, status, body, headers = {}) => route.fulfill({
         status,
@@ -169,6 +189,16 @@ export async function installMockApi(context, options = {}) {
         }
         // First observation past the deadline commits the result, exactly once:
         // a row lands in the table, a page is charged, a credit is spent.
+        if (!job.committed && job.unreadable) {
+            // A page with no recognisable document: the job fails, the page is
+            // counted, and no credit is taken (only successes are charged).
+            job.committed = true;
+            job.status = 'failed';
+            job.progress = 100;
+            job.finished_at = new Date().toISOString();
+            job.failures = [{ page_number: 1, detail: UNRECOGNIZED_DOCUMENT_DETAIL }];
+            state.user.uploaded_pages_count += 1;
+        }
         if (!job.committed) {
             job.committed = true;
             job.status = 'complete';
@@ -222,6 +252,26 @@ export async function installMockApi(context, options = {}) {
             return json(route, 401, { detail: "Nom d'utilisateur ou mot de passe incorrect" });
         }
 
+        // POST /auth/forgot-password — the same answer whether or not the account exists.
+        if (path === '/auth/forgot-password' && method === 'POST') {
+            state.forgotPasswordRequests = [...(state.forgotPasswordRequests || []), JSON.parse(request.postData() || '{}').identifier];
+            return json(route, 200, { detail: "Si un compte correspond à cet identifiant, un email contenant un lien de réinitialisation vient de lui être envoyé. Le lien est valable 48 heures." });
+        }
+
+        // POST /auth/reset-password — one valid, single-use link; the usual policy.
+        if (path === '/auth/reset-password' && method === 'POST') {
+            const body = JSON.parse(request.postData() || '{}');
+            if (!body.token || body.token !== state.passwordLinkToken) {
+                return json(route, 400, { detail: "Ce lien n'est plus valide (il a expiré ou a déjà servi). Demandez un nouveau lien depuis « Mot de passe oublié ? »." });
+            }
+            const policyErrors = passwordPolicyErrors(body.password || '');
+            if (policyErrors.length) return json(route, 422, { detail: policyErrors.join(' ') });
+            state.passwordLinkToken = null;
+            credentials.password = body.password;
+            state.session = false;             // main.py: a reset ends the account's sessions
+            return json(route, 200, { detail: 'Votre mot de passe est enregistré. Vous pouvez vous connecter.', user_name: credentials.username });
+        }
+
         // Logging out is a server round-trip now: an HttpOnly cookie cannot be
         // deleted from JavaScript.
         if (path === '/logout' && method === 'POST') {
@@ -231,6 +281,17 @@ export async function installMockApi(context, options = {}) {
                     'scanid_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
                     'scanid_has_session=; Path=/; SameSite=Lax; Max-Age=0',
                 ].join('\n'),
+            });
+        }
+
+        // POST /session/refresh — activity renews a still-valid session (main.py).
+        if (path === '/session/refresh' && method === 'POST') {
+            if (!(await authorized(request))) return unauthorized(route);
+            // A slow network, on demand: the renewed cookie lands when the answer does.
+            if (state.refreshDelayMs) await new Promise(resolve => setTimeout(resolve, state.refreshDelayMs));
+            state.session = true;
+            return json(route, 200, { access_token: state.token, token_type: 'bearer' }, {
+                'set-cookie': `scanid_session=${state.token}; Path=/; HttpOnly; SameSite=Lax`,
             });
         }
 
@@ -268,7 +329,31 @@ export async function installMockApi(context, options = {}) {
             });
         }
 
+        // POST /signup — /app/inscription (main.py signup_for_pack).
+        if (path === '/signup' && method === 'POST') {
+            const body = JSON.parse(request.postData() || '{}');
+            if (!PAYMENT_LINKS[body.pack]) {
+                return json(route, 400, { detail: "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/#tarifs." });
+            }
+            if (String(body.email || '').toLowerCase() === state.user.email) {
+                return json(route, 400, { detail: 'Un compte existe déjà avec cette adresse email. Connectez-vous pour acheter ce pack.' });
+            }
+            const policyErrors = passwordPolicyErrors(body.password || '');
+            if (policyErrors.length) return json(route, 422, { detail: policyErrors.join(' ') });
+            state.signups = [...(state.signups || []), body];
+            return json(route, 200, { checkout_url: checkoutUrl(body.pack, String(body.email).toLowerCase(), 'u-new'), purchase_id: 'pu-new' });
+        }
+
         if (!(await authorized(request))) return unauthorized(route);
+
+        // POST /orders — a logged-in customer buys a pack (main.py order_pack).
+        if (path === '/orders' && method === 'POST') {
+            const { pack } = JSON.parse(request.postData() || '{}');
+            if (!PAYMENT_LINKS[pack]) {
+                return json(route, 400, { detail: "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/#tarifs." });
+            }
+            return json(route, 200, { checkout_url: checkoutUrl(pack, state.user.email, state.user.id), purchase_id: 'pu-order' });
+        }
 
         if (path === '/users/me' && method === 'PUT') {
             const body = JSON.parse(request.postData() || '{}');
@@ -282,6 +367,11 @@ export async function installMockApi(context, options = {}) {
             return json(route, 200, state.user);
         }
 
+        // GET /users/me/purchases — « Mes achats » (main.py read_my_purchases).
+        if (path === '/users/me/purchases' && method === 'GET') {
+            return json(route, 200, state.purchases || []);
+        }
+
         if (path === '/users/me') {
             materializeJobs();
             return json(route, 200, state.user);
@@ -290,6 +380,24 @@ export async function installMockApi(context, options = {}) {
         if (path === '/destinations') {
             const destinations = [...new Set(state.passports.map(row => row.destination).filter(Boolean))].sort();
             return json(route, 200, destinations);
+        }
+
+        // « Demandes d'essai » (main.py list/validate/reject_trial_request).
+        if (path.startsWith('/admin/trial-requests')) {
+            if (state.user.role !== 'admin') return json(route, 403, { detail: "Privilèges d'administrateur requis." });
+            state.trialRequests = state.trialRequests || [];
+            if (path === '/admin/trial-requests' && method === 'GET') {
+                return json(route, 200, state.trialRequests.filter(row => row.status === 'pending'));
+            }
+            const [, , , id, action] = path.split('/');
+            const row = state.trialRequests.find(candidate => candidate.id === id);
+            if (!row) return json(route, 404, { detail: "Demande d'essai introuvable." });
+            if (row.status !== 'pending') return json(route, 409, { detail: 'Cette demande a déjà été traitée.' });
+            if (method === 'POST' && (action === 'validate' || action === 'reject')) {
+                row.status = action === 'validate' ? 'validated' : 'rejected';
+                row.decided_at = new Date().toISOString();
+                return json(route, 200, row);
+            }
         }
 
         if (path === '/admin/filterable-users') {
@@ -310,6 +418,7 @@ export async function installMockApi(context, options = {}) {
                 status: 'processing', progress: 20, created_at: new Date().toISOString(),
                 finished_at: null, successes: [], failures: [],
                 startedAt: Date.now(), committed: false, destination,
+                unreadable: /^illisible/i.test(fileName),
             };
             state.jobs.unshift(job);
             return json(route, 200, publicJob(job));
@@ -334,7 +443,9 @@ export async function installMockApi(context, options = {}) {
             let rows = state.passports;
             if (params.get('destination')) rows = rows.filter(row => row.destination === params.get('destination'));
             if (params.get('document_type')) {
-                rows = rows.filter(row => documentType(row.passport_number) === params.get('document_type'));
+                // 'PASS' is the legacy passport code, still accepted (main.py LEGACY_DOC_TYPE_PASSPORT).
+                const wanted = params.get('document_type') === 'PASS' ? 'PP' : params.get('document_type');
+                rows = rows.filter(row => documentType(row.passport_number) === wanted);
             }
             if (rows.length === 0) {
                 return json(route, 404, { detail: 'Aucune donnée de passeport trouvée pour les critères donnés' });

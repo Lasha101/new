@@ -123,3 +123,102 @@ SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "lax")
 # commitment in the client DPA, so the endpoint is pinned rather than left to
 # the library default (which is the global endpoint, vision.googleapis.com).
 VISION_API_ENDPOINT = os.getenv("VISION_API_ENDPOINT", "eu-vision.googleapis.com")
+
+
+# --- Public addresses ----------------------------------------------------
+# Used to build the links that go out by email. Production values by default:
+# a link in an email must never point at a developer's laptop by accident.
+def app_public_url() -> str:
+    return os.getenv("APP_PUBLIC_URL", "https://scanid.fr/app/")
+
+
+def site_public_url() -> str:
+    return os.getenv("SITE_PUBLIC_URL", "https://scanid.fr/")
+
+
+# --- Email ---------------------------------------------------------------
+# SMTP through the IONOS mailbox contact@scanid.fr (Spec v2): smtp.ionos.fr,
+# port 587, STARTTLS, credentials in the environment only.
+#
+# MAIL_BACKEND picks how mail leaves:
+#   smtp      real delivery (the default as soon as SMTP_HOST is set)
+#   outbox    kept in memory (and written to MAIL_OUTBOX_DIR if set) — for
+#             development and tests; the default outside production
+#   disabled  nothing is sent; the default in production without SMTP_HOST,
+#             so a missing configuration is visible instead of silent
+def mail_backend() -> str:
+    explicit = os.getenv("MAIL_BACKEND", "").strip().lower()
+    if explicit in ("smtp", "outbox", "disabled"):
+        return explicit
+    if os.getenv("SMTP_HOST"):
+        return "smtp"
+    return "disabled" if is_production() else "outbox"
+
+
+def smtp_settings() -> dict:
+    return {
+        "host": os.getenv("SMTP_HOST", ""),
+        "port": _env_int("SMTP_PORT", 587),
+        "username": os.getenv("SMTP_USERNAME", ""),
+        "password": os.getenv("SMTP_PASSWORD", ""),
+        "starttls": os.getenv("SMTP_STARTTLS", "1").strip().lower() in ("1", "true", "yes", "on"),
+        "timeout": _env_int("SMTP_TIMEOUT_SECONDS", 20),
+    }
+
+
+def mail_from() -> str:
+    return os.getenv("MAIL_FROM", "ScanID <contact@scanid.fr>")
+
+
+def mail_admin_to() -> str:
+    """Where trial requests and payment anomalies are reported (Alex)."""
+    return os.getenv("MAIL_ADMIN_TO", "contact@scanid.fr")
+
+
+# --- Password links ------------------------------------------------------
+# « Mot de passe oublié ? » and the free-trial welcome email: 48 hours.
+PASSWORD_TOKEN_HOURS = _env_int("PASSWORD_TOKEN_HOURS", 48)
+FORGOT_PASSWORD_RATE_LIMIT = os.getenv("FORGOT_PASSWORD_RATE_LIMIT", "5/hour")
+RESET_PASSWORD_RATE_LIMIT = os.getenv("RESET_PASSWORD_RATE_LIMIT", "10/hour")
+
+
+# --- Free trial (Spec v2 §1) ---------------------------------------------
+TRIAL_CREDITS = _env_int("TRIAL_CREDITS", 20)
+# Pending and rejected requests are deleted after this many days (RGPD
+# minimisation).
+TRIAL_PURGE_DAYS = _env_int("TRIAL_PURGE_DAYS", 30)
+TRIAL_RATE_LIMIT = os.getenv("TRIAL_RATE_LIMIT", "5/hour")
+
+
+# --- Packs and Stripe (Spec v3) ------------------------------------------
+# Prices HT in cents, from gestion/ScanID-Pilotage.xlsx « Stripe (à créer) »;
+# TVA 20 % on top. The Payment Links default to the live ones published on
+# scanid.fr; STRIPE_PAYMENT_LINK_<pack> points a pack at a test-mode link.
+VAT_RATE_PERCENT = 20
+CREDIT_VALIDITY_MONTHS = 12
+PACK_PRICES_HT_CENTS = {100: 9_900, 1000: 69_000, 3000: 189_000, 5000: 295_000}
+_DEFAULT_PAYMENT_LINKS = {
+    100: "https://buy.stripe.com/9B64gy8XZfVycQFdiZebu00",
+    1000: "https://buy.stripe.com/8x27sK0rtbFi8Apgvbebu01",
+    3000: "https://buy.stripe.com/6oU8wOa2324I9Eta6Nebu02",
+    5000: "https://buy.stripe.com/6oU14mdefaBe3g5gvbebu03",
+}
+
+
+def payment_link(pack: int) -> str:
+    return os.getenv(f"STRIPE_PAYMENT_LINK_{pack}", _DEFAULT_PAYMENT_LINKS[pack])
+
+
+def stripe_webhook_secret() -> str:
+    return os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
+
+
+STRIPE_WEBHOOK_TOLERANCE_SECONDS = _env_int("STRIPE_WEBHOOK_TOLERANCE_SECONDS", 300)
+SIGNUP_RATE_LIMIT = os.getenv("SIGNUP_RATE_LIMIT", "5/minute")
+
+
+# --- Session lifetime ----------------------------------------------------
+# A session ends after this long WITHOUT USER ACTIVITY: the app renews it
+# (POST /session/refresh) only when the person actually uses the page, never
+# for background polling. 12 hours (action list, 14/09/2026).
+SESSION_IDLE_MINUTES = _env_int("SESSION_IDLE_MINUTES", 12 * 60)

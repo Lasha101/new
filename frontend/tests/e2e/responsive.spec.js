@@ -88,7 +88,7 @@ test.describe('Parité tableau / cartes', () => {
 
     test('le filtre de type garde les deux vues d’accord', async ({ page }) => {
         await login(page);
-        await page.locator(SELECTORS.typeFilter).locator('button[value="PASS"]').click();
+        await page.locator(SELECTORS.typeFilter).locator('button[value="PP"]').click();
 
         const rowCount = await resultsCards(page).count();
         expect(rowCount).toBeGreaterThan(0);

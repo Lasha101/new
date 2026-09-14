@@ -38,6 +38,14 @@ export const QUEUE_STATUS_CHIP = {
     failed: 'failed',
 };
 
+/**
+ * Shown under a document whose OCR job failed. A job fails only when it
+ * extracted nothing, and only successful extractions are charged, so the
+ * promise at the end of the sentence is always true for this message.
+ */
+export const JOB_FAILED_MESSAGE = 'Aucun passeport ou CNI française reconnu sur cette image. '
+    + 'Vérifiez la photo (voir le guide) et réessayez — aucun crédit n’a été décompté.';
+
 /** Attempts per document, first try included. Two retries after the first send. */
 export const MAX_ATTEMPTS = 3;
 
@@ -235,7 +243,7 @@ export class UploadQueue {
             if (jobStatus === 'complete') { changed = true; return { ...item, status: QUEUE_STATUS.done }; }
             if (jobStatus === 'failed') {
                 changed = true;
-                return { ...item, status: QUEUE_STATUS.failed, error: "L'extraction a échoué." };
+                return { ...item, status: QUEUE_STATUS.failed, error: JOB_FAILED_MESSAGE };
             }
             return item;
         });

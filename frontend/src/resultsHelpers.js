@@ -1,12 +1,12 @@
 // Pure helpers of the results screen (no React, no DOM) so they can be unit
 // tested with `node --test`.
 
-// Document type of a row: PASS = passeport, PI = pièce d'identité (CNI).
+// Document type of a row: PP = passeport, PI = pièce d'identité (CNI).
 // The database has no document-type column, so the type is derived from the
 // document number: a French passport number is always 2 digits + 2 letters +
 // 5 digits, while a CNI number is 12 digits (old format) or 9 alphanumeric
 // characters (new format). Mirrors document_type_of() in backend/main.py.
-export const DOC_TYPE_PASSPORT = 'PASS';
+export const DOC_TYPE_PASSPORT = 'PP';
 export const DOC_TYPE_ID_CARD = 'PI';
 const PASSPORT_NUMBER_RE = /^\d{2}[A-Z]{2}\d{5}$/;
 
@@ -63,6 +63,16 @@ export function resultCellValue(item, field, fieldTypes = {}) {
     if (fieldTypes[field] === 'date') { value = formatDateFR(value); }
     // Missing values render as an empty cell, never as the text "null".
     return value == null ? '' : String(value);
+}
+
+// A row whose OCR confidence is below 80 % is highlighted in the results so the
+// user checks it (action list item 9). A row without a score is not.
+export const LOW_CONFIDENCE_THRESHOLD = 0.8;
+export const LOW_CONFIDENCE_TITLE = 'Score de confiance inférieur à 80 % : vérifiez ce document.';
+
+export function isLowConfidence(item) {
+    const score = item?.confidence_score;
+    return typeof score === 'number' && Number.isFinite(score) && score < LOW_CONFIDENCE_THRESHOLD;
 }
 
 // Query string of GET /export/data, so that the file contains exactly the rows

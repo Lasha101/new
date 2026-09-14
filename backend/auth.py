@@ -22,7 +22,25 @@ logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "a_default_fallback_key_if_not_set")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# A session lasts this long after it was last renewed. It is renewed only by
+# real activity (POST /session/refresh, called by the app when the person uses
+# the page), so this is the inactivity timeout: 12 hours. It used to be a fixed
+# 30 minutes from login that nothing renewed.
+ACCESS_TOKEN_EXPIRE_MINUTES = config.SESSION_IDLE_MINUTES
+
+ACCOUNT_ACTIVE = "active"
+
+
+def is_active_account(user: Dict[str, Any]) -> bool:
+    """Only an active account may log in or hold a session. A free-trial request
+    is 'pending' until validated; a refused one is 'rejected'."""
+    return (user.get("status") or ACCOUNT_ACTIVE) == ACCOUNT_ACTIVE
+
+
+def session_claims(user: Dict[str, Any]) -> Dict[str, Any]:
+    """The claims of a session token for this account. "sv" is its session
+    version: a password reset raises it, which ends every session issued before."""
+    return {"sub": user.get("user_name"), "sv": int(user.get("session_version") or 0)}
 
 # argon2 for every new hash. bcrypt stays in the list as a VERIFIER only:
 # `deprecated="auto"` marks it legacy, so `needs_update()` is true for any
@@ -105,6 +123,10 @@ def authenticate_user(db: Session, username: str, password: str) -> Any:
     import crud
     user = crud.get_user_by_username(db, username=username)
     if not user or not verify_password(password, str(user.get("hashed_password"))):
+        return False
+    if not is_active_account(user):
+        # Same answer as a wrong password: the caller learns nothing about the
+        # account. (A pending trial account has no usable password anyway.)
         return False
 
     # Transparent upgrade: a hash produced by a superseded scheme is replaced
@@ -204,7 +226,11 @@ def get_current_user(
         raise credentials_exception
     import crud
     user = crud.get_user_by_username(db, username=str(token_data.username))
-    if user is None:
+    if user is None or not is_active_account(user):
+        raise credentials_exception
+    # A token issued before session versions existed carries no "sv"; it counts
+    # as version 0, which is what every account had, so the deploy logs nobody out.
+    if int(payload.get("sv") or 0) != int(user.get("session_version") or 0):
         raise credentials_exception
     return user
 

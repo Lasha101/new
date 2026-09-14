@@ -123,7 +123,7 @@ test.describe('Contraste WCAG AA', () => {
         });
 
         const dashboard = [
-            '.sid-dropzone small', '.sid-topbar-right', '.sid-credits', '.sid-table th',
+            '.sid-dropzone small', '.sid-topbar-right', '.sid-sitenav a', '.sid-credits', '.sid-table th',
             '.sid-badge--pp', '.sid-badge--pi',
             '#contrast-probe-queued', '.sid-chip--processing', '.sid-chip--done', '.sid-chip--failed',
         ];

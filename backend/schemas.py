@@ -66,7 +66,18 @@ class UserRegister(UserBase):
     password: str
 
 
-class UserUpdate(BaseModel):
+class BillingIdentity(BaseModel):
+    """The invoice fields of an account (« Mon Compte » → Facturation)."""
+    company: Optional[str] = None
+    siret: Optional[str] = None
+    vat_number: Optional[str] = None
+    billing_street: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_country: Optional[str] = None
+
+
+class UserUpdate(BillingIdentity):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -78,7 +89,7 @@ class UserUpdate(BaseModel):
     page_credits: Optional[int] = None
 
 
-class User(UserBase):
+class User(UserBase, BillingIdentity):
     id: str
     role: str
     uploaded_pages_count: int
@@ -86,6 +97,71 @@ class User(UserBase):
     passports: List["Passport"] = []
     voyages: List[Voyage] = []
     model_config = ConfigDict(from_attributes=True)
+
+
+class TrialRequestOut(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    nom: str
+    societe: Optional[str] = None
+    email: str
+    telephone: Optional[str] = None
+    volume: Optional[str] = None
+    message: Optional[str] = None
+    siret: Optional[str] = None
+    tva: Optional[str] = None
+    status: str
+    created_at: datetime
+    decided_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PackSignupRequest(BaseModel):
+    """/app/inscription (Spec v3). Plain strings: every rule is checked in the
+    endpoint so each refusal can be one French sentence."""
+    pack: int
+    first_name: str = ""
+    last_name: str = ""
+    company: str = ""
+    email: str = ""
+    password: str = ""
+    phone_number: str = ""
+    billing_street: str = ""
+    billing_postal_code: str = ""
+    billing_city: str = ""
+    billing_country: str = ""
+    siret: str = ""
+    vat_number: str = ""
+    consent: bool = False
+
+
+class OrderRequest(BaseModel):
+    pack: int
+
+
+class PurchaseOut(BaseModel):
+    id: str
+    pack: int
+    credits: int
+    amount_ht_cents: int
+    paid_at: datetime
+    expires_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CheckoutOut(BaseModel):
+    checkout_url: str
+    purchase_id: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    # Email or nom d'utilisateur, whichever the person remembers.
+    identifier: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
 
 
 class Token(BaseModel):

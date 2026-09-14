@@ -4,8 +4,9 @@
 // src/upload/uploadQueue.test.js, avec des délais simulés. Ici on prouve la
 // même chose contre le VRAI transport : le XHR de l'application, le vrai
 // endpoint, les vrais délais, et ce que l'utilisateur voit.
-import { test, expect } from './test-base.js';
-import { login, uploadFiles, SELECTORS } from '../helpers/index.js';
+import { readFileSync } from 'node:fs';
+import { test, expect, LIVE } from './test-base.js';
+import { login, uploadFiles, SELECTORS, TEXT } from '../helpers/index.js';
 import { fixturePath } from '../fixtures/index.js';
 
 /** Le nom de fichier porté par un corps multipart. */
@@ -158,6 +159,24 @@ test.describe("File d'envoi — marche nominale", () => {
             await expect(page.locator(SELECTORS.queueItem)).toHaveCount(0);
         }
         await expect(page.locator(SELECTORS.uploadCard)).toBeVisible();
+    });
+
+    test('un document illisible affiche le message actionnable sous le fichier, sans décompter de crédit', async ({ page, api }) => {
+        test.skip(LIVE, 'le mock décide de l’échec par le nom du fichier ; un vrai backend lit l’image');
+        await login(page);
+        const credits = api.user.page_credits;
+
+        await page.locator(SELECTORS.fileInput).setInputFiles({
+            name: 'illisible.jpg', mimeType: 'image/jpeg', buffer: readFileSync(fixturePath('smallJpeg')),
+        });
+        await page.getByRole('button', { name: TEXT.startAnalysis }).click();
+
+        const item = page.locator(SELECTORS.queueItem).filter({ hasText: 'illisible.jpg' });
+        await expect(item).toHaveAttribute('data-queue-status', 'failed', { timeout: 30_000 });
+        await expect(item.locator(SELECTORS.queueError)).toHaveText(
+            'Aucun passeport ou CNI française reconnu sur cette image. Vérifiez la photo (voir le guide) et réessayez — aucun crédit n’a été décompté.');
+        await expect(item.locator(`${SELECTORS.queueError} a`)).toHaveAttribute('href', 'https://scanid.fr/guide-photo.html');
+        await expect(page.locator(SELECTORS.creditBadge)).toHaveText(`Crédits : ${credits}`);
     });
 
     test("la file ne survit pas à un rechargement", async ({ page }) => {

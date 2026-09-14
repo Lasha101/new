@@ -87,7 +87,7 @@ export const TEXT = {
     downloadCsv: 'Télécharger CSV',
     downloadExcel: 'Télécharger Excel',
     preview: 'Aperçu',
-    noData: 'Aucune donnée trouvée.',
+    noData: 'Aucun document pour l’instant — importez votre premier passeport ou votre première CNI ci-dessus.',
     filterAll: 'Tous',
     jobDone: 'Terminé',
     jobFailed: 'Échoué',

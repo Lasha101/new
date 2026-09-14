@@ -35,12 +35,19 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+import account_tokens
+import billing
+import billing_identity
 import config
 import crud, models, schemas, auth
+import emails
+import mailer
 import file_validation
 import log_redaction
 import ocr_service
 import password_policy
+import schema_migrations
+import trials
 from database import get_db, engine, SessionLocal
 
 logging.basicConfig(level=logging.INFO)
@@ -63,15 +70,19 @@ CSV_MEDIA_TYPE = "text/csv"
 # which is ';' in a French locale (a ',' file lands in a single column).
 CSV_DELIMITER = ";"
 
-# --- Document type (PASS = passeport, PI = pièce d'identité / CNI) ---
+# --- Document type (PP = passeport, PI = pièce d'identité / CNI) ---
 # The passports table has no document-type column, so the type is derived
 # from the document number: a French passport number is always 2 digits +
 # 2 letters + 5 digits, while a CNI number is 12 digits (old format) or 9
 # alphanumeric characters (new format, never in the passport shape). The
 # frontend applies exactly the same rule (frontend/src/resultsHelpers.js).
-DOC_TYPE_PASSPORT = "PASS"
+DOC_TYPE_PASSPORT = "PP"
 DOC_TYPE_ID_CARD = "PI"
-DocumentType = Literal["PASS", "PI"]
+# "PASS" was the passport code until 14/09/2026 (Alex chose « PP »). It is still
+# accepted as a filter value, so an app shell cached before the change keeps
+# exporting; every value the API produces is "PP".
+LEGACY_DOC_TYPE_PASSPORT = "PASS"
+DocumentType = Literal["PP", "PI", "PASS"]
 ExportFormat = Literal["xlsx", "csv"]
 # Dates are displayed the French way (jour/mois/année) everywhere the export is
 # seen: on-screen preview, CSV text (_format_display_date) and the number format
@@ -92,7 +103,7 @@ _PASSPORT_NUMBER_RE = re.compile(r"^[0-9]{2}[A-Z]{2}[0-9]{5}$")
 
 
 def document_type_of(passport_number: Any) -> str:
-    """'PASS' for a French passport number, 'PI' for any other document number."""
+    """'PP' for a French passport number, 'PI' for any other document number."""
     number = str(passport_number or "").strip().upper()
     return DOC_TYPE_PASSPORT if _PASSPORT_NUMBER_RE.match(number) else DOC_TYPE_ID_CARD
 
@@ -107,7 +118,7 @@ EXPORT_COLUMNS = ["last_name", "first_name", "birth_date", "expiration_date", "n
 EXPORT_HEADERS = {
     "document_type": "Type", "first_name": "Prénom", "last_name": "Nom de famille",
     "birth_date": "Date de Naissance", "expiration_date": "Date d'Expiration",
-    "nationality": "Nationalité", "passport_number": "Numéro de Passeport",
+    "nationality": "Nationalité", "passport_number": "Numéro de document",
     "destination": "Destination", "confidence_score": "Score de Confiance",
 }
 
@@ -356,6 +367,29 @@ def sweep_orphaned_spool_files() -> int:
     return removed
 
 
+def _purge_trial_requests_once() -> int:
+    db = SessionLocal()
+    try:
+        removed = trials.purge(db)
+        if removed:
+            logger.info("Demandes d'essai purgées (plus de %d jours) : %d", config.TRIAL_PURGE_DAYS, removed)
+        return removed
+    finally:
+        db.close()
+
+
+async def _purge_trial_requests_daily():
+    """RGPD minimisation (Spec v2 §1): pending and refused trial requests are
+    deleted after TRIAL_PURGE_DAYS. Runs at startup, then every 24 hours, in
+    this process (production runs a single worker)."""
+    while True:
+        try:
+            await asyncio.to_thread(_purge_trial_requests_once)
+        except Exception as e:
+            logger.error("Purge des demandes d'essai en échec : %s", type(e).__name__)
+        await asyncio.sleep(24 * 3600)
+
+
 # --- Lifespan for application startup/shutdown ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -363,8 +397,10 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("🚀 Backend starting up (PostgreSQL).")
         await asyncio.to_thread(sweep_orphaned_spool_files)
-        # Create any missing tables on boot (idempotent), then look up the admin.
+        # Create any missing tables on boot (idempotent), add the columns an
+        # older database lacks (schema_migrations.py), then look up the admin.
         await asyncio.to_thread(models.Base.metadata.create_all, engine)
+        await asyncio.to_thread(schema_migrations.add_missing_columns, engine)
         admin_user = await asyncio.to_thread(crud.get_user_by_username, db, username="admin")
     except Exception as e:
         logger.error(f"🔴 Database startup check failed: {e}")
@@ -388,8 +424,11 @@ async def lifespan(app: FastAPI):
 
     await asyncio.to_thread(db.close)
 
+    purge_task = asyncio.create_task(_purge_trial_requests_daily())
+
     yield
 
+    purge_task.cancel()
     logger.info("Lifespan shutdown: Cleaning up resources...")
     manager.is_shutting_down = True
     await manager.shutdown()
@@ -497,11 +536,13 @@ def _filter_by_document_type(rows: List[Dict[str, Any]], document_type: Optional
     """Keeps only the rows of the given document type; no type = all rows."""
     if not document_type:
         return rows
+    if document_type == LEGACY_DOC_TYPE_PASSPORT:
+        document_type = DOC_TYPE_PASSPORT
     return [row for row in rows if document_type_of(row.get("passport_number")) == document_type]
 
 
 def _build_export_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Export rows in EXPORT_COLUMNS order: the derived Type column (PASS/PI)
+    """Export rows in EXPORT_COLUMNS order: the derived Type column (PP/PI)
     computed from the document number, internal ids (id, owner_id) dropped,
     text values uppercased."""
     export_rows = []
@@ -670,12 +711,216 @@ def login_for_access_token(request: Request, response: Response, form_data: OAut
         )
 
     auth.reset_login_failures(form_data.username)
-    access_token = auth.create_access_token(data={"sub": user.get("user_name")})
+    access_token = auth.create_access_token(data=auth.session_claims(user))
     # The token now also travels as an HttpOnly cookie, which is what the
     # browser uses from here on. The response body is UNCHANGED — same shape,
     # same fields — so every existing client, and the test suite, keep working.
     auth.set_session_cookie(response, access_token)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+# --- Password reset (« Mot de passe oublié ? ») ---
+FORGOT_PASSWORD_ANSWER = (
+    "Si un compte correspond à cet identifiant, un email contenant un lien de réinitialisation "
+    "vient de lui être envoyé. Le lien est valable 48 heures."
+)
+INVALID_PASSWORD_LINK = (
+    "Ce lien n'est plus valide (il a expiré ou a déjà servi). "
+    "Demandez un nouveau lien depuis « Mot de passe oublié ? »."
+)
+
+
+@app.post("/auth/forgot-password")
+@limiter.limit(config.FORGOT_PASSWORD_RATE_LIMIT)
+def forgot_password(request: Request, payload: schemas.ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Emails a 48-hour link to choose a new password.
+
+    The answer is the same whether or not the account exists, so the form
+    cannot be used to find out who is a customer. Only an active account gets an
+    email: a pending trial request is not an account yet.
+    """
+    user = crud.get_user_by_login_identifier(db, payload.identifier)
+    if user and auth.is_active_account(user):
+        raw_token = account_tokens.issue(db, user["id"], account_tokens.PURPOSE_RESET)
+        subject, body = emails.password_reset(user, raw_token)
+        background_tasks.add_task(mailer.send, user["email"], subject, body, "password_reset")
+    return {"detail": FORGOT_PASSWORD_ANSWER}
+
+
+@app.post("/auth/reset-password")
+@limiter.limit(config.RESET_PASSWORD_RATE_LIMIT)
+def reset_password(request: Request, payload: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Sets the password chosen through a one-time link (reset or first
+    password of a validated trial). Ends the account's other sessions."""
+    found = account_tokens.find_valid(db, payload.token)
+    if found is None:
+        raise HTTPException(status_code=400, detail=INVALID_PASSWORD_LINK)
+    user = found["user"]
+    password_policy.assert_valid_password(payload.password, email=user.get("email"), user_name=user.get("user_name"))
+    account_tokens.consume(db, found["token"], auth.get_password_hash(payload.password))
+    # A locked-out account whose owner just proved control of the mailbox.
+    auth.reset_login_failures(user.get("user_name"))
+    return {"detail": "Votre mot de passe est enregistré. Vous pouvez vous connecter.", "user_name": user.get("user_name")}
+
+
+# --- Buying a pack: account first, then Stripe (Spec v3) ---
+UNKNOWN_PACK = "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/#tarifs."
+
+
+@app.post("/signup", response_model=schemas.CheckoutOut)
+@limiter.limit(config.SIGNUP_RATE_LIMIT)
+def signup_for_pack(request: Request, payload: schemas.PackSignupRequest, db: Session = Depends(get_db)):
+    """/app/inscription: creates the active account with 0 credits and a pending
+    purchase, then returns the pack's Payment Link to redirect to. Credits
+    arrive with the Stripe webhook, never before."""
+    if not billing.is_known_pack(payload.pack):
+        raise HTTPException(status_code=400, detail=UNKNOWN_PACK)
+    fields = {name: (getattr(payload, name) or "").strip() for name in (
+        "first_name", "last_name", "company", "phone_number",
+        "billing_street", "billing_postal_code", "billing_city", "billing_country")}
+    labels = {"first_name": "le prénom", "last_name": "le nom", "company": "la société",
+              "phone_number": "le téléphone", "billing_street": "la rue de l'adresse de facturation",
+              "billing_postal_code": "le code postal", "billing_city": "la ville", "billing_country": "le pays"}
+    for name, value in fields.items():
+        if not value:
+            raise HTTPException(status_code=400, detail=f"Veuillez renseigner {labels[name]}.")
+        if len(value) > 200:
+            raise HTTPException(status_code=400, detail=f"Le champ {labels[name]} est trop long.")
+    try:
+        email = str(trials._EMAIL.validate_python(payload.email.strip())).lower()
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="L'adresse email n'est pas valide.")
+    siret = billing_identity.normalize_siret(payload.siret)
+    if not billing_identity.is_valid_siret(siret):
+        raise HTTPException(status_code=400, detail=billing_identity.SIRET_ERROR)
+    vat = billing_identity.normalize_vat(payload.vat_number)
+    if vat and not billing_identity.is_valid_vat(vat):
+        raise HTTPException(status_code=400, detail=billing_identity.VAT_ERROR)
+    if not payload.consent:
+        raise HTTPException(status_code=400, detail="Veuillez accepter le traitement de vos données pour créer le compte.")
+    if crud.get_user_by_login_identifier(db, email) or trials._email_taken(db, email):
+        raise HTTPException(status_code=400, detail="Un compte existe déjà avec cette adresse email. Connectez-vous pour acheter ce pack.")
+    password_policy.assert_valid_password(payload.password, email=email, user_name=email)
+
+    user = crud.create_user(db=db, user=schemas.UserCreate(
+        first_name=fields["first_name"], last_name=fields["last_name"], email=email,
+        phone_number=fields["phone_number"], user_name=email, password=payload.password, page_credits=0,
+    ), role="user")
+    row = db.get(models.User, user["id"])
+    row.company, row.siret, row.vat_number = fields["company"], siret, vat or None
+    row.billing_street, row.billing_postal_code = fields["billing_street"], fields["billing_postal_code"]
+    row.billing_city, row.billing_country = fields["billing_city"], fields["billing_country"]
+    db.commit()
+    purchase = billing.create_pending_purchase(db, user["id"], payload.pack)
+    return {"checkout_url": billing.checkout_url(payload.pack, email, user["id"]), "purchase_id": purchase["id"]}
+
+
+@app.post("/orders", response_model=schemas.CheckoutOut)
+def order_pack(payload: schemas.OrderRequest, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+    """A customer who already has an account buys a pack: same pending purchase
+    and Payment Link, no signup form."""
+    if not billing.is_known_pack(payload.pack):
+        raise HTTPException(status_code=400, detail=UNKNOWN_PACK)
+    purchase = billing.create_pending_purchase(db, current_user["id"], payload.pack)
+    return {"checkout_url": billing.checkout_url(payload.pack, current_user["email"], current_user["id"]), "purchase_id": purchase["id"]}
+
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """checkout.session.completed (and async_payment_succeeded, for bank
+    transfers) → credits the pack paid for, once. Signature verified with
+    STRIPE_WEBHOOK_SECRET. Anything that cannot be credited automatically is
+    acknowledged (Stripe would otherwise retry for days) and reported to Alex."""
+    secret = config.stripe_webhook_secret()
+    if not secret:
+        return JSONResponse(status_code=503, content={"detail": "Webhook Stripe non configuré."})
+    payload = await request.body()
+    if not billing.verify_signature(payload, request.headers.get("stripe-signature", ""), secret):
+        return JSONResponse(status_code=400, content={"detail": "Signature Stripe invalide."})
+    try:
+        event = json.loads(payload)
+        event_type = event.get("type")
+        session = (event.get("data") or {}).get("object") or {}
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"detail": "Événement illisible."})
+    if event_type not in billing.PAID_EVENTS:
+        return {"received": True, "result": "ignored"}
+
+    outcome = await asyncio.to_thread(billing.credit_checkout_session, db, session)
+    if outcome.status == "credited":
+        logger.info("Stripe: pack %s crédité (session traitée).", outcome.pack)
+        subject, text_body = emails.purchase_confirmation(outcome.user, outcome.pack, outcome.expires_at)
+        background_tasks.add_task(mailer.send, outcome.user["email"], subject, text_body, "purchase_confirmation")
+        await manager.send_update(outcome.user["id"], {"type": "credit_update"})
+    elif outcome.status == "unmatched":
+        logger.error("Stripe: paiement non crédité automatiquement (%s).", outcome.reason)
+        subject, text_body = emails.payment_anomaly(outcome.reason, session)
+        background_tasks.add_task(mailer.send, config.mail_admin_to(), subject, text_body, "payment_anomaly")
+    return {"received": True, "result": outcome.status}
+
+
+# --- Public configuration read by the website ---
+@app.get("/config")
+def public_config():
+    """What scanid.fr may switch on (Spec v3 §3). `signup` sends « Souscrire »
+    to /app/inscription instead of straight to Stripe, so it is only true once
+    the Stripe webhook secret is configured — before that, a paid pack could
+    never be credited automatically. `trial` needs email: the request is useless
+    if nobody is told about it."""
+    return {"signup": bool(config.stripe_webhook_secret()), "trial": mailer.is_configured()}
+
+
+# --- Free trial (Spec v2 §1) ---
+@app.post("/trial-requests", status_code=201)
+@limiter.limit(config.TRIAL_RATE_LIMIT)
+async def create_trial_request(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """The form of scanid.fr/essai.html. Errors are {"error": "…"} (Spec v2); on
+    any of them the site falls back to Formspree, so a lead is never lost —
+    including when email is not configured, which is refused here on purpose."""
+    if not mailer.is_configured():
+        return JSONResponse(status_code=503, content={"error": "Les demandes d'essai sont momentanément indisponibles."})
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Requête invalide."})
+    try:
+        data = trials.parse(body)
+        trial = await asyncio.to_thread(trials.create, db, data)
+    except trials.TrialRequestError as e:
+        return JSONResponse(status_code=e.status_code, content={"error": e.message})
+    subject, text_body = emails.trial_admin_notification(trial)
+    background_tasks.add_task(mailer.send, config.mail_admin_to(), subject, text_body, "trial_notification", trial["email"])
+    return JSONResponse(status_code=201, content={"status": "pending"})
+
+
+@app.get("/admin/trial-requests", response_model=List[schemas.TrialRequestOut], dependencies=[Depends(auth.require_admin)])
+def list_trial_requests(db: Session = Depends(get_db)):
+    return trials.list_pending(db)
+
+
+@app.post("/admin/trial-requests/{request_id}/validate", response_model=schemas.TrialRequestOut, dependencies=[Depends(auth.require_admin)])
+def validate_trial_request(request_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Activates the account and emails the welcome message with a 48-hour link
+    to choose the password."""
+    if not mailer.is_configured():
+        raise HTTPException(status_code=503, detail="L'envoi d'emails n'est pas configuré : le compte n'a pas été activé.")
+    try:
+        trial, user = trials.validate(db, request_id)
+    except trials.TrialRequestError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    raw_token = account_tokens.issue(db, user["id"], account_tokens.PURPOSE_SET)
+    subject, text_body = emails.trial_welcome(user, raw_token)
+    background_tasks.add_task(mailer.send, user["email"], subject, text_body, "trial_welcome")
+    return trial
+
+
+@app.post("/admin/trial-requests/{request_id}/reject", response_model=schemas.TrialRequestOut, dependencies=[Depends(auth.require_admin)])
+def reject_trial_request(request_id: str, db: Session = Depends(get_db)):
+    """Refuses the request. No email: Alex answers by hand if useful."""
+    try:
+        return trials.reject(db, request_id)
+    except trials.TrialRequestError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 
 
 @app.post("/logout")
@@ -688,6 +933,19 @@ def logout(response: Response):
     """
     auth.clear_session_cookie(response)
     return {"detail": "Déconnexion réussie"}
+
+
+@app.post("/session/refresh", response_model=schemas.Token)
+def refresh_session(response: Response, current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+    """Renews a still-valid session for another SESSION_IDLE_MINUTES (12 h).
+
+    The app calls this only when the person actually uses the page, never from
+    background polling, so a session nobody touches for 12 hours expires and
+    cannot be renewed afterwards: that is the automatic logout on inactivity.
+    """
+    access_token = auth.create_access_token(data=auth.session_claims(current_user))
+    auth.set_session_cookie(response, access_token)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 # --- SSE ROUTE FOR REAL-TIME UPDATES ---
@@ -788,6 +1046,20 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
             exclude_unset=True, exclude={"uploaded_pages_count", "page_credits", "user_name", "role"}
         ))
 
+    # Billing identity: a SIRET or VAT number that is given must be valid, and is
+    # stored normalised (spaces dropped, VAT upper-cased). An empty value clears it.
+    identity = {}
+    if user_update.siret:
+        identity["siret"] = billing_identity.normalize_siret(user_update.siret)
+        if not billing_identity.is_valid_siret(identity["siret"]):
+            raise HTTPException(status_code=400, detail=billing_identity.SIRET_ERROR)
+    if user_update.vat_number:
+        identity["vat_number"] = billing_identity.normalize_vat(user_update.vat_number)
+        if not billing_identity.is_valid_vat(identity["vat_number"]):
+            raise HTTPException(status_code=400, detail=billing_identity.VAT_ERROR)
+    if identity:
+        user_update = user_update.model_copy(update=identity)
+
     # A password change goes through the same policy as a registration. The
     # field is optional here — an empty value means "leave it alone", which is
     # what the account form sends when the user edits anything else — so the
@@ -801,6 +1073,12 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
         )
 
     return crud.update_user(db=db, user_id=current_user["id"], user_update=user_update)
+
+
+@app.get("/users/me/purchases", response_model=List[schemas.PurchaseOut])
+def read_my_purchases(db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+    """« Mes achats »: pack, date, expiry of every paid purchase."""
+    return billing.paid_purchases(db, current_user["id"])
 
 
 # --- Admin User Management Routes ---
@@ -1009,14 +1287,14 @@ def export_data(
     destination: Optional[str] = None, user_id: Optional[str] = None,
     first_name: Optional[str] = None, last_name: Optional[str] = None,
     preview: bool = False,
-    document_type: Optional[DocumentType] = Query(None, description="PASS = passeports, PI = cartes d'identité; absent = tous"),
+    document_type: Optional[DocumentType] = Query(None, description="PP = passeports (PASS accepté), PI = cartes d'identité; absent = tous"),
     export_format: ExportFormat = Query("xlsx", alias="format"),
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(auth.get_current_active_user)
 ):
     """Exports the filtered documents as an Excel (.xlsx, default) or CSV
     file, or as JSON rows when preview=true (used by the on-screen preview
-    table). The optional document_type filter (PASS/PI) narrows the rows to one
+    table). The optional document_type filter (PP/PI) narrows the rows to one
     document type; without it, every matching row is exported."""
     effective_user_id = current_user.get("id")
     if current_user.get("role") == "admin":

@@ -44,10 +44,10 @@ test.describe('ScanID — baseline', () => {
         await expect(badge).toHaveText(/^Crédits\s*:\s*\d+$/);
         if (!LIVE) await expect(badge).toHaveText(`Crédits : ${api.user.page_credits}`);
 
-        await expect(page.locator('.credit-display')).toContainText('Pages Traitées :');
+        await expect(page.locator('.credit-display')).toContainText('Documents traités :');
     });
 
-    test('le filtre Tous/PASS/PI change le nombre de lignes visibles', async ({ page }) => {
+    test('le filtre Tous/PP/PI change le nombre de lignes visibles', async ({ page }) => {
         await login(page);
 
         const filter = page.locator(SELECTORS.typeFilter);
@@ -57,7 +57,7 @@ test.describe('ScanID — baseline', () => {
         const total = await countResultRows(page);
         expect(total).toBeGreaterThan(0);
 
-        await selectDocType(page, 'PASS');
+        await selectDocType(page, 'PP');
         const passCount = await countResultRows(page);
 
         await selectDocType(page, 'PI');
@@ -73,12 +73,12 @@ test.describe('ScanID — baseline', () => {
 
         if (!LIVE) {
             expect(total).toBe(EXPECTED_ROW_COUNTS['']);
-            expect(passCount).toBe(EXPECTED_ROW_COUNTS.PASS);
+            expect(passCount).toBe(EXPECTED_ROW_COUNTS.PP);
             expect(idCardCount).toBe(EXPECTED_ROW_COUNTS.PI);
         }
 
-        // The filter narrows on the document number, which is what PASS means.
-        await selectDocType(page, 'PASS');
+        // The filter narrows on the document number, which is what PP means.
+        await selectDocType(page, 'PP');
         for (const cells of await resultsRows(page).all()) {
             await expect(cells).toContainText(/\d{2}[A-Z]{2}\d{5}/);
         }

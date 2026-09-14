@@ -173,7 +173,8 @@ test('applyJobStatuses moves processing -> done, and a failed job -> failed', as
     const byName = Object.fromEntries(queue.snapshot().map(item => [item.name, item]));
     assert.equal(byName['a.jpg'].status, QUEUE_STATUS.done);
     assert.equal(byName['b.jpg'].status, QUEUE_STATUS.failed);
-    assert.equal(byName['b.jpg'].error, "L'extraction a échoué.");
+    assert.equal(byName['b.jpg'].error,
+        'Aucun passeport ou CNI française reconnu sur cette image. Vérifiez la photo (voir le guide) et réessayez — aucun crédit n’a été décompté.');
 });
 
 test('a done document is never sent again by retryFailed', async () => {

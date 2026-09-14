@@ -17,7 +17,7 @@ import { DOC_TYPE_PASSPORT, DOC_TYPE_ID_CARD } from '../../src/resultsHelpers.js
  */
 const BASELINE_EXPORT_HEADERS = [
     'Nom de famille', 'Prénom', 'Date de Naissance', "Date d'Expiration", 'Nationalité',
-    'Numéro de Passeport', 'Type', 'Destination', 'Score de Confiance',
+    'Numéro de document', 'Type', 'Destination', 'Score de Confiance',
 ];
 
 /** English words that must never appear in this French UI. */
@@ -188,6 +188,24 @@ test.describe('Interface en français', () => {
             for (const word of ENGLISH_WORDS) {
                 expect(text, `"${word}" is visible on the ${tab} tab`).not.toMatch(new RegExp(`\\b${word}\\b`));
             }
+        }
+    });
+});
+
+test.describe('Onglet du navigateur', () => {
+    test('l’onglet affiche « ScanID — Espace client », en français, avec l’icône du site', async ({ page, request }) => {
+        await page.goto(APP_BASE);
+        await expect(page).toHaveTitle('ScanID — Espace client');
+        await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+
+        // The same bytes as the public site's icons (scanid-site-v5-deploy/).
+        const { readFileSync } = await import('node:fs');
+        const siteFile = name => readFileSync(new URL(`../../scanid-site-v5-deploy/${name}`, import.meta.url));
+        for (const [selector, name] of [['link[rel="icon"]', 'favicon.svg'], ['link[rel="apple-touch-icon"]', 'apple-touch-icon.png']]) {
+            const href = await page.locator(selector).getAttribute('href');
+            const response = await request.get(new URL(href, page.url()).toString());
+            expect(response.status(), `${name} is served`).toBe(200);
+            expect(Buffer.compare(await response.body(), siteFile(name)), `${name} is the site's icon`).toBe(0);
         }
     });
 });

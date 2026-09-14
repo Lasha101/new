@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, resultCellValue, DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
+import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, resultCellValue, isLowConfidence, LOW_CONFIDENCE_TITLE, DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
 import { prepareFileForUpload } from './upload/imagePrep.js';
-import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUEUE_STATUS_LABEL } from './upload/uploadQueue.js';
+import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUEUE_STATUS_LABEL, JOB_FAILED_MESSAGE } from './upload/uploadQueue.js';
 import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
 import { PASSWORD_RULES, evaluatePassword, generateExamplePassword } from './passwordRules.js';
 import OfflineScreen from './OfflineScreen.jsx';
+import { packSummary, formatEuros, formatCount, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -17,6 +18,13 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 // visitor on the home page instead of the login screen they just earned.
 const APP_ROOT = import.meta.env.BASE_URL;
 
+// The views that have an address of their own under the app: the page a
+// password link opens (/app/mot-de-passe#token=…) and the pack purchase page
+// the site's « Souscrire » buttons open (/app/inscription?pack=…). Everything
+// else is the login screen or the dashboard, as before.
+const ROUTE_VIEWS = { 'mot-de-passe': 'password', 'inscription': 'inscription' };
+const routeView = () => ROUTE_VIEWS[window.location.pathname.slice(APP_ROOT.length).replace(/\/+$/, '')] || null;
+
 // The readable marker cookie the server sets beside the HttpOnly session
 // cookie. It says only "this browser has logged in before" and is what lets
 // « Votre session a expiré » be told apart from a first visit.
@@ -25,6 +33,14 @@ const hasSessionHint = () => document.cookie
     .split(';')
     .some(part => part.trim().startsWith(`${SESSION_HINT_COOKIE}=`));
 
+// Automatic logout after 12 hours of inactivity (action list item 9). The
+// server session lasts 12 h from its last renewal (backend SESSION_IDLE_MINUTES)
+// and only real use of the page renews it — at most every 5 minutes. Background
+// polling never does, so a tab left open overnight ends on the login screen.
+const SESSION_IDLE_MS = 12 * 60 * 60 * 1000;
+const SESSION_REFRESH_EVERY_MS = 5 * 60 * 1000;
+const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'];
+
 // The file types the picker offers. HEIC/HEIF are added because that is what an
 // iPhone's photo library hands over; nothing that was accepted before has been
 // removed, so a PDF is still a PDF.
@@ -32,6 +48,17 @@ const UPLOAD_ACCEPT = 'image/png, image/jpeg, image/jpg, image/heic, image/heif,
 
 /** Where the photo guide lives (opened in a new tab from the capture row). */
 const PHOTO_GUIDE_URL = 'https://scanid.fr/guide-photo.html';
+
+// The public site's menu (Spec v2 §2), repeated in the app's top bar so a
+// customer can get back to it. Same targets as the site's own navigation.
+const SITE_URL = 'https://scanid.fr/';
+const SITE_LINKS = [
+    ['Présentation', `${SITE_URL}presentation.html`],
+    ['Ressources', `${SITE_URL}ressources.html`],
+    ['Tarifs', `${SITE_URL}#tarifs`],
+    ['FAQ', `${SITE_URL}faq.html`],
+    ['Contact', `${SITE_URL}contact.html`],
+];
 
 /** « 4,2 Mo » — file sizes in the queue, in French notation. */
 const formatBytes = (bytes) => {
@@ -79,7 +106,7 @@ const GlobalStyles = () => (
         .sid-pwrules__warn { display: block; font-style: italic; }
 
         /* DASHBOARD GRID — two columns: on the passports tab the welcome card
-           (nav) and the « Ajouter un Document » card share row 1 (left/right);
+           (nav) and the « Ajouter un document » card share row 1 (left/right);
            every other section spans the entire screen width. Vertical rhythm
            comes from the sections' own margins, hence row-gap: 0. */
         .dashboard-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); column-gap: 1.4rem; row-gap: 0; }
@@ -106,6 +133,31 @@ const GlobalStyles = () => (
            the viewport, so let the top bar wrap. */
         @media (max-width: 380px) {
             .sid-topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.7rem 1rem; }
+        }
+
+        /* SITE MENU (Spec v2 §2) — the site's links in the top bar; below 900 px
+           they collapse under « Retour au site », whose panel drops under the
+           whole bar (the sticky bar is its containing block). Muted slate on
+           navy is 6.46:1; the focus outline is the brand cyan, which a 25 %
+           cyan shadow would not make visible on navy. */
+        .sid-logo a { color: inherit; text-decoration: none; border-radius: 6px; }
+        .sid-logo a:focus-visible, .sid-sitenav a:focus-visible, .sid-sitemenu summary:focus-visible, .sid-sitemenu__panel a:focus-visible { outline: 2px solid var(--sid-cyan); outline-offset: 2px; }
+        .sid-sitenav { display: flex; align-items: center; gap: 0.2rem; margin-left: auto; }
+        .sid-sitenav a, .sid-sitemenu summary, .sid-sitemenu__panel a { font-family: var(--sid-font-head); font-weight: 600; font-size: 0.85rem; color: var(--sid-muted); text-decoration: none; border-radius: 8px; }
+        .sid-sitenav a { padding: 0.45rem 0.6rem; }
+        .sid-sitenav a:hover, .sid-sitemenu summary:hover, .sid-sitemenu__panel a:hover { color: #fff; text-decoration: none; }
+        .sid-topbar .sid-topbar-right { margin-left: 0.8rem; }
+        .sid-sitemenu { display: none; margin-left: auto; }
+        .sid-sitemenu summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; min-height: 44px; padding: 0 0.5rem; white-space: nowrap; }
+        .sid-sitemenu summary::-webkit-details-marker { display: none; }
+        .sid-sitemenu summary::after { content: "▾"; font-size: 0.8em; transition: transform 0.18s; }
+        .sid-sitemenu[open] summary::after { transform: rotate(180deg); }
+        .sid-sitemenu__panel { position: absolute; left: 0; right: 0; top: 100%; display: flex; flex-direction: column; padding: 0.3rem 1rem 0.7rem; background: var(--sid-navy); border-bottom: 1px solid rgba(14, 165, 233, .14); box-shadow: 0 12px 24px rgba(11, 22, 40, .25); }
+        .sid-sitemenu__panel a { display: flex; align-items: center; min-height: 44px; padding: 0 0.5rem; }
+        @media (max-width: 900px) {
+            .sid-sitenav { display: none; }
+            .sid-sitemenu { display: block; }
+            .sid-topbar .sid-topbar-right { margin-left: 0.25rem; }
         }
 
         /* NAVIGATION SIDEBAR */
@@ -142,6 +194,31 @@ const GlobalStyles = () => (
 
         .sid-dropzone * { pointer-events: none; }
 
+        /* A text action that reads as a link (« Mot de passe oublié ? »). The
+           info token keeps AA on white (the cyan link colour does not). */
+        .sid-linklike { background: none; border: none; padding: 0.15rem 0.1rem; font: inherit; font-size: 0.85rem; color: var(--sid-info); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; border-radius: 6px; }
+        .sid-linklike:hover { color: var(--sid-ink); }
+        .sid-linklike:focus-visible { outline: none; box-shadow: var(--sid-focus); }
+        .sid-forgot { display: flex; justify-content: flex-end; margin-top: 0.4rem; }
+
+        /* « Demandes d'essai »: the design system's cards at every width. An email
+           or a message is not an extracted value, so it keeps its own case. */
+        .sid-trials .sid-card-item__value { text-transform: none; }
+        .sid-trials .sid-card-item__head { flex-wrap: wrap; }
+        .sid-trials .sid-card-item__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        /* /app/inscription */
+        .sid-signup { max-width: 760px; margin: 0 auto; }
+        .sid-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 1rem; }
+        .sid-pack-summary__rows { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; margin: 0.8rem 0 0; }
+        .sid-pack-summary__rows dt { color: var(--sid-text); }
+        .sid-pack-summary__rows dd { margin: 0; text-align: right; font-weight: 600; color: var(--sid-ink); }
+        .sid-pack-summary__rows .is-total { font-family: var(--sid-font-head); font-size: 1.05rem; color: var(--sid-ink); }
+        .sid-consent { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.88rem; margin: 0.6rem 0 1rem; }
+        .sid-consent input { margin-top: 0.2rem; }
+        .sid-signup fieldset { border: none; padding: 0; margin: 0.6rem 0 0; min-width: 0; }
+        .sid-signup legend { font-family: var(--sid-font-head); font-weight: 600; color: var(--sid-ink); margin-bottom: 0.5rem; }
+
         /* SORT UI ELEMENTS */
         .sid-table thead th.sortable { cursor: pointer; transition: background-color 0.2s; user-select: none; }
         .sid-table thead th.sortable:hover { background-color: var(--sid-navy-3); }
@@ -154,6 +231,13 @@ const GlobalStyles = () => (
 
         /* Selection and action cells sit outside the uppercase/centred body. */
         .sid-table th.checkbox-cell, .sid-table td.checkbox-cell { width: 1%; padding-right: 0.4rem; }
+        /* Confidence below 80 %: warning tint + a 3 px amber edge, table and cards.
+           Declared before .selected-row so a selected row still shows as selected. */
+        .sid-table tbody tr.is-low-confidence { background-color: var(--sid-warn-bg); }
+        .sid-table tbody tr.is-low-confidence > td:first-child { box-shadow: inset 3px 0 0 var(--sid-warn); }
+        .sid-card-item.is-low-confidence { background-color: var(--sid-warn-bg); border-left: 3px solid var(--sid-warn); }
+        /* « Modifier » in cyan-dark falls to 3.68:1 on the tint; the info blue keeps 5.33:1. */
+        .is-low-confidence .sid-btn-ghost { color: var(--sid-info); }
         .sid-table tbody tr.selected-row { background-color: rgba(14, 165, 233, .1); }
 
         /* FILTERS */
@@ -200,14 +284,14 @@ const GlobalStyles = () => (
 );
 
 const columnTranslations = {
-    document_type: 'Type', // PASS = passeport, PI = pièce d'identité (derived, see resultsHelpers.js)
+    document_type: 'Type', // PP = passeport, PI = pièce d'identité (derived, see resultsHelpers.js)
     first_name: 'Prénom',
     last_name: 'Nom de famille',
     birth_date: 'Date de Naissance',
     // delivery_date removed
     expiration_date: "Date d'Expiration",
     nationality: 'Nationalité',
-    passport_number: 'Numéro de Passeport',
+    passport_number: 'Numéro de document',
     confidence_score: 'Score de Confiance',
     email: 'Email',
     phone_number: 'Numéro de Téléphone',
@@ -215,7 +299,7 @@ const columnTranslations = {
     role: 'Rôle',
     destination: 'Destination',
     actions: 'Actions',
-    uploaded_pages_count: 'Pages Traitées',
+    uploaded_pages_count: 'Documents traités',
     page_credits: 'Crédits Pages' // NEW
 };
 
@@ -223,11 +307,11 @@ const columnTranslations = {
 const EyeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
 const EyeOffIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>);
 const UploadIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>);
-function PasswordInput({ value, onChange, name, placeholder, required = false }) {
+function PasswordInput({ value, onChange, name, placeholder, required = false, id }) {
     const [showPassword, setShowPassword] = useState(false);
     return (
         <div className="password-container">
-            <input type={showPassword ? 'text' : 'password'} name={name} value={value} onChange={onChange} className="sid-input" placeholder={placeholder} required={required} autoComplete="new-password" />
+            <input id={id} type={showPassword ? 'text' : 'password'} name={name} value={value} onChange={onChange} className="sid-input" placeholder={placeholder} required={required} autoComplete="new-password" />
             <button type="button" className="password-toggle-btn" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}>
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
@@ -306,6 +390,39 @@ const ProgressBar = ({ progress, status }) => {
     );
 };
 
+const SiteLinks = () => SITE_LINKS.map(([label, href]) => <a key={href} href={href}>{label}</a>);
+
+// Narrow screens: the same links collapsed under « Retour au site ». A native
+// disclosure, closed again by Escape or a tap anywhere outside it.
+function SiteMenu() {
+    const menuRef = useRef(null);
+    useEffect(() => {
+        const close = (event) => {
+            const menu = menuRef.current;
+            if (!menu || !menu.open) return;
+            if (event.type === 'keydown') {
+                if (event.key !== 'Escape') return;
+                menu.open = false;
+                menu.querySelector('summary').focus();
+            } else if (!menu.contains(event.target)) {
+                menu.open = false;
+            }
+        };
+        document.addEventListener('pointerdown', close);
+        document.addEventListener('keydown', close);
+        return () => {
+            document.removeEventListener('pointerdown', close);
+            document.removeEventListener('keydown', close);
+        };
+    }, []);
+    return (
+        <details className="sid-sitemenu" ref={menuRef}>
+            <summary>Retour au site</summary>
+            <nav className="sid-sitemenu__panel" aria-label="Site ScanID"><SiteLinks /></nav>
+        </details>
+    );
+}
+
 // --- MAIN APP COMPONENT ---
 export default function App() {
     // `token` is no longer the JWT — it is a boolean "there is a session".
@@ -316,7 +433,9 @@ export default function App() {
     // replaces.
     const [token, setToken] = useState(false);
     const [user, setUser] = useState(null);
-    const [view, setView] = useState('login');
+    const [view, setView] = useState(() => routeView() || 'login');
+    // The identifiant shown on the login form after a password was just chosen.
+    const [loginPrefill, setLoginPrefill] = useState('');
     const [sessionExpired, setSessionExpired] = useState(false);
     // Whether this browser ever had a session. A first visit answers 401 to
     // /users/me exactly as an expired one does, and only this tells them apart
@@ -329,9 +448,16 @@ export default function App() {
     // and no secret; the credential itself stays unreadable.
     const hadSessionRef = useRef(hasSessionHint());
     const online = useOnlineStatus();
+    // The session renewal on its way, if any (see the activity effect below).
+    const refreshInFlightRef = useRef(null);
     const logout = useCallback(({ expired = false } = {}) => {
-        // The cookie is HttpOnly, so only the server can clear it.
-        fetch(`${API_URL}/logout`, { credentials: 'include', method: 'POST' }).catch(() => {});
+        // The cookie is HttpOnly, so only the server can clear it. The click on
+        // « Déconnexion » is itself activity and may have just sent a renewal:
+        // its new cookie must land BEFORE the logout clears it, never after.
+        // keepalive: leaving the page right away does not cancel the logout.
+        Promise.resolve(refreshInFlightRef.current)
+            .then(() => fetch(`${API_URL}/logout`, { credentials: 'include', method: 'POST', keepalive: true }))
+            .catch(() => {});
         hadSessionRef.current = false;
         setToken(false); setUser(null);
         setSessionExpired(!!expired);
@@ -347,13 +473,14 @@ export default function App() {
             if (response.ok) {
                 const data = await response.json();
                 hadSessionRef.current = true;
-                setUser(data); setToken(true); setView('dashboard'); setSessionExpired(false);
+                // A password link stays on its page even for a logged-in visitor.
+                setUser(data); setToken(true); setView(routeView() || 'dashboard'); setSessionExpired(false);
             }
             // The server answered and refused: the session really is over.
             // Say so on the login screen instead of dropping the user there
             // with no explanation — but only if there was a session to lose.
-            else if (hadSessionRef.current) { logout({ expired: true }); }
-            else { setToken(false); setView('login'); }
+            else if (hadSessionRef.current && !routeView()) { logout({ expired: true }); }
+            else { setToken(false); setView(routeView() || 'login'); }
         } catch (error) {
             // A transport failure is NOT an expired session. This used to
             // log the user out, so a lift or a tunnel discarded the session
@@ -369,14 +496,51 @@ export default function App() {
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, [fetchUser]);
+    // Renew the session on activity; after 12 h without any, ask the server,
+    // which has let the session expire → « Votre session a expiré ».
+    useEffect(() => {
+        if (!token) return undefined;
+        let lastActivity = Date.now();
+        let lastRefresh = 0;          // the first activity renews at once
+        let lastIdleCheck = 0;
+        const onActivity = () => {
+            const now = Date.now();
+            lastActivity = now;
+            if (now - lastRefresh < SESSION_REFRESH_EVERY_MS) return;
+            lastRefresh = now;
+            const renewal = fetch(`${API_URL}/session/refresh`, { credentials: 'include', method: 'POST' }).catch(() => {});
+            refreshInFlightRef.current = renewal;
+            renewal.then(() => { if (refreshInFlightRef.current === renewal) refreshInFlightRef.current = null; });
+        };
+        const idleCheck = setInterval(() => {
+            const now = Date.now();
+            // Re-asked at most every 5 minutes, in case another tab kept the session alive.
+            if (now - lastActivity < SESSION_IDLE_MS || now - lastIdleCheck < SESSION_REFRESH_EVERY_MS) return;
+            lastIdleCheck = now;
+            fetchUser();
+        }, 60 * 1000);
+        ACTIVITY_EVENTS.forEach(type => window.addEventListener(type, onActivity, { capture: true, passive: true }));
+        return () => {
+            clearInterval(idleCheck);
+            ACTIVITY_EVENTS.forEach(type => window.removeEventListener(type, onActivity, { capture: true }));
+        };
+    }, [token, fetchUser]);
     // Back online with a session that never got to load: pick it up again.
     useEffect(() => { if (online && token && !user) fetchUser(); }, [online, token, user, fetchUser]);
     const renderView = () => {
         switch (view) {
-            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} />;
+            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
+            case 'forgot': return <ForgotPasswordPage onBackToLogin={() => setView('login')} />;
+            case 'inscription': return <PackSignupPage
+                user={user}
+                onLogin={() => setView('login')}
+                onBackToApp={() => { window.history.pushState({}, '', APP_ROOT); setView(user ? 'dashboard' : 'login'); }} />;
+            case 'password': return <SetPasswordPage
+                onDone={(userName) => { setLoginPrefill(userName || ''); window.history.pushState({}, '', APP_ROOT); setUser(null); setToken(false); setView('login'); }}
+                onForgot={() => { window.history.pushState({}, '', APP_ROOT); setView('forgot'); }} />;
             case 'signup': return <SelfRegistrationPage onBackToLogin={() => setView('login')} />;
             case 'dashboard': return <Dashboard user={user} logout={logout} token={token} fetchUser={fetchUser} />;
-            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} />;
+            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
         }
     };
     const handleReconnect = useCallback(() => { reportNetworkResult(true); fetchUser(); }, [fetchUser]);
@@ -384,7 +548,9 @@ export default function App() {
         <>
             <GlobalStyles />
             <header className="sid-topbar">
-                <h1 className="sid-logo">Scan<span>ID</span></h1>
+                <h1 className="sid-logo"><a href={SITE_URL}>Scan<span>ID</span></a></h1>
+                <nav className="sid-sitenav" aria-label="Site ScanID"><SiteLinks /></nav>
+                <SiteMenu />
                 {user && (
                     <div className="sid-topbar-right">
                         <button onClick={() => logout()} className="sid-btn-ghost">Déconnexion</button>
@@ -400,8 +566,8 @@ export default function App() {
 }
 
 // --- PAGE & VIEW COMPONENTS ---
-function Login({ setToken, fetchUser, onShowRegistration, sessionExpired = false }) {
-    const [username, setUsername] = useState('');
+function Login({ setToken, fetchUser, onShowRegistration, onForgotPassword, sessionExpired = false, initialUsername = '' }) {
+    const [username, setUsername] = useState(initialUsername);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -461,6 +627,7 @@ function Login({ setToken, fetchUser, onShowRegistration, sessionExpired = false
                             <div className="form-group">
                                 <label className="sid-label">Mot de passe</label>
                                 <PasswordInput name="password" value={password} onChange={e => setPassword(e.target.value)} required={true} placeholder="Entrez votre mot de passe" />
+                                <div className="sid-forgot"><button type="button" className="sid-linklike" onClick={onForgotPassword}>Mot de passe oublié ?</button></div>
                             </div>
                             <button type="submit" className="sid-btn" style={{ width: '100%', marginTop: '1rem' }} disabled={isLoading}>
                                 {isLoading ? 'Connexion...' : 'Se connecter'}
@@ -481,6 +648,255 @@ function Login({ setToken, fetchUser, onShowRegistration, sessionExpired = false
                 </div>
                 <p>&copy; {new Date().getFullYear()} Gestionnaire de Voyages - Tous droits réservés.</p>
             </footer>
+        </div>
+    );
+}
+
+// « Mot de passe oublié ? ». The server answers the same thing whether or not
+// the account exists, and so does this page.
+function ForgotPasswordPage({ onBackToLogin }) {
+    const [identifier, setIdentifier] = useState('');
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault(); setError(''); setIsLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/forgot-password`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier }) });
+            if (response.ok) { setMessage((await response.json()).detail); }
+            else if (response.status === 429) { setError('Trop de demandes depuis cette connexion. Veuillez réessayer plus tard.'); }
+            else { setError('Une erreur est survenue. Veuillez réessayer.'); }
+        } catch {
+            setError('Une erreur est survenue. Veuillez réessayer.');
+        } finally { setIsLoading(false); }
+    };
+
+    return (
+        <div className="landing-container">
+            <div className="landing-auth">
+                <div className="sid-card sid-forgot-page">
+                    <h2>Mot de passe oublié</h2>
+                    {message ? (
+                        <p className="sid-alert sid-alert--ok">{message}</p>
+                    ) : (
+                        <>
+                            <p>Indiquez votre email ou votre nom d'utilisateur : nous vous envoyons un lien pour choisir un nouveau mot de passe.</p>
+                            {error && <p className="sid-alert sid-alert--err">{error}</p>}
+                            <form onSubmit={handleSubmit}>
+                                <div className="form-group">
+                                    <label className="sid-label" htmlFor="forgot-identifier">Email ou nom d'utilisateur</label>
+                                    <input id="forgot-identifier" type="text" value={identifier} onChange={e => setIdentifier(e.target.value)} className="sid-input" autoComplete="username" required />
+                                </div>
+                                <button type="submit" className="sid-btn" style={{ width: '100%', marginTop: '0.5rem' }} disabled={isLoading}>{isLoading ? 'Envoi…' : 'Recevoir le lien'}</button>
+                            </form>
+                        </>
+                    )}
+                    <button type="button" onClick={onBackToLogin} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>Retour à la connexion</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// The page a password link opens: /app/mot-de-passe#token=… — from
+// « Mot de passe oublié ? » or from the free-trial welcome email. The token is
+// in the fragment so it never reaches a server log; it is read once and removed
+// from the address bar straight away.
+function SetPasswordPage({ onDone, onForgot }) {
+    const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '');
+    const [password, setPassword] = useState('');
+    const [confirmation, setConfirmation] = useState('');
+    const [error, setError] = useState('');
+    const [linkInvalid, setLinkInvalid] = useState(!token);
+    const [doneFor, setDoneFor] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (window.location.hash) window.history.replaceState({}, '', window.location.pathname);
+    }, []);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault(); setError('');
+        if (password !== confirmation) { setError('Les deux mots de passe ne correspondent pas.'); return; }
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/reset-password`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) });
+            let data = {};
+            try { data = await response.json(); } catch { /* non-JSON body */ }
+            if (response.ok) { setDoneFor(data.user_name || ''); }
+            else if (response.status === 400) { setLinkInvalid(true); setError(typeof data.detail === 'string' ? data.detail : ''); }
+            else if (response.status === 429) { setError('Trop de tentatives. Veuillez réessayer plus tard.'); }
+            else { setError(typeof data.detail === 'string' ? data.detail : "Le mot de passe n'a pas pu être enregistré."); }
+        } catch {
+            setError('Une erreur est survenue. Veuillez réessayer.');
+        } finally { setIsLoading(false); }
+    };
+
+    return (
+        <div className="landing-container">
+            <div className="landing-auth">
+                <div className="sid-card sid-password-page">
+                    <h2>Choisir votre mot de passe</h2>
+                    {doneFor !== null ? (
+                        <>
+                            <p className="sid-alert sid-alert--ok">Votre mot de passe est enregistré. Vous pouvez vous connecter{doneFor ? <> avec l'identifiant <strong>{doneFor}</strong></> : null}.</p>
+                            <button type="button" className="sid-btn" style={{ width: '100%' }} onClick={() => onDone(doneFor)}>Se connecter</button>
+                        </>
+                    ) : linkInvalid ? (
+                        <>
+                            <p className="sid-alert sid-alert--err">{error || "Ce lien n'est pas valide. Demandez un nouveau lien depuis « Mot de passe oublié ? »."}</p>
+                            <button type="button" className="sid-btn" style={{ width: '100%' }} onClick={onForgot}>Demander un nouveau lien</button>
+                        </>
+                    ) : (
+                        <form onSubmit={handleSubmit}>
+                            {error && <p className="sid-alert sid-alert--err">{error}</p>}
+                            <div className="form-group">
+                                <label className="sid-label">Nouveau mot de passe</label>
+                                <PasswordInput name="password" value={password} onChange={e => setPassword(e.target.value)} required={true} />
+                                <PasswordRules value={password} />
+                            </div>
+                            <div className="form-group">
+                                <label className="sid-label">Confirmez le mot de passe</label>
+                                <PasswordInput name="confirmation" value={confirmation} onChange={e => setConfirmation(e.target.value)} required={true} />
+                            </div>
+                            <button type="submit" className="sid-btn" style={{ width: '100%', marginTop: '0.5rem' }} disabled={isLoading}>{isLoading ? 'Enregistrement…' : 'Enregistrer le mot de passe'}</button>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// /app/inscription?pack=100|1000|3000|5000 (Spec v3): the account first, then
+// payment on the pack's Stripe Payment Link. Credits arrive with the Stripe
+// webhook, never from this page. A customer who is already logged in skips the
+// form.
+const SIRET_ERROR = 'Le SIRET doit comporter 14 chiffres valides.';
+const VAT_ERROR = "Le numéro de TVA intracommunautaire n'est pas au bon format (ex. : FR12345678901).";
+
+function PackSignupPage({ user, onLogin, onBackToApp }) {
+    const [pack] = useState(() => new URLSearchParams(window.location.search).get('pack'));
+    const summary = packSummary(pack);
+    const [form, setForm] = useState({
+        first_name: '', last_name: '', company: '', email: '', password: '', phone_number: '',
+        billing_street: '', billing_postal_code: '', billing_city: '', billing_country: 'France',
+        siret: '', vat_number: '', consent: false,
+    });
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [redirecting, setRedirecting] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setForm(previous => ({ ...previous, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    const requestCheckout = async (path, body) => {
+        setError(''); setIsLoading(true);
+        try {
+            const response = await fetch(`${API_URL}${path}`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            let data = {};
+            try { data = await response.json(); } catch { /* non-JSON body */ }
+            if (response.ok && data.checkout_url) {
+                setRedirecting(true);
+                window.location.assign(data.checkout_url);
+                return;
+            }
+            if (response.status === 429) setError('Trop de tentatives. Veuillez réessayer dans une minute.');
+            else setError(typeof data.detail === 'string' ? data.detail : 'Vérifiez les champs saisis.');
+        } catch {
+            setError('Une erreur est survenue. Veuillez réessayer.');
+        } finally { setIsLoading(false); }
+    };
+
+    const handleSignup = (e) => {
+        e.preventDefault();
+        if (!isValidSiret(normalizeSiret(form.siret))) { setError(SIRET_ERROR); return; }
+        if (form.vat_number.trim() && !isValidVat(normalizeVat(form.vat_number))) { setError(VAT_ERROR); return; }
+        requestCheckout('/signup', { ...form, pack: summary.pack });
+    };
+
+    if (!summary) {
+        return (
+            <div className="sid-signup"><div className="sid-card">
+                <h2>Ce pack n'existe pas.</h2>
+                <p>Choisissez votre pack sur la page des tarifs : <a href="https://scanid.fr/#tarifs">scanid.fr/#tarifs</a>.</p>
+            </div></div>
+        );
+    }
+
+    const field = (name, label, props = {}) => (
+        <div className="form-group">
+            <label className="sid-label" htmlFor={`signup-${name}`}>{label}</label>
+            <input id={`signup-${name}`} name={name} value={form[name]} onChange={handleChange} className="sid-input" {...props} />
+        </div>
+    );
+
+    return (
+        <div className="sid-signup">
+            <div className="sid-card sid-pack-summary">
+                <h2>Pack {formatCount(summary.scans)}</h2>
+                <p>{formatCount(summary.scans)} scans de passeports ou CNI françaises — crédits valables 12 mois, soit {formatEuros(summary.perScanHtCents)} HT le scan.</p>
+                <dl className="sid-pack-summary__rows">
+                    <dt>Prix HT</dt><dd>{formatEuros(summary.htCents)}</dd>
+                    <dt>TVA 20 %</dt><dd>{formatEuros(summary.vatCents)}</dd>
+                    <dt className="is-total">Total TTC</dt><dd className="is-total">{formatEuros(summary.ttcCents)}</dd>
+                </dl>
+            </div>
+
+            {redirecting ? (
+                <div className="sid-card"><p className="sid-alert sid-alert--ok">{user ? 'Redirection vers le paiement sécurisé…' : 'Compte créé. Redirection vers le paiement sécurisé…'}</p></div>
+            ) : user ? (
+                <div className="sid-card">
+                    <p>Vous êtes connecté en tant que <strong>{user.user_name}</strong>.</p>
+                    {error && <p className="sid-alert sid-alert--err">{error}</p>}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button type="button" className="sid-btn" disabled={isLoading} onClick={() => requestCheckout('/orders', { pack: summary.pack })}>Continuer vers le paiement</button>
+                        <button type="button" className="sid-btn-outline" onClick={onBackToApp}>Retour à mon espace</button>
+                    </div>
+                </div>
+            ) : (
+                <form className="sid-card" onSubmit={handleSignup}>
+                    <h2>Créer votre compte</h2>
+                    <p>Votre compte est créé avant le paiement : vos scans y sont ajoutés dès que Stripe confirme le règlement.</p>
+                    {error && <p className="sid-alert sid-alert--err">{error}</p>}
+                    <div className="sid-form-grid">
+                        {field('first_name', 'Prénom', { required: true, autoComplete: 'given-name' })}
+                        {field('last_name', 'Nom', { required: true, autoComplete: 'family-name' })}
+                    </div>
+                    {field('company', 'Société / agence', { required: true, autoComplete: 'organization' })}
+                    <div className="sid-form-grid">
+                        {field('email', 'Email professionnel', { type: 'email', required: true, autoComplete: 'email' })}
+                        {field('phone_number', 'Téléphone', { type: 'tel', required: true, autoComplete: 'tel' })}
+                    </div>
+                    <div className="form-group">
+                        <label className="sid-label" htmlFor="signup-password">Mot de passe</label>
+                        <PasswordInput id="signup-password" name="password" value={form.password} onChange={handleChange} required={true} />
+                        <PasswordRules value={form.password} />
+                    </div>
+                    <fieldset>
+                        <legend>Adresse de facturation</legend>
+                        {field('billing_street', 'Rue', { required: true, autoComplete: 'street-address' })}
+                        <div className="sid-form-grid">
+                            {field('billing_postal_code', 'Code postal', { required: true, autoComplete: 'postal-code' })}
+                            {field('billing_city', 'Ville', { required: true, autoComplete: 'address-level2' })}
+                        </div>
+                        {field('billing_country', 'Pays', { required: true, autoComplete: 'country-name' })}
+                        <div className="sid-form-grid">
+                            {field('siret', 'SIRET', { required: true, inputMode: 'numeric', placeholder: '14 chiffres', autoComplete: 'off' })}
+                            {field('vat_number', 'N° de TVA intracommunautaire (facultatif)', { placeholder: 'FR12345678901', autoComplete: 'off' })}
+                        </div>
+                    </fieldset>
+                    <label className="sid-consent">
+                        <input type="checkbox" name="consent" checked={form.consent} onChange={handleChange} className="sid-checkbox" required />
+                        <span>J'accepte que ScanID utilise ces informations pour créer mon compte et établir mes factures (voir la <a href="https://scanid.fr/politique-confidentialite.html" target="_blank" rel="noopener noreferrer">politique de confidentialité</a>).</span>
+                    </label>
+                    <button type="submit" className="sid-btn" style={{ width: '100%' }} disabled={isLoading}>{isLoading ? 'Création du compte…' : 'Créer mon compte et payer'}</button>
+                    <button type="button" className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }} onClick={onLogin}>Déjà client ? Se connecter</button>
+                </form>
+            )}
         </div>
     );
 }
@@ -520,7 +936,8 @@ const userFields = {
 };
 
 function Dashboard({ user, token, fetchUser }) {
-    const [activeTab, setActiveTab] = useState('passports');
+    // The link in Alex's trial-request email ends in #demandes-essai.
+    const [activeTab, setActiveTab] = useState(() => (user.role === 'admin' && window.location.hash === '#demandes-essai') ? 'trials' : 'passports');
     const [filterableUsers, setFilterableUsers] = useState([]);
     const [userSpecificDestinations, setUserSpecificDestinations] = useState([]);
 
@@ -610,6 +1027,7 @@ function Dashboard({ user, token, fetchUser }) {
                         filterConfig={passportFilterConfig}
                        />;
             case 'account': return <AccountEditor user={user} fetchUser={fetchUser} />;
+            case 'trials': return user.role === 'admin' ? <TrialRequestsPage /> : null;
             case 'admin_manage':
                 return <AdminManagementPage
                         token={token}
@@ -626,12 +1044,15 @@ function Dashboard({ user, token, fetchUser }) {
                 <h3>Bienvenue, {user.first_name}!</h3>
                 <span className="sid-credits">Crédits : {user.page_credits}</span>
                 <div className="credit-display">
-                    <span style={{ display: 'block' }}>Pages Traitées : {user.uploaded_pages_count}</span>
+                    <span style={{ display: 'block' }}>Documents traités : {user.uploaded_pages_count}</span>
                 </div>
                 <div className="nav-menu">
                     <button onClick={() => setActiveTab('passports')} className={`nav-button ${activeTab === 'passports' ? 'active' : ''}`}>Passeports</button>
                     {user.role === 'admin' && (
                         <button onClick={() => setActiveTab('admin_manage')} className={`nav-button ${activeTab === 'admin_manage' ? 'active' : ''}`}>Administration</button>
+                    )}
+                    {user.role === 'admin' && (
+                        <button onClick={() => setActiveTab('trials')} className={`nav-button ${activeTab === 'trials' ? 'active' : ''}`}>Demandes d'essai</button>
                     )}
                     <button onClick={() => setActiveTab('account')} className={`nav-button ${activeTab === 'account' ? 'active' : ''}`}>Mon Compte</button>
                 </div>
@@ -646,7 +1067,7 @@ function PassportsPage({ token, user, fetchUser, adminUsers, userDestinations, f
     return (
         <div>
             <CrudManager 
-                title="Mes Passeports" 
+                title="Mes documents" 
                 endpoint="passports" 
                 token={token} 
                 user={user} 
@@ -661,6 +1082,78 @@ function PassportsPage({ token, user, fetchUser, adminUsers, userDestinations, f
     );
 }
 
+// « Demandes d'essai » (Spec v2 §1): the pending requests from scanid.fr/essai.html.
+function TrialRequestsPage() {
+    const [requests, setRequests] = useState(null);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [busyId, setBusyId] = useState(null);
+
+    const load = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_URL}/admin/trial-requests`, { credentials: 'include' });
+            if (response.ok) { setRequests(await response.json()); } else { setError("Impossible de charger les demandes d'essai."); }
+        } catch { setError("Impossible de charger les demandes d'essai."); }
+    }, []);
+    useEffect(() => { load(); }, [load]);
+
+    const decide = async (request, action) => {
+        if (action === 'reject' && !window.confirm(`Refuser la demande de ${request.nom} ? Aucun email ne sera envoyé.`)) return;
+        setBusyId(request.id); setMessage(''); setError('');
+        try {
+            const response = await fetch(`${API_URL}/admin/trial-requests/${request.id}/${action}`, { credentials: 'include', method: 'POST' });
+            let data = {};
+            try { data = await response.json(); } catch { /* non-JSON body */ }
+            if (response.ok) {
+                setMessage(action === 'validate'
+                    ? `Demande validée : ${request.email} reçoit l'email de bienvenue avec son lien pour choisir un mot de passe.`
+                    : `Demande de ${request.nom} refusée.`);
+            } else {
+                setError(typeof data.detail === 'string' ? data.detail : 'Action impossible.');
+            }
+        } catch {
+            setError('Une erreur est survenue. Veuillez réessayer.');
+        } finally {
+            setBusyId(null);
+            load();
+        }
+    };
+
+    const formatDate = (value) => new Date(value).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const details = [['Email', 'email'], ['Téléphone', 'telephone'], ['Volume', 'volume'], ['SIRET', 'siret'], ['N° de TVA', 'tva'], ['Message', 'message']];
+
+    return (
+        <div className="sid-trials">
+            <h2>Demandes d'essai</h2>
+            <p>Chaque demande a créé un compte en attente avec 20 scans offerts. « Valider » ouvre le compte et envoie l'email de bienvenue avec un lien pour choisir le mot de passe ; « Refuser » le ferme sans email. Sans décision, une demande est supprimée après 30 jours.</p>
+            {message && <p className="sid-alert sid-alert--ok">{message}</p>}
+            {error && <p className="sid-alert sid-alert--err">{error}</p>}
+            {requests === null ? null : requests.length === 0 ? (
+                <div className="sid-empty">Aucune demande d'essai en attente.</div>
+            ) : requests.map(request => (
+                <div key={request.id} className="sid-card-item sid-trial-request">
+                    <div className="sid-card-item__head">
+                        <div>
+                            <strong>{request.nom}</strong>{request.societe ? ` — ${request.societe}` : ''}
+                            <small style={{ display: 'block', color: 'var(--sid-muted-strong)' }}>{formatDate(request.created_at)}</small>
+                        </div>
+                        <div className="sid-card-item__actions">
+                            <button type="button" className="sid-btn" disabled={busyId === request.id} onClick={() => decide(request, 'validate')}>Valider</button>
+                            <button type="button" className="sid-btn-outline" disabled={busyId === request.id} onClick={() => decide(request, 'reject')}>Refuser</button>
+                        </div>
+                    </div>
+                    {details.filter(([, field]) => request[field]).map(([label, field]) => (
+                        <div className="sid-card-item__row" key={field}>
+                            <span className="sid-card-item__label">{label}</span>
+                            <span className="sid-card-item__value">{request[field]}</span>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function AdminManagementPage({ token, user, userFields }) {
     return (
         <div>
@@ -668,6 +1161,17 @@ function AdminManagementPage({ token, user, userFields }) {
         </div>
     );
 }
+
+// « Mon Compte » → Facturation: the fields a French B2B invoice needs.
+const BILLING_FIELDS = [
+    ['company', 'Société / agence'],
+    ['siret', 'SIRET'],
+    ['vat_number', 'N° de TVA intracommunautaire'],
+    ['billing_street', 'Rue'],
+    ['billing_postal_code', 'Code postal'],
+    ['billing_city', 'Ville'],
+    ['billing_country', 'Pays'],
+];
 
 function AccountEditor({ user, fetchUser }) {
     const [formData, setFormData] = useState({ 
@@ -677,9 +1181,11 @@ function AccountEditor({ user, fetchUser }) {
         phone_number: '', 
         password: '',
         uploaded_pages_count: 0,
-        page_credits: 0
+        page_credits: 0,
+        ...Object.fromEntries(BILLING_FIELDS.map(([name]) => [name, ''])),
     });
     const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
 
     useEffect(() => { 
         if (user) {
@@ -690,7 +1196,8 @@ function AccountEditor({ user, fetchUser }) {
                 phone_number: user.phone_number, 
                 password: '',
                 uploaded_pages_count: user.uploaded_pages_count,
-                page_credits: user.page_credits
+                page_credits: user.page_credits,
+                ...Object.fromEntries(BILLING_FIELDS.map(([name]) => [name, user[name] || ''])),
             }); 
         }
     }, [user]);
@@ -699,7 +1206,9 @@ function AccountEditor({ user, fetchUser }) {
     
     const handleSubmit = async (e) => {
         e.preventDefault(); 
-        setMessage(''); 
+        setMessage(''); setError('');
+        if (formData.siret.trim() && !isValidSiret(normalizeSiret(formData.siret))) { setError(SIRET_ERROR); return; }
+        if (formData.vat_number.trim() && !isValidVat(normalizeVat(formData.vat_number))) { setError(VAT_ERROR); return; }
         const payload = { ...formData };
         if (!payload.password) delete payload.password;
         if (user.role === 'admin') {
@@ -709,13 +1218,19 @@ function AccountEditor({ user, fetchUser }) {
             payload.page_credits = parseInt(payload.page_credits, 10) || 0;
         }
         const response = await fetch(`${API_URL}/users/me`, { credentials: 'include', method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (response.ok) { setMessage('Compte mis à jour avec succès !'); fetchUser(); } else { setMessage('Échec de la mise à jour du compte.'); }
+        if (response.ok) { setMessage('Compte mis à jour avec succès !'); fetchUser(); }
+        else {
+            let detail = null;
+            try { detail = (await response.json()).detail; } catch { /* non-JSON body */ }
+            setError(typeof detail === 'string' ? detail : 'Échec de la mise à jour du compte.');
+        }
     };
     
     return (
         <div>
             <h2>Modifier Mon Compte</h2>
             {message && <p className="sid-alert sid-alert--ok">{message}</p>}
+            {error && <p className="sid-alert sid-alert--err">{error}</p>}
             <form onSubmit={handleSubmit}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                     <div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" /></div>
@@ -732,9 +1247,58 @@ function AccountEditor({ user, fetchUser }) {
                     </div>
                 </div>
                 <div className="form-group"><label className="sid-label">Nouveau mot de passe (optionnel)</label><PasswordInput name="password" value={formData.password} onChange={handleChange} placeholder="Laisser vide pour conserver le mot de passe actuel" />{formData.password && <PasswordRules value={formData.password} />}</div>
+                <h3 className="mt-1">Facturation</h3>
+                <div className="sid-form-grid sid-billing-fields">
+                    {BILLING_FIELDS.map(([name, label]) => (
+                        <div className="form-group" key={name}>
+                            <label className="sid-label" htmlFor={`account-${name}`}>{label}</label>
+                            <input id={`account-${name}`} type="text" name={name} value={formData[name]} onChange={handleChange} className="sid-input"
+                                placeholder={name === 'siret' ? '14 chiffres' : name === 'vat_number' ? 'FR12345678901' : undefined} />
+                        </div>
+                    ))}
+                </div>
                 <button type="submit" className="sid-btn" style={{ marginTop: '1rem' }}>Enregistrer les modifications</button>
             </form>
+            <MyPurchases />
         </div>
+    );
+}
+
+// « Mes achats »: pack, date, expiry of each paid pack (invoice links later).
+function MyPurchases() {
+    const [purchases, setPurchases] = useState(null);
+    useEffect(() => {
+        (async () => {
+            try {
+                const response = await fetch(`${API_URL}/users/me/purchases`, { credentials: 'include' });
+                setPurchases(response.ok ? await response.json() : []);
+            } catch { setPurchases([]); }
+        })();
+    }, []);
+    const day = value => (value ? new Date(value).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }) : '—');
+
+    return (
+        <section className="sid-purchases mt-1">
+            <h3>Mes achats</h3>
+            {purchases === null ? null : purchases.length === 0 ? (
+                <div className="sid-empty">Aucun achat pour l'instant.</div>
+            ) : (
+                <div className="sid-table-wrap">
+                    <table className="sid-table">
+                        <thead><tr><th>Pack</th><th>Acheté le</th><th>Valable jusqu'au</th></tr></thead>
+                        <tbody>
+                            {purchases.map(purchase => (
+                                <tr key={purchase.id}>
+                                    <td>Pack {formatCount(purchase.pack)}</td>
+                                    <td>{day(purchase.paid_at)}</td>
+                                    <td>{day(purchase.expires_at)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </section>
     );
 }
 
@@ -872,13 +1436,13 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
 
     return (
         <div className="sid-card">
-            <h3 style={{ marginTop: 0 }}>Ajouter un Document</h3>
+            <h3 style={{ marginTop: 0 }}>Ajouter un document (passeport ou CNI)</h3>
             <p className="mb-2">Glissez votre document ci-dessous pour lancer l'extraction automatique.</p>
             {error && <p className="sid-alert sid-alert--err">{error}</p>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label className="sid-label">Destination (Optionnel)</label>
-                    <input type="text" name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="sid-input" list="destination-datalist-ocr" placeholder="Ex: Voyage Japon 2024" autoComplete="off" />
+                    <input type="text" name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="sid-input" list="destination-datalist-ocr" placeholder="Ex : Groupe Lisbonne — octobre 2026" autoComplete="off" />
                     <datalist id="destination-datalist-ocr">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist>
                 </div>
                 <div className="form-group">
@@ -932,7 +1496,7 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
                                         <div style={{ width: `${item.progress}%` }} />
                                     </div>
                                 )}
-                                {item.error && <p className="sid-queue__error">{item.error}</p>}
+                                {item.error && <p className="sid-queue__error">{item.error === JOB_FAILED_MESSAGE ? <FailedExtractionMessage /> : item.error}</p>}
                             </li>
                         ))}
                     </ul>
@@ -940,6 +1504,13 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
             )}
         </div>
     );
+}
+
+// JOB_FAILED_MESSAGE with « voir le guide » as a link to the photo guide. The
+// text content is exactly the message, so it reads the same with or without links.
+function FailedExtractionMessage() {
+    const [before, after] = JOB_FAILED_MESSAGE.split('voir le guide');
+    return (<>{before}<a href={PHOTO_GUIDE_URL} target="_blank" rel="noopener noreferrer">voir le guide</a>{after}</>);
 }
 
 // Processing-state chips, keyed by the job.status values the backend writes
@@ -1146,7 +1717,7 @@ function CrudForm({ item, isCreating, onSave, onCancel, fields, endpoint, token 
     };
     const formFields = { ...fields };
     if (formFields.confidence_score) { delete formFields.confidence_score; }
-    return (<form onSubmit={handleSubmit} className="sid-card"><h3>{isCreating ? 'Créer' : 'Modifier'}</h3>{error && <p className="sid-alert sid-alert--err">{error}</p>}<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem 1.5rem' }}>{Object.entries(formFields).map(([key, type]) => (<div className="form-group" key={key}><label className="sid-label">{columnTranslations[key] || key.replace(/_/g, ' ')}</label>{key === 'password' ? (<PasswordInput name={key} value={formData[key] || ''} onChange={handleChange} placeholder={!isCreating ? 'Laisser vide pour conserver' : ''} required={isCreating} />) : key === 'destination' ? (<><input type="text" name="destination" value={formData.destination || ''} onChange={handleChange} className="sid-input" list="destination-datalist-form" placeholder="Ex: Voyage 2024" autoComplete="off" /><datalist id="destination-datalist-form">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist></>) : type === 'checkbox' ? (<input type="checkbox" name={key} checked={!!formData[key]} onChange={handleChange} className="sid-checkbox" />) : (<input type={type} name={key} value={formData[key] || ''} onChange={handleChange} className="sid-input" required={key !== 'destination' && type !== 'checkbox' && key !== 'uploaded_pages_count' && key !== 'page_credits'} />)}</div>))}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.6rem', flexWrap: 'wrap' }}><button type="button" onClick={onCancel} className="sid-btn-outline">Annuler</button><button type="submit" className="sid-btn">Enregistrer</button></div></form>);
+    return (<form onSubmit={handleSubmit} className="sid-card"><h3>{isCreating ? 'Créer' : 'Modifier'}</h3>{error && <p className="sid-alert sid-alert--err">{error}</p>}<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem 1.5rem' }}>{Object.entries(formFields).map(([key, type]) => (<div className="form-group" key={key}><label className="sid-label">{columnTranslations[key] || key.replace(/_/g, ' ')}</label>{key === 'password' ? (<PasswordInput name={key} value={formData[key] || ''} onChange={handleChange} placeholder={!isCreating ? 'Laisser vide pour conserver' : ''} required={isCreating} />) : key === 'destination' ? (<><input type="text" name="destination" value={formData.destination || ''} onChange={handleChange} className="sid-input" list="destination-datalist-form" placeholder="Ex : Groupe Lisbonne — octobre 2026" autoComplete="off" /><datalist id="destination-datalist-form">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist></>) : type === 'checkbox' ? (<input type="checkbox" name={key} checked={!!formData[key]} onChange={handleChange} className="sid-checkbox" />) : (<input type={type} name={key} value={formData[key] || ''} onChange={handleChange} className="sid-input" required={key !== 'destination' && type !== 'checkbox' && key !== 'uploaded_pages_count' && key !== 'page_credits'} />)}</div>))}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.6rem', flexWrap: 'wrap' }}><button type="button" onClick={onCancel} className="sid-btn-outline">Annuler</button><button type="submit" className="sid-btn">Enregistrer</button></div></form>);
 }
 
 function PreviewTable({ data }) {
@@ -1178,7 +1749,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const [editingItem, setEditingItem] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
     const [filters, setFilters] = useState({});
-    // Type filter of the results table ('' = Tous, 'PASS', 'PI'); shared with
+    // Type filter of the results table ('' = Tous, 'PP', 'PI'); shared with
     // the export panel so the downloads contain exactly the rows on screen.
     const [docTypeFilter, setDocTypeFilter] = useState('');
     const [dynamicDestinations, setDynamicDestinations] = useState([]);
@@ -1493,9 +2064,12 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const displayFields = { ...fields };
     if (endpoint === 'admin/users') delete displayFields.password;
     // Passports: same columns and order as the export files (the derived Type
-    // column PASS/PI sits between the document number and the destination),
+    // column PP/PI sits between the document number and the destination),
     // see resultsHelpers.js.
     const displayColumns = endpoint === 'passports' ? PASSPORT_COLUMN_ORDER : Object.keys(displayFields);
+    const emptyMessage = endpoint === 'passports'
+        ? 'Aucun document pour l’instant — importez votre premier passeport ou votre première CNI ci-dessus.'
+        : 'Aucune donnée trouvée.';
 
     // Use dynamic destinations (if admin looking at a user) or generic user destinations for the bulk list
     const availableBulkDestinations = (user.role === 'admin' && dynamicDestinations.length > 0) ? dynamicDestinations : userDestinations;
@@ -1548,7 +2122,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             {/* --- END EXPORT PANEL --- */}
 
             {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-1"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, Email...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="sid-input" autoComplete="off"/></div></div> )}
-            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-1">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><span className="sid-label" style={{ margin: 0 }}>Type</span><div className="sid-seg" role="group" aria-label="Filtrer par type de document (PASS = passeport, PI = pièce d'identité)" data-name="document_type_filter">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <button key={option.value} type="button" value={option.value} className={docTypeFilter === option.value ? 'is-active' : ''} aria-pressed={docTypeFilter === option.value} onClick={() => handleDocTypeFilterChange(option.value)}>{option.label}</button> ))}</div></div> )} </div> )}
+            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-1">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><span className="sid-label" style={{ margin: 0 }}>Type</span><div className="sid-seg" role="group" aria-label="Filtrer par type de document (PP = passeport, PI = pièce d'identité)" data-name="document_type_filter">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <button key={option.value} type="button" value={option.value} className={docTypeFilter === option.value ? 'is-active' : ''} aria-pressed={docTypeFilter === option.value} onClick={() => handleDocTypeFilterChange(option.value)}>{option.label}</button> ))}</div></div> )} </div> )}
             {/* Both views are always mounted; only CSS decides which one shows,
                 so a resize never unmounts a view and never loses state. */}
             <div className="sid-results">
@@ -1596,8 +2170,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedItems.length === 0 ? ( <tr><td colSpan={displayColumns.length + 2}><div className="sid-empty">Aucune donnée trouvée.</div></td></tr> ) : sortedItems.map(item => (
-                            <tr key={item.id} className={selectedIds.has(item.id) ? 'selected-row' : ''}>
+                        {sortedItems.length === 0 ? ( <tr><td colSpan={displayColumns.length + 2}><div className="sid-empty">{emptyMessage}</div></td></tr> ) : sortedItems.map(item => (
+                            <tr key={item.id} className={[selectedIds.has(item.id) && 'selected-row', isLowConfidence(item) && 'is-low-confidence'].filter(Boolean).join(' ')} title={isLowConfidence(item) ? LOW_CONFIDENCE_TITLE : undefined}>
                                 {endpoint === 'passports' && ( <td className="checkbox-cell"><input type="checkbox" className="sid-checkbox" onChange={() => handleToggleSelect(item.id)} checked={selectedIds.has(item.id)} aria-label={`Sélectionner ${item.first_name} ${item.last_name}`} /></td> )}
                                 {/* Cell values come from resultCellValue — the same function the
                                     card list below uses, so the two views cannot drift. */}
@@ -1616,10 +2190,10 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             {/* Mobile view of the very same rows and the very same displayColumns.
                 Shown below 720 px by CSS alone — see scanid-app.css. */}
             <div className="sid-card-list">
-                {sortedItems.length === 0 ? ( <div className="sid-empty">Aucune donnée trouvée.</div> ) : sortedItems.map(item => {
+                {sortedItems.length === 0 ? ( <div className="sid-empty">{emptyMessage}</div> ) : sortedItems.map(item => {
                     const typeValue = endpoint === 'passports' ? resultCellValue(item, 'document_type', fields) : null;
                     return (
-                        <div key={item.id} className="sid-card-item">
+                        <div key={item.id} className={`sid-card-item${isLowConfidence(item) ? ' is-low-confidence' : ''}`} title={isLowConfidence(item) ? LOW_CONFIDENCE_TITLE : undefined}>
                             <div className="sid-card-item__head">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                     {endpoint === 'passports' && ( <input type="checkbox" className="sid-checkbox" onChange={() => handleToggleSelect(item.id)} checked={selectedIds.has(item.id)} aria-label={`Sélectionner ${item.first_name} ${item.last_name}`} /> )}

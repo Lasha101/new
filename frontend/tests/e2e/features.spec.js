@@ -169,7 +169,7 @@ test.describe('Création et modification manuelles', () => {
         // The derived Type column classified it from the number it was given.
         const badge = resultsTable(page).locator('tbody tr').first()
             .locator('td[data-field="document_type"] .sid-badge');
-        await expect(badge).toHaveText('PASS');
+        await expect(badge).toHaveText('PP');
     });
 
     test('« Modifier » ouvre la ligne pré-remplie et enregistre', async ({ page, api }) => {

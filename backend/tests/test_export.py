@@ -1,5 +1,5 @@
 """Spec tests of the results-screen downloads (CSV and XLSX):
-document type PASS/PI, filter-aware export, no internal ids, French headers in
+document type PP/PI, filter-aware export, no internal ids, French headers in
 the on-screen column order (Type between the document number and the
 destination), DD/MM/YYYY dates, uppercase values, CSV UTF-8 BOM, XLSX
 centering, auto-fitted widths and AutoFilter dropdowns on every column."""
@@ -18,7 +18,7 @@ import os
 
 # Column order of the downloaded files = order of the on-screen table.
 FRENCH_HEADERS = ["Nom de famille", "Prénom", "Date de Naissance", "Date d'Expiration", "Nationalité",
-                  "Numéro de Passeport", "Type", "Destination", "Score de Confiance"]
+                  "Numéro de document", "Type", "Destination", "Score de Confiance"]
 # Named column indexes, so the assertions read like the table.
 NOM, PRENOM, NAISSANCE, EXPIRATION, NATIONALITE, NUMERO, TYPE, DESTINATION, SCORE = range(9)
 INTERNAL_COLUMNS = {"id", "owner_id", "ID", "OWNER_ID", "Identifiant", "Propriétaire"}
@@ -50,11 +50,11 @@ def assert_uppercase(values):
             assert value == value.upper(), f"value not uppercase: {value!r}"
 
 
-# --- Document type derivation (PASS / PI) ---
+# --- Document type derivation (PP / PI) ---
 
 @pytest.mark.parametrize("number, expected", [
-    ("12AB34567", "PASS"),        # French passport: 2 digits + 2 letters + 5 digits
-    (" 12ab34567 ", "PASS"),      # normalised (case / whitespace)
+    ("12AB34567", "PP"),          # French passport: 2 digits + 2 letters + 5 digits
+    (" 12ab34567 ", "PP"),        # normalised (case / whitespace)
     ("123456789012", "PI"),       # old-format CNI: 12 digits
     ("X4RTBPFW4", "PI"),          # new-format CNI: 9 alphanumeric
     ("D2H6862M2", "PI"),
@@ -103,8 +103,8 @@ def test_filter_by_document_type():
     rows = [{"passport_number": "12AB34567"}, {"passport_number": "123456789012"}]
     assert main._filter_by_document_type(rows, None) == rows
     assert main._filter_by_document_type(rows, "") == rows
-    assert main._filter_by_document_type(rows, "PASS") == [rows[0]]
-    assert main._filter_by_document_type(rows, "PP") == []               # the former code is no longer a type
+    assert main._filter_by_document_type(rows, "PP") == [rows[0]]
+    assert main._filter_by_document_type(rows, "PASS") == [rows[0]]      # legacy code, still accepted as a filter
     assert main._filter_by_document_type(rows, "PI") == [rows[1]]
 
 
@@ -123,8 +123,8 @@ def test_csv_export_all_rows_french_headers_uppercase_no_ids(client, user_with_d
         assert len(row) == len(FRENCH_HEADERS)
         assert_uppercase(row)
     by_number = {row[NUMERO]: row for row in data_rows}
-    assert by_number["12AB34567"][TYPE] == "PASS"
-    assert by_number["98ZY12345"][TYPE] == "PASS"
+    assert by_number["12AB34567"][TYPE] == "PP"
+    assert by_number["98ZY12345"][TYPE] == "PP"
     assert by_number['="123456789012"'][TYPE] == "PI"    # 12-digit CNI number kept as text for Excel
     assert by_number["X4RTBPFW4"][TYPE] == "PI"
     # accents survive the round trip and are uppercased; surname first, then given names
@@ -172,7 +172,7 @@ def test_csv_quoting_round_trip(client, db_session):
 
 
 @pytest.mark.parametrize("document_type, expected_numbers", [
-    ("PASS", {"12AB34567", "98ZY12345"}),
+    ("PP", {"12AB34567", "98ZY12345"}),
     ("PI", {'="123456789012"', "X4RTBPFW4"}),
 ])
 def test_csv_export_respects_type_filter(client, user_with_documents, document_type, expected_numbers):
@@ -186,8 +186,10 @@ def test_csv_export_respects_type_filter(client, user_with_documents, document_t
 def test_export_invalid_type_filter_is_rejected(client, user_with_documents):
     response = client.get("/export/data?document_type=XX", headers=user_with_documents["headers"])
     assert response.status_code == 422
-    response = client.get("/export/data?document_type=PP", headers=user_with_documents["headers"])   # former code
-    assert response.status_code == 422
+    # The code before « PP » still filters (an app shell cached before the rename), and yields PP rows.
+    rows = read_csv(client.get("/export/data?format=csv&document_type=PASS", headers=user_with_documents["headers"]))
+    assert {row[NUMERO] for row in rows[1:]} == {"12AB34567", "98ZY12345"}
+    assert {row[TYPE] for row in rows[1:]} == {"PP"}
     response = client.get("/export/data?format=pdf", headers=user_with_documents["headers"])
     assert response.status_code == 422
 
@@ -201,7 +203,7 @@ def test_export_type_filter_with_no_match_is_404(client, db_session, user_with_d
 
 
 def test_csv_export_combines_type_filter_with_destination_filter(client, user_with_documents):
-    response = client.get("/export/data?format=csv&destination=Rome&document_type=PASS", headers=user_with_documents["headers"])
+    response = client.get("/export/data?format=csv&destination=Rome&document_type=PP", headers=user_with_documents["headers"])
     rows = read_csv(response)
     assert [row[NUMERO] for row in rows[1:]] == ["98ZY12345"]
 
@@ -221,7 +223,7 @@ def test_xlsx_export_headers_type_column_uppercase_no_ids(client, user_with_docu
     for row in data_rows:
         assert_uppercase(row)
     by_number = {row[NUMERO]: row for row in data_rows}
-    assert by_number["12AB34567"][TYPE] == "PASS"
+    assert by_number["12AB34567"][TYPE] == "PP"
     assert by_number["123456789012"][TYPE] == "PI"
     assert by_number["X4RTBPFW4"][TYPE] == "PI"
     assert by_number["12AB34567"][NOM:PRENOM + 1] == ["DUPONT-LÉVY", "ÉLODIE"]
@@ -330,7 +332,7 @@ def test_xlsx_widths_grow_with_long_values(client, db_session):
 
 
 @pytest.mark.parametrize("document_type, expected_numbers", [
-    ("PASS", {"12AB34567", "98ZY12345"}),
+    ("PP", {"12AB34567", "98ZY12345"}),
     ("PI", {"123456789012", "X4RTBPFW4"}),
 ])
 def test_xlsx_export_respects_type_filter(client, user_with_documents, document_type, expected_numbers):
@@ -369,14 +371,14 @@ def test_export_headers_match_frontend_column_translations():
 
 def test_export_column_order_and_type_codes_match_frontend():
     """The downloaded files use the column order of the on-screen table
-    (PASSPORT_COLUMN_ORDER) and the same type codes (PASS / PI)."""
+    (PASSPORT_COLUMN_ORDER) and the same type codes (PP / PI)."""
     helpers_js = os.path.join(os.path.dirname(main.__file__), "..", "frontend", "src", "resultsHelpers.js")
     if not os.path.exists(helpers_js):
         pytest.skip("frontend sources not available next to the backend")
     source = open(helpers_js, encoding="utf-8").read()
     order_block = re.search(r"export const PASSPORT_COLUMN_ORDER = \[(.*?)\];", source, re.S).group(1)
     assert re.findall(r"'([a-z_]+)'", order_block) == main.EXPORT_COLUMNS
-    assert re.search(r"export const DOC_TYPE_PASSPORT = '([A-Z]+)'", source).group(1) == main.DOC_TYPE_PASSPORT == "PASS"
+    assert re.search(r"export const DOC_TYPE_PASSPORT = '([A-Z]+)'", source).group(1) == main.DOC_TYPE_PASSPORT == "PP"
     assert re.search(r"export const DOC_TYPE_ID_CARD = '([A-Z]+)'", source).group(1) == main.DOC_TYPE_ID_CARD == "PI"
     # Type sits between the document number and the destination, surname comes first
     assert main.EXPORT_COLUMNS.index("document_type") == main.EXPORT_COLUMNS.index("passport_number") + 1
@@ -395,7 +397,7 @@ def test_export_returns_all_rows_beyond_listing_page(client, db_session):
     assert len(listed) == 100                                    # pre-existing listing cap
     rows = read_csv(client.get("/export/data?format=csv", headers=auth_headers("root")))
     assert len(rows) - 1 == 120
-    pp = read_csv(client.get("/export/data?format=csv&document_type=PASS", headers=auth_headers("root")))
+    pp = read_csv(client.get("/export/data?format=csv&document_type=PP", headers=auth_headers("root")))
     pi = read_csv(client.get("/export/data?format=csv&document_type=PI", headers=auth_headers("root")))
     assert len(pp) - 1 == 60 and len(pi) - 1 == 60
 
@@ -410,13 +412,13 @@ def test_preview_rows_match_export_columns_and_type_filter(client, user_with_doc
     assert list(rows[0].keys()) == main.EXPORT_COLUMNS
     assert "id" not in rows[0] and "owner_id" not in rows[0]
     for row in rows:
-        assert row["document_type"] in ("PASS", "PI")
+        assert row["document_type"] in ("PP", "PI")
         assert_uppercase(row.values())
     # date and empty values are JSON friendly; dates are shown as DD/MM/YYYY like in the files
     by_number = {row["passport_number"]: row for row in rows}
     assert by_number["12AB34567"]["birth_date"] == "17/05/1990"
     assert by_number["12AB34567"]["expiration_date"] == "02/01/2030"
-    assert by_number["12AB34567"]["document_type"] == "PASS"
+    assert by_number["12AB34567"]["document_type"] == "PP"
     assert by_number["X4RTBPFW4"]["destination"] == ""
 
     filtered = client.get("/export/data?preview=true&document_type=PI", headers=user_with_documents["headers"]).json()
@@ -435,7 +437,7 @@ def test_selection_export_xlsx_and_csv_same_format(client, user_with_documents):
     rows = xlsx_rows(ws)
     assert rows[0] == FRENCH_HEADERS
     assert {row[NUMERO] for row in rows[1:]} == {"12AB34567", "123456789012"}   # bob's row excluded
-    assert {row[TYPE] for row in rows[1:]} == {"PASS", "PI"}
+    assert {row[TYPE] for row in rows[1:]} == {"PP", "PI"}
     for cell in (c for row in ws.iter_rows() for c in row):
         assert cell.alignment.horizontal == "center"
 

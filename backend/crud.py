@@ -39,6 +39,20 @@ def get_user_by_email(db: Session, email: str):
     return _row_to_dict(row)
 
 
+def get_user_by_login_identifier(db: Session, identifier: str):
+    """The account a person means by « email ou nom d'utilisateur »: the exact
+    login name first, then the email address in any letter case."""
+    identifier = (identifier or "").strip()
+    if not identifier:
+        return None
+    user = get_user_by_username(db, username=identifier)
+    if user:
+        return user
+    from sqlalchemy import func
+    row = db.query(models.User).filter(func.lower(models.User.email) == identifier.lower()).first()
+    return _row_to_dict(row)
+
+
 def get_users(db: Session, skip: int = 0, limit: int = 100, name_filter: Optional[str] = None):
     query = db.query(models.User)
     if name_filter:

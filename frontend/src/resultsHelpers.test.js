@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, formatDateFR,
-    resultCellValue,
+    resultCellValue, isLowConfidence, LOW_CONFIDENCE_THRESHOLD,
     DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, DOC_TYPE_ID_CARD, PASSPORT_COLUMN_ORDER,
 } from './resultsHelpers.js';
 
@@ -12,31 +12,31 @@ const oldCni = { id: 'c1', passport_number: '123456789012', first_name: 'B' };
 const newCni = { id: 'c2', passport_number: 'X4RTBPFW4', first_name: 'C' };
 const rows = [passport, oldCni, newCni];
 
-test('document type: French passport number shape is PASS, everything else is PI', () => {
-    assert.equal(getDocumentType(passport), 'PASS');
+test('document type: French passport number shape is PP, everything else is PI', () => {
+    assert.equal(getDocumentType(passport), 'PP');
     assert.equal(getDocumentType(oldCni), 'PI');          // old CNI: 12 digits
     assert.equal(getDocumentType(newCni), 'PI');          // new CNI: 9 alphanumeric
     assert.equal(getDocumentType({ passport_number: 'D2H6862M2' }), 'PI');
-    assert.equal(getDocumentType({ passport_number: ' 12ab34567 ' }), 'PASS'); // normalised
+    assert.equal(getDocumentType({ passport_number: ' 12ab34567 ' }), 'PP');   // normalised
     assert.equal(getDocumentType({ passport_number: '' }), 'PI');
     assert.equal(getDocumentType({}), 'PI');
     assert.equal(getDocumentType(null), 'PI');
-    assert.equal(DOC_TYPE_PASSPORT, 'PASS');              // never the former 'PP'
+    assert.equal(DOC_TYPE_PASSPORT, 'PP');                // Alex, 14/09/2026 (was 'PASS')
     assert.equal(DOC_TYPE_ID_CARD, 'PI');
 });
 
-test('filter options are Tous (default, no filter) / PASS / PI, in French', () => {
-    assert.deepEqual(DOC_TYPE_FILTER_OPTIONS.map(o => o.label), ['Tous', 'PASS', 'PI']);
-    assert.deepEqual(DOC_TYPE_FILTER_OPTIONS.map(o => o.value), ['', 'PASS', 'PI']);
+test('filter options are Tous (default, no filter) / PP / PI, in French', () => {
+    assert.deepEqual(DOC_TYPE_FILTER_OPTIONS.map(o => o.label), ['Tous', 'PP', 'PI']);
+    assert.deepEqual(DOC_TYPE_FILTER_OPTIONS.map(o => o.value), ['', 'PP', 'PI']);
 });
 
-test('PASS/PI filter controls which rows are displayed', () => {
+test('PP/PI filter controls which rows are displayed', () => {
     assert.deepEqual(filterByDocumentType(rows, ''), rows);          // Tous
     assert.deepEqual(filterByDocumentType(rows, undefined), rows);
-    assert.deepEqual(filterByDocumentType(rows, 'PASS'), [passport]);
+    assert.deepEqual(filterByDocumentType(rows, 'PP'), [passport]);
     assert.deepEqual(filterByDocumentType(rows, 'PI'), [oldCni, newCni]);
-    assert.deepEqual(filterByDocumentType(rows, 'PP'), []);          // the former code matches nothing
-    assert.deepEqual(filterByDocumentType([], 'PASS'), []);
+    assert.deepEqual(filterByDocumentType(rows, 'PASS'), []);        // the former code matches nothing
+    assert.deepEqual(filterByDocumentType([], 'PP'), []);
 });
 
 test('column order: surname, given names, dates, nationality, number, Type, destination, score', () => {
@@ -70,10 +70,10 @@ test('export query is filter-aware: type filter, format, preview, panel filters'
     assert.deepEqual(q({ role: 'user' }), { format: 'xlsx' });
     // Active type filter is forwarded so the file contains exactly the rows on screen.
     assert.deepEqual(q({ role: 'user', docTypeFilter: 'PI', format: 'csv' }), { document_type: 'PI', format: 'csv' });
-    assert.deepEqual(q({ role: 'user', docTypeFilter: DOC_TYPE_PASSPORT }), { document_type: 'PASS', format: 'xlsx' });
+    assert.deepEqual(q({ role: 'user', docTypeFilter: DOC_TYPE_PASSPORT }), { document_type: 'PP', format: 'xlsx' });
     // Preview flag and export panel filters are preserved.
-    assert.deepEqual(q({ role: 'admin', exportFilters: { user_id: 'u1', destination: 'Rome' }, docTypeFilter: 'PASS', preview: true }),
-        { user_id: 'u1', destination: 'Rome', document_type: 'PASS', format: 'xlsx', preview: 'true' });
+    assert.deepEqual(q({ role: 'admin', exportFilters: { user_id: 'u1', destination: 'Rome' }, docTypeFilter: 'PP', preview: true }),
+        { user_id: 'u1', destination: 'Rome', document_type: 'PP', format: 'xlsx', preview: 'true' });
     // Non-admins never send user_id; empty panel filters are dropped.
     assert.deepEqual(q({ role: 'user', exportFilters: { user_id: 'u1', destination: '' } }), { format: 'xlsx' });
     // The results table's own filters narrow the download too (what is on screen is exported)...
@@ -142,4 +142,19 @@ test('resultCellValue covers every column of the shared definition', () => {
     // Without a field-type map the dates stay in their stored ISO form rather
     // than throwing — the admin/users table calls it that way.
     assert.equal(resultCellValue(row, 'birth_date', {}), '1990-05-17');
+});
+
+test('low confidence: a score below 0.8 is flagged, 0.8 and above or no score are not', () => {
+    assert.equal(LOW_CONFIDENCE_THRESHOLD, 0.8);
+    assert.equal(isLowConfidence({ confidence_score: 0.5 }), true);
+    assert.equal(isLowConfidence({ confidence_score: 0.66 }), true);
+    assert.equal(isLowConfidence({ confidence_score: 0.7999 }), true);
+    assert.equal(isLowConfidence({ confidence_score: 0 }), true);
+    assert.equal(isLowConfidence({ confidence_score: 0.8 }), false);
+    assert.equal(isLowConfidence({ confidence_score: 0.8734 }), false);
+    assert.equal(isLowConfidence({ confidence_score: null }), false);   // not scored: not flagged
+    assert.equal(isLowConfidence({ confidence_score: '0.5' }), false);
+    assert.equal(isLowConfidence({ confidence_score: Number.NaN }), false);
+    assert.equal(isLowConfidence({}), false);
+    assert.equal(isLowConfidence(null), false);
 });

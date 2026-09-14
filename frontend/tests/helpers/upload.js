@@ -86,14 +86,14 @@ export function resultsRows(page) {
 }
 
 /**
- * Sets the Tous/PASS/PI filter.
+ * Sets the Tous/PP/PI filter.
  *
  * It used to be a <select> driven by selectOption(); the design system renders
  * it as a .sid-seg group of buttons. Only the gesture changed — the state it
  * sets and the rows it narrows are identical.
  *
  * @param {import('@playwright/test').Page} page
- * @param {''|'PASS'|'PI'} value '' selects « Tous ».
+ * @param {''|'PP'|'PI'} value '' selects « Tous ».
  */
 export async function selectDocType(page, value) {
     const group = page.locator(SELECTORS.typeFilter);
