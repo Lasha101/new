@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 # Every self-registered account starts with exactly this many page credits
-# (1 credit = 1 extracted page).
+# (1 credit = 1 successfully extracted document; failures are not charged).
 SIGNUP_PAGE_CREDITS = 5
 
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -235,8 +235,8 @@ async def _run_ocr_extraction_job(
         if "verso_of_page" in result:
             # Verso of a split old-format CNI, merged into the document of its
             # recto (page result['verso_of_page']): nothing to save, nothing to
-            # report as a failure. The page still counts toward the credit
-            # charge below, like every processed page.
+            # report as a failure. The page still counts as processed, but it
+            # costs no credit: the document is paid once, by its recto's success.
             logger.info(f"[Job {job_id}] Page {page_number} : verso fusionné avec le recto de la page {result['verso_of_page']}.")
             continue
 
@@ -287,8 +287,10 @@ async def _run_ocr_extraction_job(
             current_progress = 80 + int((i / total_pages) * 15)
             await asyncio.to_thread(crud.update_ocr_job_progress, db, job_id, current_progress)
 
-    # Charge one credit per processed page and track the page counter.
+    # Charge one credit per SUCCESSFUL extraction only — a failed page costs
+    # nothing — and track every processed page in the page counter.
     page_count = len(extraction_results)
+    credits_charged = len(successes)
     if page_count > 0:
         try:
             def _charge_credits():
@@ -297,7 +299,7 @@ async def _run_ocr_extraction_job(
                     sa_update(models.User)
                     .where(models.User.id == str(user_id))
                     .values(
-                        page_credits=models.User.page_credits - page_count,
+                        page_credits=models.User.page_credits - credits_charged,
                         uploaded_pages_count=models.User.uploaded_pages_count + page_count,
                     )
                 )

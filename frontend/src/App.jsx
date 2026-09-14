@@ -79,7 +79,7 @@ const GlobalStyles = () => (
         .sid-pwrules__warn { display: block; font-style: italic; }
 
         /* DASHBOARD GRID — two columns: on the passports tab the welcome card
-           (nav) and the « Ajouter un Passeport » card share row 1 (left/right);
+           (nav) and the « Ajouter un Document » card share row 1 (left/right);
            every other section spans the entire screen width. Vertical rhythm
            comes from the sections' own margins, hence row-gap: 0. */
         .dashboard-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); column-gap: 1.4rem; row-gap: 0; }
@@ -110,6 +110,7 @@ const GlobalStyles = () => (
 
         /* NAVIGATION SIDEBAR */
         .dashboard-nav h3 { margin-top: 0; margin-bottom: 0.25rem; }
+        .dashboard-nav .sid-credits { display: inline-block; margin: 0.35rem 0 0.5rem; }
         .dashboard-nav .credit-display { margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--sid-text); }
 
         .nav-menu { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -386,8 +387,6 @@ export default function App() {
                 <h1 className="sid-logo">Scan<span>ID</span></h1>
                 {user && (
                     <div className="sid-topbar-right">
-                        {/* The credits counter the dashboard used to show in its sidebar. */}
-                        <span className="sid-credits">Crédits : {user.page_credits}</span>
                         <button onClick={() => logout()} className="sid-btn-ghost">Déconnexion</button>
                     </div>
                 )}
@@ -625,6 +624,7 @@ function Dashboard({ user, token, fetchUser }) {
         <div className={`dashboard-layout${activeTab === 'passports' ? ' passports-layout' : ''}`}>
             <nav className="dashboard-nav sid-card">
                 <h3>Bienvenue, {user.first_name}!</h3>
+                <span className="sid-credits">Crédits : {user.page_credits}</span>
                 <div className="credit-display">
                     <span style={{ display: 'block' }}>Pages Traitées : {user.uploaded_pages_count}</span>
                 </div>
@@ -872,7 +872,7 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
 
     return (
         <div className="sid-card">
-            <h3 style={{ marginTop: 0 }}>Ajouter un Passeport</h3>
+            <h3 style={{ marginTop: 0 }}>Ajouter un Document</h3>
             <p className="mb-2">Glissez votre document ci-dessous pour lancer l'extraction automatique.</p>
             {error && <p className="sid-alert sid-alert--err">{error}</p>}
             <form onSubmit={handleSubmit}>

@@ -8,6 +8,19 @@ measured table is produced by `tests/e2e/a11y.spec.js` on every run.
 
 ---
 
+## v1.2 — 14/09/2026
+
+**`.sid-credits` moved out of the navy bar, under « Bienvenue, …! ».** The user
+asked for the credits badge to sit directly under the welcome heading of the
+dashboard card. On the white card the brand cyan (`--sid-cyan`) that suited the
+bar falls to ≈ 2.5:1, so the badge's text colour is now `--sid-info`
+(`#0369a1`): **5.25:1** measured by `a11y.spec.js`. Shape, tint, border and font
+are unchanged. Spacing under the heading lives in `App.jsx`
+(`.dashboard-nav .sid-credits`). The « Déconnexion » button stays in the bar
+(§N3 below still applies to it).
+
+---
+
 ## v1.1 — 06/09/2026 (Package A)
 
 ### Fonts

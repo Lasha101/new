@@ -193,14 +193,23 @@ test.describe('Interface en français', () => {
 });
 
 test.describe('Barre d’application', () => {
-    test('le logo et le compteur de crédits sont dans la barre', async ({ page, api }) => {
+    test('le logo est dans la barre, le compteur de crédits sous « Bienvenue »', async ({ page, api }) => {
         await login(page);
 
         const topbar = page.locator(SELECTORS.topbar);
         await expect(topbar.locator(SELECTORS.logo)).toHaveText('ScanID');
         await expect(topbar.locator(`${SELECTORS.logo} span`)).toHaveText('ID');
-        await expect(topbar.locator(SELECTORS.creditBadge)).toHaveText(`Crédits : ${api.user.page_credits}`);
         await expect(topbar.locator(SELECTORS.logoutButton)).toHaveText(TEXT.logout);
+        await expect(topbar.locator(SELECTORS.creditBadge)).toHaveCount(0);
+
+        // Directly under the welcome heading, on every tab of the dashboard.
+        for (const tab of ['Passeports', 'Mon Compte']) {
+            await page.locator(SELECTORS.navButtons).filter({ hasText: tab }).click();
+            const badge = page.locator('.dashboard-nav h3 + .sid-credits');
+            await expect(page.locator('.dashboard-nav h3')).toHaveText(`Bienvenue, ${api.user.first_name}!`);
+            await expect(badge).toHaveText(`Crédits : ${api.user.page_credits}`);
+            await expect(page.locator(SELECTORS.creditBadge)).toHaveCount(1);
+        }
     });
 
     test('le filtre segmenté marque l’option active', async ({ page }) => {

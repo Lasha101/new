@@ -1,11 +1,13 @@
 # SCANID — HANDOVER
 
-Resume file for the "public site becomes the front door of scanid.fr" work.
+Resume file for the "public site becomes the front door of scanid.fr" work, and for the
+application tasks that followed it.
 
 **If you are a new session: read §0 first and obey it for the whole session. Then read
-§1–§4, and continue at the first stage in §5 whose status is not `DONE`.**
+§A (the current task) and continue at the first stage in §A.4 whose status is not `DONE`.
+§1–§9 are the completed v5 task, kept as a record.**
 
-Last updated: 2026-09-13 (v5 task complete locally)
+Last updated: 2026-09-14 (task A — credits on success, « Ajouter un Document », credits badge — complete locally, not deployed)
 
 ---
 
@@ -58,7 +60,186 @@ they applied to the previous one (v4).
 
 ---
 
-## 1. CURRENT TASK — IMPLEMENT v5 AS THE FRONT DOOR
+## A. CURRENT TASK (2026-09-14) — THE APPLICATION: CREDITS, HEADING, BADGE
+
+The user: *"you have the same constraints and permissions as they are in
+SCANID-HANDOVER.md, but the tasks are different."* §0 therefore applies unchanged.
+
+### A.1 Demand (the user's words, in substance)
+
+1. **Charge only successful extractions — never failures.** Example given: 10 credits,
+   an extraction ends with 2 failures and 3 successes → the user pays **3** credits and
+   **always** has **7** left.
+2. **« Ajouter un Passeport » → « Ajouter un Document »** (heading of the upload card).
+3. **The credits badge** (blue pill « Crédits : N », top right of the application bar)
+   **moves to just under « Bienvenue, …! »** in the dashboard's welcome card.
+4. **Every other current functionality is preserved.**
+
+### A.2 State found before any change (measured)
+
+- `frontend/site/` is **absent from disk** at the start of this session (git shows its 31
+  files as deleted in the working tree). Not done by this session; §0.4 forbids touching
+  it, so it is left as found. The build does not read it (the assembler reads
+  `scanid-site-v5-deploy/`, §3).
+- **Charging** — `backend/main.py`, end of `_run_ocr_extraction_job`: after the per-page
+  loop, one atomic `UPDATE` subtracts `page_count = len(extraction_results)` from
+  `page_credits` — **every page of the file**, including failed pages and the verso of a
+  split CNI — and adds the same number to `uploaded_pages_count`. A job that fails as a
+  whole (exception in the OCR) returns before this and charges nothing.
+- The upload gate (`page_credits <= 0` → 403 « Crédits insuffisants ») is at the upload
+  endpoint, before the job.
+- `backend/tests/test_ocr_split_cni.py::test_job_skips_verso_entries_and_charges_every_page`
+  **pins the old rule** (1 success + 1 verso + 1 failure → 3 credits charged).
+- **Heading** — `frontend/src/App.jsx`, `FileUploader`: `<h3>Ajouter un Passeport</h3>`.
+  No test references the text.
+- **Badge** — `frontend/src/App.jsx`, `App` header: `<span className="sid-credits">` in
+  `.sid-topbar-right`, next to « Déconnexion ». Styled in `frontend/src/scanid-app.css`
+  (`.sid-credits`: cyan `#0EA5E9` on a 12 % cyan tint, designed for the navy bar).
+  `tests/e2e/design-system.spec.js` **asserts the badge is inside the top bar**;
+  `a11y.spec.js` measures its contrast; `smoke`, `privacy`, `features` and the `login()`
+  helper find it by `.sid-credits` anywhere on the page.
+- Baselines before any edit: backend `pytest` **216 passed**; frontend unit **81 passed**;
+  e2e desktop project **109 passed**; `eslint src/App.jsx` **12 problems** (7 errors,
+  5 warnings — all pre-existing, none on a line this task touches).
+
+### A.3 Decisions (what "only necessary changes" means here)
+
+1. **1 credit = 1 successfully extracted document** = one entry in the job's `successes`
+   (a row saved to `passports`). Failures of every kind cost nothing: unreadable page,
+   validation error, database error, whole-job failure. The verso of a split CNI merges
+   into its recto's single success, so **recto + verso = 1 credit**.
+2. **« Pages Traitées » (`uploaded_pages_count`) is not changed** — it still counts every
+   processed page. The demand is about what the user *pays*, not about that counter.
+3. **The upload gate is not changed** (`page_credits <= 0` refuses the upload).
+4. **Badge:** same element, same class (`.sid-credits`), same text « Crédits : N »,
+   moved into the welcome card directly under the `<h3>`. On the white card the navy-bar
+   cyan measures ≈ 2.5:1 (fails WCAG AA); its text colour becomes the existing
+   `--sid-info` token (`#0369a1`, ≈ 5.2:1 on the same tint). « Déconnexion » stays in
+   the bar.
+5. **Heading:** text only.
+6. Tests that encode the **old** behaviour are updated to the demanded one (the split-CNI
+   charge assertion, the "badge is in the top bar" assertion); a test for the user's own
+   example (3 successes + 2 failures → 7 of 10 left) is added. No other test is touched.
+
+### A.4 Stages
+
+| # | Stage | Status |
+| --- | --- | --- |
+| A0 | Survey code, tests and baselines (§A.2) | **DONE** |
+| A1 | Write demand, findings, decisions and plan into this file | **DONE** |
+| A2 | Backend: charge `len(successes)`; update/add tests | **DONE** |
+| A3 | Frontend: heading text; badge under « Bienvenue »; e2e assertion | **DONE** |
+| A4 | Verify: backend, unit, e2e (desktop + mobile), lint, build, rendering | **DONE** |
+| A5 | Record what changed and how to ship | **DONE** |
+
+### Stage A2 — Backend — DONE
+
+`backend/main.py`, end of `_run_ocr_extraction_job` — the only functional change:
+
+```diff
+-    # Charge one credit per processed page and track the page counter.
++    # Charge one credit per SUCCESSFUL extraction only — a failed page costs
++    # nothing — and track every processed page in the page counter.
+     page_count = len(extraction_results)
++    credits_charged = len(successes)
+ ...
+-                        page_credits=models.User.page_credits - page_count,
++                        page_credits=models.User.page_credits - credits_charged,
+                         uploaded_pages_count=models.User.uploaded_pages_count + page_count,
+```
+
+Plus two comments made true again (`SIGNUP_PAGE_CREDITS`, the verso branch). The update is
+still one atomic `UPDATE`; the `credit_update` SSE push is unchanged.
+
+Tests:
+- `tests/test_ocr_split_cni.py` — the test pinning the old rule renamed
+  `…_charges_only_successes`; credits after the job `7` → `9`; `uploaded_pages_count`
+  stays `3`.
+- **New** `tests/test_credit_charging.py` — the user's example (10 credits; pages
+  ok / unreadable / ok / duplicate refused at save / ok → 3 successes, 2 failures →
+  **7 left**, 5 pages counted); only failures → 10 left; OCR crash → 10 left.
+
+Result: `pytest` **219 passed** (216 + 3). The same tests run against `HEAD`'s `main.py`
+in a scratch copy: **3 fail** (7→5, 10→8, 9→7) — they detect the old charge. The crash
+test passes on both (that path never charged).
+
+### Stage A3 — Frontend — DONE
+
+`frontend/src/App.jsx`
+- `FileUploader`: `<h3>Ajouter un Passeport</h3>` → `<h3>Ajouter un Document</h3>` (and the
+  layout comment that names the card).
+- `App` header: the `<span className="sid-credits">` removed from `.sid-topbar-right`;
+  « Déconnexion » stays there, alone.
+- `Dashboard` nav: the same `<span className="sid-credits">Crédits : {user.page_credits}</span>`
+  inserted directly after `<h3>Bienvenue, {user.first_name}!</h3>`, before « Pages
+  Traitées ». The nav card is rendered on every tab (Passeports, Mon Compte,
+  Administration), so the badge stays visible wherever it was visible before, and still
+  refreshes on the `credit_update` SSE event (it reads the same `user` object).
+- GlobalStyles, NAVIGATION SIDEBAR: `.dashboard-nav .sid-credits { display: inline-block;
+  margin: 0.35rem 0 0.5rem; }` — spacing only.
+
+`frontend/src/scanid-app.css` — `.sid-credits`: `color: var(--sid-cyan)` →
+`color: var(--sid-info)` (contrast on the white card, §A.3.4). Shape, tint, border, font
+unchanged. Recorded in `CHANGELOG-css.md` v1.2.
+
+`frontend/src/upload/uploadQueue.js` — one comment corrected ("a credit per page" → "a
+credit per extracted document"). No code.
+
+`frontend/tests/e2e/design-system.spec.js` — the test asserting the badge is **in the top
+bar** now asserts the demanded placement: not in the bar; `.dashboard-nav h3 + .sid-credits`
+reads « Crédits : N » on the Passeports and Mon Compte tabs; exactly one badge on the page.
+
+### Stage A4 — Verify — DONE
+
+| Check | Before (baseline) | After |
+| --- | --- | --- |
+| Backend `pytest` | 216 passed | **219 passed** (3 new) |
+| New/changed charge tests against `HEAD`'s `main.py` | — | **3 fail** — they detect the old rule |
+| Frontend unit `npm run test:unit` | 81 passed | **81 passed** |
+| E2E desktop | 109 passed | **109 passed** |
+| E2E all projects (desktop, mobile-small, mobile-375 WebKit, pwa) | — | **337 passed, 1 skipped** (the static WebKit skip in `capture.spec.js`, unrelated) |
+| `eslint src/App.jsx` | 12 problems | **12 problems** (identical; none on a touched line); the other two touched JS files clean |
+| `.sid-credits` contrast (a11y spec, on the white card) | 5.97:1 in the bar | **5.25:1** — AA pass |
+| Build guards `tests/build/no-google-fonts.test.js` | 5 pass | **5 pass** |
+| `dist/` rebuilt by `npm run build` (the deploy's command) | — | app half carries « Ajouter un Document », no « Ajouter un Passeport », the new badge rule; **site half: 22 / 22 pages byte-identical to live https://scanid.fr** |
+
+**Rendering** (Chromium, mocked backend, 1280×800 and 375×740): top bar = logo +
+« Déconnexion » only (0 badges in it); welcome card = « Bienvenue, Alice! » → pill
+« Crédits : 12 » (≈ 10 px under the heading) → « Pages Traitées : 3 » → tabs; upload
+card heading « Ajouter un Document »; no horizontal overflow at 375 px.
+
+### Stage A5 — What changed, and how to ship — DONE
+
+**Files changed by task A** (nothing staged, nothing committed):
+
+| File | Change |
+| --- | --- |
+| `backend/main.py` | charge `len(successes)` instead of every page; 2 comments |
+| `backend/tests/test_ocr_split_cni.py` | old-rule assertion updated (7 → 9), test renamed |
+| `backend/tests/test_credit_charging.py` | **new** — the user's example + no-charge cases |
+| `frontend/src/App.jsx` | heading text; badge moved from top bar to under « Bienvenue »; 1 spacing rule; 1 comment |
+| `frontend/src/scanid-app.css` | `.sid-credits` text colour `--sid-cyan` → `--sid-info` (+ comment) |
+| `frontend/src/CHANGELOG-css.md` | v1.2 entry |
+| `frontend/src/upload/uploadQueue.js` | 1 comment |
+| `frontend/tests/e2e/design-system.spec.js` | badge-placement test follows the demand |
+| `SCANID-HANDOVER.md` | this section |
+
+**To ship:** `git add` / `git commit` / `git push` to `master` (the user's step, §0.3). The
+deploy workflow rebuilds the frontend and restarts the backend service; no database
+migration, no nginx change, no new dependency. ⚠️ **`git add .` would now also stage the
+deletion of the 31 files of `frontend/site/`** (absent from disk, §A.2) — stage the files
+above by name unless that deletion is intended.
+
+**Behaviour notes for the user (not demanded, therefore not changed):**
+- The upload gate refuses only at `page_credits <= 0`. A user with 1 credit who uploads a
+  10-page PDF that yields 10 successes ends at −9, exactly as before (only failures are
+  now free).
+- « Pages Traitées » still counts every processed page, failed ones included.
+- Charges already taken on past jobs are not refunded.
+
+---
+
+## 1. PREVIOUS TASK (COMPLETE, LIVE) — IMPLEMENT v5 AS THE FRONT DOOR
 
 **Demand (2026-09-13):** use the content of `frontend/scanid-site-v5-deploy/` instead of
 the content of `frontend/site/`, under all the constraints in §0.
@@ -418,6 +599,25 @@ visible purchase call to action) and §6 item 4 (`/calculateur.html` turns into 
 
 After the push, the deploy workflow's own probes apply unchanged: `href="/app/"` is on
 the v5 home page (2 occurrences) and `/fonts/site.css` is built, so they pass.
+
+---
+
+### v5 IS LIVE — verified 2026-09-13
+
+The user committed and pushed `4ae4926` ("Deploy the presentation of v5"); `master` is in
+sync with `origin/master`. Verified against https://scanid.fr:
+
+- **22 / 22 live pages are byte-exact against the v5 build** (20 differ from v4; `404.html`
+  and `iftm/index.html` are identical in both versions). Still v4: **0**.
+- `/calculateur.html` and `/scripts/calculateur-1.js` → **404**; `/contact.html` and
+  `/scripts/index-1.js` → 200; `/app/` → 200; unknown path → 404; site CSP unchanged.
+- Rendered (Chromium): six-item nav, trial bar under it (1392×30 px desktop, 342×43 px
+  mobile), 6 font faces loaded.
+- **The §2.4 defect is live:** the four « Souscrire » buttons render as `display:inline`,
+  no padding, no border — small dark-blue link text on the dark pricing cards — next to a
+  correctly styled « Commencer » button.
+- Also live, as predicted in §6: `GET /api/config` → 404 logged in the console on every
+  home-page load; mobile page 929 px wide on a 390 px screen (`div.ft-links`).
 
 ---
 

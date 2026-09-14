@@ -141,9 +141,10 @@ export class UploadQueue {
     /**
      * Drains the queue, one document at a time.
      *
-     * Sequential on purpose: the backend charges a credit per page and runs the
-     * OCR in-process, so three parallel uploads would only queue behind each
-     * other server-side while tripling the phone's memory use.
+     * Sequential on purpose: the backend charges a credit per extracted
+     * document and runs the OCR in-process, so three parallel uploads would
+     * only queue behind each other server-side while tripling the phone's
+     * memory use.
      */
     async run() {
         if (this.running) return;

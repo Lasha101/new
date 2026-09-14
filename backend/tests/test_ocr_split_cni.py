@@ -232,7 +232,7 @@ def test_partial_mrz_line2_rejected_when_a_check_digit_fails():
 
 # --- Job aggregation: verso entries are neither successes nor failures ----------
 
-def test_job_skips_verso_entries_and_charges_every_page(db_session, monkeypatch):
+def test_job_skips_verso_entries_and_charges_only_successes(db_session, monkeypatch):
     user = make_user(db_session, "ocruser", page_credits=10)
     job_id = str(uuid.uuid4())
     crud.create_ocr_job(db=db_session, job_id=job_id, user_id=user["id"], file_name="split.pdf")
@@ -259,5 +259,5 @@ def test_job_skips_verso_entries_and_charges_every_page(db_session, monkeypatch)
     assert saved["expiration_date"] == "2030-06-05"
 
     updated_user = crud.get_user(db_session, user["id"])
-    assert updated_user["page_credits"] == 7          # 3 pages charged, verso included
-    assert updated_user["uploaded_pages_count"] == 3
+    assert updated_user["page_credits"] == 9          # 1 document charged: no credit for the verso or the failure
+    assert updated_user["uploaded_pages_count"] == 3  # every processed page is still counted

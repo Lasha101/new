@@ -73,9 +73,11 @@ a:hover { text-decoration: underline; }
 .sid-logo { font-family: var(--sid-font-head); font-weight: 700; font-size: 1.25rem; color: #fff; letter-spacing: -.02em; margin: 0; }
 .sid-logo span { color: var(--sid-cyan); }
 .sid-topbar-right { display: flex; align-items: center; gap: 1rem; color: var(--sid-muted); font-size: .85rem; }
+/* Le badge vit sous « Bienvenue » (carte blanche), plus dans la barre navy :
+   le cyan de marque n'y tiendrait que ≈ 2,5:1. Voir CHANGELOG-css.md v1.2. */
 .sid-credits {
   font-family: var(--sid-font-head); font-weight: 600; font-size: .82rem;
-  color: var(--sid-cyan); background: rgba(14, 165, 233, .12);
+  color: var(--sid-info); background: rgba(14, 165, 233, .12);
   border: 1px solid rgba(14, 165, 233, .3);
   padding: .35rem .8rem; border-radius: 999px;
   white-space: nowrap;
