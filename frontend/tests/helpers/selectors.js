@@ -77,7 +77,7 @@ export const TEXT = {
     loginHeading: 'Connexion',
     loginSubmit: 'Se connecter',
     loginLoading: 'Connexion...',
-    usernamePlaceholder: "Entrez votre identifiant",
+    usernamePlaceholder: 'vous@agence.fr',
     passwordPlaceholder: 'Entrez votre mot de passe',
     badCredentials: "Nom d'utilisateur ou mot de passe incorrect",
     rateLimited: 'Trop de tentatives de connexion. Veuillez réessayer dans une minute.',

@@ -6,14 +6,15 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§B) exactly where it stopped, under the same
+> instruction to **resume the current task (§C) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
 > 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`;
 >    `frontend/site/` and `frontend/scanid-site-v5-deploy/` read-only; work in stages; update
 >    this file after every stage; outside the repository: read when needed, write only with
 >    permission).
-> 2. Read **§B.0 RESUME POINT** — the exact position (stage and sub-step), the environment, the
+> 2. Read **§C** (the current task, 2026-09-30) first. Then, for the task before it,
+>    **§B.0 RESUME POINT** — the exact position (stage and sub-step), the environment, the
 >    commands, and the specification of every remaining step. Then §B.1–§B.3 (demand, findings,
 >    decisions — decisions are settled, do not re-open them) and the stage records below §B.4.
 > 3. Check the working tree matches §B.0 (`git status --short`), run the quick baseline
@@ -25,8 +26,10 @@ application tasks that followed it.
 >    state and the user-side steps of §B.6, and wait for the user's next demand under the same §0.
 >
 > §A (task A — committed `a2b235d`, pushed) and §1–§9 (the v5 site task, live) are records only.
+> §B is a record too since its commit (see §C.0).
 
-Last updated: 2026-09-14 (task B — nine-item action list — **ALL STAGES B0–B13 DONE, complete locally, uncommitted**; how to ship: §B.6)
+Last updated: 2026-09-30 (task C — login-page footer + the two `/api/config` switches — **C1 DONE
+locally, uncommitted; C2 needs the user/Alex, see §C.2**)
 
 ---
 
@@ -79,7 +82,137 @@ they applied to the previous one (v4).
 
 ---
 
-## B. CURRENT TASK (2026-09-14) — THE NINE-ITEM ACTION LIST
+## C. CURRENT TASK (2026-09-30) — LOGIN-PAGE FOOTER, AND THE TWO `/api/config` SWITCHES
+
+### C.0 State in one line
+
+**C1 (five login-page fixes): DONE locally, uncommitted.** **C2 (the two switches): no code
+change is needed or was made** — both flags are already environment-driven and correct; what
+remains is on the server and in Stripe, and only the user and Alex can do it (§C.2).
+
+Task B (§B) is no longer pending: it was committed as **`b3028b4`** (2026-09-14) and is live —
+`https://scanid.fr/api/config` answers, which is a task-B endpoint. §B is a record from here on.
+
+### C.1 The demand, verbatim (user, 2026-09-30)
+
+> **1. Five small fixes on the login page.** Seen on https://scanid.fr/app/. Apply the same footer
+> wherever it appears in the app.
+>
+> | Now | Change to |
+> | --- | --- |
+> | Footer links « Mentions Légales », « Politique de Confidentialité », « CGU », « Contact » all point to `#` | https://scanid.fr/mentions-legales.html · https://scanid.fr/politique-confidentialite.html · https://scanid.fr/cgv.html · https://scanid.fr/contact.html |
+> | « © 2026 Gestionnaire de Voyages - Tous droits réservés. » | « © 2026 ScanID — Tous droits réservés. » |
+> | « CGU » | « CGV » (the site publishes CGV; there is no CGU page) |
+> | « Mentions Légales », « Politique de Confidentialité » | « Mentions légales », « Politique de confidentialité » (French capitalisation) |
+> | Login field « Nom d'utilisateur », placeholder « Entrez votre identifiant » | « E-mail », placeholder « vous@agence.fr » — the identifier is the email (Spec v2) |
+>
+> Test: from /app/, each footer link opens the right page of scanid.fr; the footer reads ScanID.
+>
+> **2. Two switches in GET /api/config.** Today it returns `{"signup": false, "trial": false}`.
+> Turn each one on only after its test:
+> - `trial` → `true` — after one real run with Alex: (1) Alex submits https://scanid.fr/essai.html
+>   with a test address of his; (2) the notification arrives at contact@scanid.fr and the request
+>   appears in « Demandes d'essai »; (3) Valider → welcome email → set-password link works (48 h) →
+>   login shows 20 credits; (4) remove the test account, then set `trial` to true. The current trial
+>   form already uses the endpoint whatever this flag says; the new site will read the flag to choose
+>   its confirmation message.
+> - `signup` → `true` — once the Stripe webhook is in place: (1) Alex creates the endpoint in his
+>   Stripe dashboard (Développeurs → Webhooks → https://scanid.fr/api/stripe/webhook, event
+>   `checkout.session.completed`) and gives the signing secret through the dashboard, never by chat;
+>   (2) store it as an environment variable, run one purchase in test mode and replay the webhook —
+>   credits are added once; (3) set `signup` to true. The site's « Souscrire » buttons then open
+>   /app/inscription?pack=… instead of going straight to Stripe (already handled by
+>   `/scripts/index-1.js`).
+
+Constraints and permissions: unchanged, §0 — all current functionality preserved except what is
+demanded; only necessary changes; no `git add` / `commit` / `push`; outside the repository, read and
+run to verify, but never install/delete/edit without asking.
+
+### C.2 Findings before touching anything
+
+1. **The app has exactly one footer** — `frontend/src/App.jsx`, the `<footer className="sid-appfoot">`
+   of the login view. "Wherever it appears in the app" is therefore that one place; no other
+   component, page or built HTML file renders it (`grep -rn "sid-appfoot\|legal-links\|<footer"`).
+2. **The four target pages exist and answer 200** on https://scanid.fr; `cgu.html` answers **404** —
+   which is why « CGU » had to become « CGV ».
+3. **The login field must stay `type="text"`.** Customer accounts do have the email as `user_name`
+   (`trials.py` and `main.py` both create users with `user_name=email`), but the bootstrap `admin`
+   account does not, and `auth.authenticate_user` matches `user_name` exactly. Making the input
+   `type="email"` would let the browser refuse « admin » before the request left the page. Only the
+   label and the placeholder changed.
+4. **The two flags are not stored switches — they are derived from the environment**, and have been
+   since task B: `backend/main.py` `public_config()` returns
+   `{"signup": bool(config.stripe_webhook_secret()), "trial": mailer.is_configured()}`. So there is
+   nothing to change in the code, and **no separate "set it to true" step exists**: the flag flips
+   the moment `STRIPE_WEBHOOK_SECRET` (resp. `SMTP_HOST`) is in `/opt/travelapp/backend/.env` and the
+   service restarts. Verified live: `curl https://scanid.fr/api/config` → `{"signup":false,"trial":false}`,
+   i.e. production currently has neither the SMTP credentials nor the Stripe secret.
+5. **Consequence the demand's ordering does not allow for** — reported to the user, no code written
+   for it without their decision:
+   - `trial`: the test itself needs email (the endpoint answers 503 without it and essai.html falls
+     back to Formspree), so `trial` is already `true` while Alex runs steps 1–3. **Harmless today**:
+     nothing reads the flag yet — the live essai.html posts to the endpoint regardless, and only the
+     future site will use the flag to pick a confirmation message.
+   - `signup`: **not harmless.** The live site already reads it —
+     `https://scanid.fr/scripts/index-1.js` fetches `/api/config` and, when `signup` is true,
+     redirects every « Souscrire » click to `/app/inscription?pack=…`. So storing a **test-mode**
+     signing secret to run step 2 switches the real buying flow for real visitors, while the live
+     Payment Links stay live and a live webhook would then fail signature verification. Either run
+     the test in a short window with `STRIPE_PAYMENT_LINK_*` pointed at the test links
+     (`backend/.env.example` documents them), or add a tri-state override
+     (`PUBLIC_SIGNUP=0/1`, empty = infer — the pattern `SESSION_COOKIE_SECURE` already uses) so the
+     secret can be installed with the flag held off. **The user's call; not implemented.**
+
+### C.3 C1 — what changed (three files, all in the repository)
+
+| File | Change |
+| --- | --- |
+| `frontend/src/App.jsx` | New `LEGAL_LINKS` constant beside the existing `SITE_LINKS` (same `SITE_URL` base, same shape), rendered by the footer in place of the four `href="#"` anchors; copyright « © {year} ScanID — Tous droits réservés. »; login label « E-mail » and placeholder « vous@agence.fr » |
+| `frontend/tests/helpers/selectors.js` | `usernamePlaceholder` follows the new placeholder — `auth.js`, `signup.spec.js` and `password.spec.js` find the login field by it |
+| `SCANID-HANDOVER.md` | This §C |
+
+The year stays `new Date().getFullYear()` (it renders « © 2026 » today) rather than a hard-coded
+2026: the line was already dynamic, and making it static was not asked for. Note the site's own
+pages hard-code « © 2026 ScanID · Tous droits réservés » with a middle dot — the app now follows the
+user's wording (em dash, final period), which is deliberate and differs from the site by one glyph.
+
+### C.4 C1 — verification (2026-09-30)
+
+| Check | Result |
+| --- | --- |
+| `cd backend && ../newvenv/bin/python -m pytest -q` | **295 passed** (baseline) |
+| `cd frontend && npm run test:unit` | **87 passed** (baseline) |
+| `cd frontend && npx playwright test` (all projects) | **418 passed, 1 skipped** (baseline) |
+| `npx eslint .` | **12 problems (7 errors, 5 warnings)** — the documented baseline, none on a touched line; `tests/helpers/selectors.js` clean |
+| `npm run build` | ok; `dist/app/assets/*.js` contains the four URLs, « ScanID — Tous droits », « vous@agence.fr » and **no** « Gestionnaire de Voyages », « CGU », « Entrez votre identifiant » |
+| Rendered check (`vite preview` + Playwright, screenshot) | footer: Mentions légales → `https://scanid.fr/mentions-legales.html`, Politique de confidentialité → `…/politique-confidentialite.html`, CGV → `…/cgv.html`, Contact → `…/contact.html`; « © 2026 ScanID — Tous droits réservés. »; login label « E-mail », placeholder « vous@agence.fr » |
+| Targets live | `mentions-legales.html`, `politique-confidentialite.html`, `cgv.html`, `contact.html` → **200**; `cgu.html` → **404** |
+
+Not yet done: the acceptance test as worded ("from /app/, each footer link opens the right page")
+runs on https://scanid.fr and therefore needs the deploy, which is the user's commit + push.
+
+### C.5 C2 — what is left, and who does it
+
+Nothing to write. The steps are the ones already recorded in §B.5 / §B.6.1–2, unchanged:
+
+1. **Email (turns `trial` on).** In `/opt/travelapp/backend/.env`: `SMTP_HOST=smtp.ionos.fr`,
+   `SMTP_USERNAME=contact@scanid.fr`, `SMTP_PASSWORD=<mailbox password>`; leave the commented
+   defaults out. Restart `travelapp.service`. Then Alex's run: essai.html → « Demandes d'essai » →
+   Valider → welcome email → set-password link (48 h) → login → « Crédits : 20 » → delete the test
+   account. `/api/config` shows `"trial": true` from the restart, not from the end of the run (§C.2.5).
+2. **Stripe (turns `signup` on).** Alex creates the endpoint and hands over the signing secret
+   through the dashboard, never by chat; it goes in `STRIPE_WEBHOOK_SECRET`. The code already
+   handles `checkout.session.async_payment_succeeded` as well — subscribing to it too is what makes
+   a delayed payment (bank transfer) credit; with `checkout.session.completed` alone such a payment
+   is never credited automatically. Read §C.2.5 before installing a test-mode secret on production.
+
+---
+
+## B. TASK B (2026-09-14) — THE NINE-ITEM ACTION LIST — RECORD ONLY
+
+> Shipped: committed `b3028b4` and live. The "uncommitted" wording below is the record as it
+> stood on 2026-09-14; read it as history. Its §B.5 / §B.6 server steps are still the reference
+> for §C.5.
 
 ### B.0 RESUME POINT — read this first, keep it current
 

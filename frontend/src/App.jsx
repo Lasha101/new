@@ -60,6 +60,15 @@ const SITE_LINKS = [
     ['Contact', `${SITE_URL}contact.html`],
 ];
 
+// The site's legal pages, linked from the app's footer. « CGV » and not « CGU »:
+// scanid.fr publishes conditions générales de vente, and has no CGU page.
+const LEGAL_LINKS = [
+    ['Mentions légales', `${SITE_URL}mentions-legales.html`],
+    ['Politique de confidentialité', `${SITE_URL}politique-confidentialite.html`],
+    ['CGV', `${SITE_URL}cgv.html`],
+    ['Contact', `${SITE_URL}contact.html`],
+];
+
 /** « 4,2 Mo » — file sizes in the queue, in French notation. */
 const formatBytes = (bytes) => {
     if (!Number.isFinite(bytes)) return '';
@@ -621,8 +630,8 @@ function Login({ setToken, fetchUser, onShowRegistration, onForgotPassword, sess
                         {error && <p className="sid-alert sid-alert--err">{error}</p>}
                         <form onSubmit={handleSubmit}>
                             <div className="form-group">
-                                <label className="sid-label">Nom d'utilisateur</label>
-                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="sid-input" placeholder="Entrez votre identifiant" required />
+                                <label className="sid-label">E-mail</label>
+                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="sid-input" placeholder="vous@agence.fr" required />
                             </div>
                             <div className="form-group">
                                 <label className="sid-label">Mot de passe</label>
@@ -641,12 +650,9 @@ function Login({ setToken, fetchUser, onShowRegistration, onForgotPassword, sess
             </div>
             <footer className="sid-appfoot">
                 <div className="legal-links">
-                    <a href="#">Mentions Légales</a>
-                    <a href="#">Politique de Confidentialité</a>
-                    <a href="#">CGU</a>
-                    <a href="#">Contact</a>
+                    {LEGAL_LINKS.map(([label, href]) => <a key={href} href={href}>{label}</a>)}
                 </div>
-                <p>&copy; {new Date().getFullYear()} Gestionnaire de Voyages - Tous droits réservés.</p>
+                <p>&copy; {new Date().getFullYear()} ScanID — Tous droits réservés.</p>
             </footer>
         </div>
     );
