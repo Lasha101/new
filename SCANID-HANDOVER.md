@@ -6,33 +6,30 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§D) exactly where it stopped, under the same
+> instruction to **resume the current task (§E) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
 > 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`;
->    `frontend/site/` and `frontend/scanid-site-v5-deploy/` read-only; work in stages; update
->    this file after every stage; outside the repository: read when needed, write only with
->    permission).
-> 2. Read **§D** (the current task, 2026-10-02 — new column « Sexe ») first: §D.0 says which stage
->    is next, §D.4 lists the stages. §C (2026-09-30, committed `68dde4a`) is a record. Then, for
->    the task before it, §B.0.3 still holds the environment and the commands (test suites,
->    e2e, lint, build, the real-stack harness recipe), all valid for §D.
-> 3. Check the working tree matches §D.0 (`git status --short`), run the quick baseline
->    (`backend: pytest -q`, `frontend: npm run test:unit`) and compare with §D.0.
-> 4. Continue at the **first stage of §D.4 not marked DONE**. After each stage, mark it `DONE` in
->    §D.4, append its record below §D.4, and update §D.0.
+>    `frontend/scanid-site-v5-deploy/` read-only except the edits the user explicitly demands —
+>    task E: three files, §E.3; work in stages; update this file after every stage; outside the
+>    repository: read **only when needed for the demand**, write only with permission).
+> 2. Read **§E** (the current task, 2026-10-02 — website: three removals) first: §E.0 says which
+>    stage is next, §E.4 lists the stages. §B.0.3 still holds the environment and the commands
+>    (test suites, e2e, lint, build), all valid for §E.
+> 3. Check the working tree matches §E.0 (`git status --short`) and compare.
+> 4. Continue at the **first stage of §E.4 not marked DONE**. After each stage, mark it `DONE` in
+>    §E.4, append its record below §E.4, and update §E.0.
 > 5. Keep answering the user in their conversation language; keep the UI in French.
-> 6. **Task D is implemented; its deploy is in progress (since 2026-10-02):** do not re-implement
->    anything — follow §D.0 "A new session…": find the position with §D.7.5, ask the user what only
->    they can see, guide the first unticked step of §D.7.3, tick §D.7.4. Once §D.0 says **SHIPPED**,
->    §D is a record: wait for the user's next demand under the same §0.
+> 6. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
+>    open: the user's checks, §D.7.3 steps 5–7 (workflows, journal + column on the VPS, acceptance).
+>    Guide them **one command per message** (the user's rule, §D.0) when the user returns to them.
+>    Once §D.0 says **SHIPPED**, §D is a record.
 >
 > §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
 > `68dde4a`) and §1–§9 (the v5 site task, live) are records only.
 
-Last updated: 2026-10-02 (task D — new column « Sexe » — code complete and verified; **the user is
-deploying it: resume at §D.7**, position checks §D.7.5, progress §D.7.4 — steps 1–3 done, next step 4
-(push), one command per message)
+Last updated: 2026-10-02 (task E — website, three removals — done and verified, not committed; the user
+ships it per §E4. Task D pushed as `cfbcd58` and live; the user's checks §D.7.3 steps 5–7 still open)
 
 ---
 
@@ -52,7 +49,10 @@ they applied to the previous one (v4).
 5. **The source of truth is now `frontend/scanid-site-v5-deploy/`** — it replaces the
    content of `frontend/site/` as what must be implemented. *(Operating rule derived from
    this, not stated by the user: the source of truth is treated as read-only too. Nothing
-   in this work writes into it.)*
+   in this work writes into it.)* *(Exception demanded explicitly by the user, 2026-10-02,
+   task E: the content edits listed in §E.1, in `politique-confidentialite.html`,
+   `ressources.html` and `sitemap.xml` of that directory — nothing else in it is written.
+   `frontend/site/` no longer exists in the repository.)*
 6. **`frontend/dist/` is the target.** Its content may be deleted and rewritten, but only
    to bring it in line with the source of truth.
 7. **The source pages must be what a visitor sees FIRST at `https://scanid.fr`** — the
@@ -85,16 +85,174 @@ they applied to the previous one (v4).
 
 ---
 
-## D. CURRENT TASK (2026-10-02) — NEW COLUMN « SEXE »
+## E. CURRENT TASK (2026-10-02) — WEBSITE: THREE REMOVALS
+
+### E.0 State in one line (update after every stage)
+
+**E0–E4 DONE — the three removals are made and verified (source 25/25, dist 10/10, build + guard 5/5,
+unit 88, browser desktop + phone, e2e 439 passed / 1 skipped). NEXT: the user ships it — §E4 "how to
+ship", then the laptop checks listed there.** Nothing committed (§0.3). Git at the start of task E: `master` = `origin/master` = `cfbcd58`
+(task D), only `SCANID-HANDOVER.md` modified (task D's progress ticks). Expected `git status --short` after
+E2: ` M SCANID-HANDOVER.md` + ` M` `frontend/scanid-site-v5-deploy/{politique-confidentialite.html,
+ressources.html,sitemap.xml}` — nothing else.
+
+### E.1 The demand, verbatim (user, 2026-10-02)
+
+> CRUCIAL you have the same restrictions and permissions!
+> Website — three removals!
+> Make only these changes:
+>     • From politique-confidentialite.html remove the two Georgia mentions (the list item « Développement
+>       et maintenance de l’application : prestataire technique situé en Géorgie… » and the sentence « Le
+>       prestataire technique en charge du développement (Géorgie)… »); « Dernière mise à jour : septembre
+>       2026 ».
+>     • From ressources.html remove the « Témoignages » card (it linked to temoignages.html).
+>     • From sitemap.xml remove the lines for /iftm/ and /temoignages.html; lastmod 2026-09-30 for the two
+>       changed pages.
+> CRUCIAL you read outside of the current directory if and only if it is needed to respect my prompt's
+> demands!
+> CRUCIAL you test after changes to be sure that all is correctly implemented!
+
+### E.2 Findings before touching anything
+
+1. The three files exist in `frontend/scanid-site-v5-deploy/` (tracked; the site's source, the only
+   directory `scripts/assemble-site.mjs` reads — constant `SITE`) and in `frontend/dist/` (gitignored,
+   regenerated by `npm run build` = `vite build && node scripts/assemble-site.mjs` in « Deploy », then
+   rsynced). `frontend/site/` no longer exists. → Only an edit of the source reaches scanid.fr.
+2. The assembler's rewrites are technical (« Connexion » links, fonts, inline scripts) — « None of them
+   changes what the page says »; non-HTML files (`sitemap.xml`) are copied byte for byte.
+3. Targets in the source (line numbers at `cfbcd58`):
+   - `politique-confidentialite.html` l.144: `<li><strong>Développement et maintenance de
+     l'application</strong>&nbsp;: prestataire technique situé en Géorgie, sans accès … (accès limité au
+     code source de l'application).</li>` — 3rd of the 5 items of §5 « Destinataires et sous-traitants »;
+     l.150 (§6 « Transferts hors Union européenne »): the sentence « Le prestataire technique en charge du
+     développement (Géorgie) n'a pas accès aux données à caractère personnel. » between « …région Union
+     européenne. » and « Lorsqu'un prestataire implique… »; l.170: `<p class="upd">Dernière mise
+     à jour&nbsp;: juillet 2026.</p>`. « Géorgie » appears nowhere else in the site.
+   - `ressources.html` l.179–185: `<a href="temoignages.html" class="card">` … `</a>` (⭐ « Preuves »,
+     « Témoignages »), 5th of the 6 cards of `.grid`. It is the **only** link to `temoignages.html` in the
+     site (apart from that page's own canonical).
+   - `sitemap.xml` (21 `<url>`, one per line): l.6 `/iftm/`, l.11 `/temoignages.html`; `ressources.html`
+     and `politique-confidentialite.html` both `<lastmod>2026-07-04</lastmod>`. Nothing in the site links
+     to `/iftm/`. `robots.txt` points at the sitemap — unchanged.
+4. No test pins any of this content (grep of `src/`, `tests/`, `scripts/`); `sitenav.spec.js` only checks
+   the app menu's link to `ressources.html` (kept). The app links to `ressources.html` and
+   `politique-confidentialite.html` by URL only.
+5. Not demanded, therefore not touched: `temoignages.html` and `iftm/index.html` stay in the build and are
+   still served at their URLs — after task E nothing links to them and the sitemap no longer lists them.
+
+### E.3 Decisions
+
+1. **Edit the three files in `frontend/scanid-site-v5-deploy/`** — the only tracked copy, the only one the
+   build reads. The "source of truth is read-only" rule of §0.5 / §9 is the assistant's own derived rule
+   for the v5 task; the user's explicit demand names these three files, so exactly these edits are made
+   there and nothing else in that directory. `frontend/dist/` is rebuilt by `npm run build`, never
+   hand-edited.
+2. Exact form kept: « Dernière mise à jour&nbsp;: septembre 2026. » (only the month changes); the §6
+   paragraph loses exactly that sentence and the space before it; the list item and the card are removed
+   with their whole lines.
+3. `lastmod` = **2026-09-30** as demanded (not today's date), for `ressources.html` and
+   `politique-confidentialite.html` only; the other 17 entries unchanged.
+
+### E.4 Stages
+
+| Stage | Content | Status |
+| --- | --- | --- |
+| E0 | Survey (files, build path, tests, links) | **DONE** |
+| E1 | Write the demand, findings and plan here | **DONE** |
+| E2 | The edits — 3 source files | **DONE** |
+| E3 | Verification: diff = only the demanded lines; content checks; HTML tag balance HEAD vs new; sitemap well-formed, 19 URLs; `VITE_API_URL=/api npm run build` + the `dist/` copies; build guard; unit; both pages rendered in a browser (desktop + phone); full e2e | **DONE** |
+| E4 | Record + how to ship | **DONE** |
+
+### Stage E2 — the edits — DONE
+
+`git diff --stat`: 3 files, 4 insertions, 14 deletions — all in `frontend/scanid-site-v5-deploy/`:
+- `politique-confidentialite.html`: the §5 `<li>` « Développement et maintenance de l'application … Géorgie … »
+  removed (whole line); in §6 the sentence « Le prestataire technique en charge du développement (Géorgie)
+  n'a pas accès aux données à caractère personnel. » removed with its leading space (the paragraph now
+  reads « …région Union européenne. Lorsqu'un prestataire… »); « Dernière mise à jour&nbsp;: juillet
+  2026. » → « septembre 2026. ».
+- `ressources.html`: the 7 lines of the `<a href="temoignages.html" class="card">` card removed.
+- `sitemap.xml`: the `/iftm/` and `/temoignages.html` lines removed; `<lastmod>` 2026-07-04 → **2026-09-30**
+  for `ressources.html` and `politique-confidentialite.html`.
+
+### Stage E3 — verification (record; e2e last)
+
+- [x] Source checks (`check_site_e.py`, stdlib Python, scratchpad — rebuildable from this list): **25/25**.
+      Each file == its `HEAD` version with only the demanded edits applied, **byte for byte**; no « Géorgie »
+      (case-insensitive); « Dernière mise à jour&nbsp;: septembre 2026. » once, « juillet 2026 » gone; §5 list
+      5 → 4 items; §6 joined with one space; LF kept; HTML tags balanced, 0 issues before and after. The page has
+      **two** grids: « Articles » (5 cards) unchanged; « Outils & guides » 6 → 5 cards, same order
+      (alternatives, guide, guide-photo, faq, securite). Sitemap well-formed, 21 → 19 `<url>`, entries == `HEAD`
+      minus the 2, lastmod 2026-09-30 for the 2 pages, the 17 others identical and in order, every remaining
+      `<loc>` is a page of the site; `temoignages.html` and `iftm/index.html` untouched.
+- [x] `VITE_API_URL=/api npm run build`: ok — `assemble-site: 34 files into dist/ (22 pages rewritten)`, the
+      same figures as the v5 record (§5 Stage 4). `check_site_e.py --dist`: **10/10** (`dist/sitemap.xml`
+      byte-identical to the source; both `dist/` pages carry the edits, tags balanced; `temoignages.html` and
+      `iftm/` still shipped; `dist/app/` present).
+- [x] Build guard `node --test tests/build/no-google-fonts.test.js` **5/5**; `npm run test:unit` **88/88**.
+- [x] Browser (`render_e.cjs`, Chromium of `@playwright/test`, `dist/` served by `python3 -m http.server` on
+      127.0.0.1:8093 — stopped after): desktop 1280 and phone 375, **all checks ok** — « Outils & guides » 5
+      cards (desktop 3 + 2, like « Articles »; phone one column), « Articles » 5 unchanged, no link or text
+      « Témoignages », no « Géorgie », §5 = Hébergement · OCR · Formulaires · Paiement, §6 « …région Union
+      européenne. Lorsqu'un prestataire… », « Dernière mise à jour : septembre 2026. », no horizontal overflow,
+      no console error / failed request. Screenshots looked at (scratchpad; no personal data).
+- [x] Full e2e `npx playwright test` (all projects, incl. `pwa` on a fresh build): **439 passed, 1 skipped**
+      (3.8 min, exit 0) = after task D. Servers stopped, ports 5173 / 4173 / 8093 free; `git status --short` =
+      the 4 files of §E.0, nothing else.
+
+### Stage E4 — how to ship task E — DONE
+
+**Files** (uncommitted, §0.3): ` M SCANID-HANDOVER.md` + ` M frontend/scanid-site-v5-deploy/`
+`politique-confidentialite.html`, `ressources.html`, `sitemap.xml`. `git add --dry-run .` must list exactly
+these 4. No backend, database, `.env`, nginx or service change; site only.
+**`.gitignore` review before the commit (2026-10-02, at the user's request):** `git status --porcelain
+--untracked-files=all` = exactly these 4, no untracked file; `git ls-files -ci --exclude-standard` = none;
+tracked sensitive-looking names = `backend/.env.example` (empty placeholders) and the site's public
+`ScanID-Checklist-RGPD.pdf` only. Ignored, each by an explicit rule and rightly so: the two real identity
+PDFs, `backend/.env`, `backend/bench_ocr.py` + `bench_result_*.json` (real data), `frontend/.env.local`,
+`dist/`, `test-results/`, `tests/.browser-libs/`, `tests/fixtures/files/` (regenerated by `pretest:unit`),
+`newvenv/`, `site.html` / `site1.html`. Nothing to add to `.gitignore`, nothing ignored that must ship.
+
+**The user ships it** (one command per message if guided, as in §D.7):
+```bash
+git add --dry-run .     # exactly the 4 files
+git add .
+git commit -m "Site: remove the Georgia mentions, the Témoignages card and two sitemap entries"
+git push origin master  # « CI » + « Deploy »: npm run build (assembler) → rsync dist → restart → health checks
+```
+
+**After the deploy — checks from the laptop** (public GETs, the assistant may run them):
+```bash
+curl -s https://scanid.fr/sitemap.xml | grep -c '<url>'                                   # 19
+curl -s https://scanid.fr/sitemap.xml | grep -c -E 'iftm|temoignages'                   # 0
+curl -s https://scanid.fr/sitemap.xml | grep -E 'ressources|politique'                  # both 2026-09-30
+curl -s https://scanid.fr/ressources.html | grep -c -i 'temoignages'                     # 0
+curl -s https://scanid.fr/politique-confidentialite.html | grep -c -i -E 'g(é|e)orgie'   # 0
+curl -s https://scanid.fr/politique-confidentialite.html | grep -c 'septembre 2026'      # 1
+```
+
+**Not demanded, therefore not done:** `temoignages.html` and `/iftm/` are still built and still answer at
+their URLs — nothing links to them any more and the sitemap no longer lists them, but a search engine that
+already indexed them keeps them until it drops them (deleting the pages or a `noindex` would be a separate
+demand). **With task D:** independent; pushing E restarts the backend once more, which is harmless (D's
+step 6 searches the whole day for that reason).
+
+---
+
+## D. TASK D (2026-10-02) — NEW COLUMN « SEXE » — PUSHED `cfbcd58`, LIVE; USER CHECKS 5–7 OPEN
 
 ### D.0 State in one line (update after every stage)
 
-**CODE DONE AND VERIFIED (D0–D6). NOW: THE USER IS PUSHING AND DEPLOYING IT — RESUME AT §D.7
-(deploy runbook).** Do not re-implement anything. The user runs every deploy step; the assistant never
+**CODE DONE AND VERIFIED (D0–D6). PUSHED AND LIVE — the user's checks §D.7.3 steps 5–7 still open.**
+Do not re-implement anything. The user runs every deploy step; the assistant never
 `git add` / `commit` / `push` (§0.3) and never connects to the VPS without explicit permission.
 
-**Deploy position (2026-10-02): steps 1–3 ticked (all 7 tables owned by `travelapp` → step 3 not needed);
-next = step 4 (commit + push, on the laptop).** At the
+**Deploy position (2026-10-02): steps 1–4 ticked** (all 7 tables owned by `travelapp` → step 3 not needed;
+commit `cfbcd58` pushed — remote `master` = `cfbcd58`). §D.7.5 right after: C = `401`, D =
+`/app/assets/index-BPW7hBrE.js` with 1 × « Sexe » → the new backend started (so its startup migration
+succeeded: had the ALTER failed, the API would be down) and the new frontend is live. **Open:** step 5 (the
+user looks at « CI » / « Deploy »), step 6 (journal + column on the VPS), step 7 (acceptance). The user then
+switched to task E (§E) before these. At the
 user's request (« CRUCIAL one instruction at a time! ») the deploy is guided **one command per message**:
 give exactly one command, wait for the user to paste its output, check it, tick §D.7.4, then give the next.
 
@@ -498,9 +656,11 @@ git push origin master
 
 **Step 6 — VPS, the column and the startup log:**
 ```bash
-sudo journalctl -u travelapp.service --since "30 min ago" --no-pager | grep -E "Schéma mis à jour|Database startup check failed|must be owner|startup failed"
+sudo journalctl -u travelapp.service --since "2026-10-02" --no-pager | grep -E "Schéma mis à jour|Database startup check failed|must be owner|startup failed"
 sudo -u postgres psql -d travelapp -c "SELECT sex, count(*) FROM passports GROUP BY sex;"
 ```
+(`--since "2026-10-02"`, not "30 min ago": the push of `cfbcd58` was ~09:30 UTC that day, and every later
+deploy — e.g. task E's — restarts the backend again without printing that line, the column being there.)
 Expected: « Schéma mis à jour : colonnes ajoutées passports.sex » (absent if step 3 added the column by
 hand — fine), **no** « Database startup check failed »; every existing row has an empty `sex` (normal:
 old scans are not stored, so they cannot be re-read).
@@ -542,7 +702,12 @@ The previous code works with the `sex` column present (verified) — leave the c
       — auth_tokens, ocr_jobs, passports, purchases, trial_requests, users, voyages — are owned by `travelapp`
       (2026-10-02, the user's output)
 - [x] 3 Column added by hand: **not needed** — `travelapp` owns `passports`, so the startup migration adds it
-- [ ] 4 Commit ______ pushed to `master`
+- [x] 4 Commit **`cfbcd58`** (21 files, 1139+ / 79−, parent `68dde4a`; dry run = the 21 files) — committed by
+      the user 2026-10-02 · pushed to `master`: **yes** (`git ls-remote`: remote `master` = `cfbcd58`).
+      Evidence for step 5 seen from the laptop (not a substitute for the user's look at the workflows):
+      API `401`, live bundle `index-BPW7hBrE.js` with « Sexe »
+      (From here on `SCANID-HANDOVER.md` shows as modified: these ticks are written after the commit —
+      expected, it goes into a later commit; it does not affect the deploy.)
 - [ ] 5 « CI » green · « Deploy » green
 - [ ] 6 Column present, no startup error, existing rows empty
 - [ ] 7 Acceptance on https://scanid.fr (items 1–6)
