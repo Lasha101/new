@@ -36,10 +36,10 @@ const documentType = number =>
 const EXPORT_COLUMNS = ['last_name', 'first_name', 'sex', 'birth_date', 'expiration_date', 'nationality',
     'passport_number', 'document_type', 'destination', 'confidence_score'];
 const EXPORT_HEADERS = {
-    last_name: 'Nom de famille', first_name: 'Prénom', sex: 'Sexe', birth_date: 'Date de Naissance',
-    expiration_date: "Date d'Expiration", nationality: 'Nationalité',
+    last_name: 'Nom de famille', first_name: 'Prénom', sex: 'Sexe', birth_date: 'Date de naissance',
+    expiration_date: "Date d'expiration", nationality: 'Nationalité',
     passport_number: 'Numéro de document', document_type: 'Type',
-    destination: 'Destination', confidence_score: 'Score de Confiance',
+    destination: 'Destination', confidence_score: 'Score de confiance',
 };
 
 // The session now travels in a cookie, so every request is credentialed — and
@@ -97,7 +97,7 @@ function apiPath(url) {
 }
 
 const API_PATHS = [
-    '/token', '/logout', '/users/me', '/users/register', '/events', '/destinations', '/auth',
+    '/token', '/logout', '/users/me', '/events', '/destinations', '/auth',
     '/admin/filterable-users', '/admin/users', '/admin/trial-requests', '/passports', '/ocr/jobs', '/export/data',
     '/signup', '/orders', '/session',
 ];
@@ -302,30 +302,6 @@ export async function installMockApi(context, options = {}) {
                 status: 200,
                 headers: { ...corsHeaders(request), 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
                 body: ': keep-alive\n\n',
-            });
-        }
-
-        // POST /users/register — self-registration (main.py:614). Mirrors the two
-        // French conflict messages and the 5/minute limit's 429.
-        if (path === '/users/register' && method === 'POST') {
-            const body = JSON.parse(request.postData() || '{}');
-            if (body.email === state.user.email) {
-                return json(route, 400, { detail: 'Email déjà enregistré' });
-            }
-            if (body.user_name === state.user.user_name) {
-                return json(route, 400, { detail: "Nom d'utilisateur déjà enregistré" });
-            }
-            // The password policy is enforced server-side (package C,
-            // backend/password_policy.py). The mock mirrors main.py, so it
-            // must refuse what the real endpoint refuses — and in the same
-            // ORDER: main.py checks the two conflicts first, so a duplicate
-            // username is reported as a duplicate even when the password is
-            // also weak.
-            const policyErrors = passwordPolicyErrors(body.password || '');
-            if (policyErrors.length) return json(route, 422, { detail: policyErrors.join(' ') });
-            return json(route, 200, {
-                ...body, id: 'u-new', role: 'user', password: undefined,
-                uploaded_pages_count: 0, page_credits: 10, passports: [], voyages: [],
             });
         }
 

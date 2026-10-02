@@ -23,7 +23,7 @@ const validSiret = () => ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 async function fillSignup(page, overrides = {}) {
     const values = {
-        Prénom: 'Claire', Nom: 'Achat', 'Société / agence': 'Agence Test Voyages', 'Email professionnel': 'claire@agence-test.fr',
+        Prénom: 'Claire', Nom: 'Achat', 'Société / agence': 'Agence Test Voyages', 'E-mail professionnel': 'claire@agence-test.fr',
         Téléphone: '+33 1 00 00 00 00', Rue: "1 rue de l'Essai", 'Code postal': '75001', Ville: 'Paris',
         SIRET: validSiret(), 'N° de TVA intracommunautaire (facultatif)': 'FR12345678901', ...overrides,
     };
@@ -44,7 +44,10 @@ test.describe('Inscription avant paiement', () => {
         await expect(summary).toContainText('690,00 €');
         await expect(summary).toContainText('138,00 €');
         await expect(summary).toContainText('828,00 €');
-        await expect(summary).toContainText('0,69 € HT le scan');
+        // Alex, after go-live (2026-10-02): « documents », never « scans ».
+        await expect(summary).toContainText('1 000 documents (passeports ou CNI françaises) — crédits valables 12 mois, soit 0,69 € HT le document.');
+        await expect(page.getByText('Votre compte est créé avant le paiement : vos crédits y sont ajoutés dès que Stripe confirme le règlement.')).toBeVisible();
+        expect(await page.locator('body').innerText()).not.toMatch(/\bscans?\b/i);
         await expect(page.getByLabel('Pays', { exact: true })).toHaveValue('France');
 
         await fillSignup(page, { SIRET: '12345678901234' });

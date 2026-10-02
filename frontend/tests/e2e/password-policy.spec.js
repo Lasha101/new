@@ -1,22 +1,31 @@
-// The registration screen's password rules: visible before typing, live as
-// the user types, and an example that is generated rather than hardcoded.
+// The password rules of /app/inscription — the public form that sets a
+// password since self-registration was closed (2026-10-02): visible before
+// typing, live as the user types, and an example that is generated rather
+// than hardcoded.
 //
 // The rules themselves are enforced by the server (backend/password_policy.py,
 // tests/test_password_policy.py). What is under test here is that the user is
 // told what they are BEFORE being rejected for breaking them.
 import { expect } from '@playwright/test';
 import { test } from './test-base.js';
-import { SELECTORS, APP_BASE } from '../helpers/index.js';
+import { APP_BASE } from '../helpers/index.js';
 
 const RULES = ['length', 'uppercase', 'digits', 'specials'];
 
-/** Opens « Créer un nouveau compte » from the login screen. */
+/** Opens the account form of /app/inscription (Pack 100). */
 async function openRegistration(page) {
-    await page.goto(APP_BASE);
-    await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
-    await page.getByRole('button', { name: 'Créer un compte' }).click();
-    await expect(page.getByRole('heading', { name: 'Créer un nouveau compte' })).toBeVisible();
+    await page.goto(`${APP_BASE}inscription?pack=100`);
+    await expect(page.getByRole('heading', { name: 'Créer votre compte' })).toBeVisible();
 }
+
+/** A SIRET that passes the page's own check (Luhn), so only the password can be refused. */
+const validSiret = () => ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    .map(d => `7328293200007${d}`)
+    .find((candidate) => {
+        let total = 0;
+        [...candidate].reverse().forEach((c, i) => { let n = Number(c); if (i % 2) { n *= 2; if (n > 9) n -= 9; } total += n; });
+        return total % 10 === 0;
+    });
 
 const passwordField = page => page.locator('input[name="password"]');
 const rule = (page, id) => page.locator(`.sid-pwrules__item[data-rule="${id}"]`);
@@ -100,7 +109,6 @@ test.describe('Règles de mot de passe — inscription', () => {
         const seen = new Set([first]);
         for (let attempt = 0; attempt < 6; attempt++) {
             await page.reload();
-            await page.getByRole('button', { name: 'Créer un compte' }).click();
             seen.add(await page.getByTestId('password-example').innerText());
         }
         expect(seen.size, "l'exemple doit être généré, pas codé en dur").toBeGreaterThan(1);
@@ -124,14 +132,16 @@ test.describe('Règles de mot de passe — inscription', () => {
 
     test('un mot de passe non conforme affiche le message du serveur nommant la règle', async ({ page }) => {
         await openRegistration(page);
-        await page.locator('input[name="first_name"]').fill('Jean');
-        await page.locator('input[name="last_name"]').fill('Dupont');
-        await page.locator('input[name="email"]').fill('jean.dupont@example.com');
-        await page.locator('input[name="phone_number"]').fill('0600000000');
-        await page.locator('input[name="user_name"]').fill('jdupont');
+        const fields = {
+            first_name: 'Jean', last_name: 'Dupont', company: 'Agence Dupont', email: 'jean.dupont@example.com',
+            phone_number: '0600000000', billing_street: "1 rue de l'Essai", billing_postal_code: '75001',
+            billing_city: 'Paris', siret: validSiret(),
+        };
+        for (const [name, value] of Object.entries(fields)) await page.locator(`input[name="${name}"]`).fill(value);
         await passwordField(page).fill('pw');
+        await page.locator('input[name="consent"]').check();
 
-        await page.getByRole('button', { name: "S'inscrire" }).click();
+        await page.getByRole('button', { name: 'Créer mon compte et payer' }).click();
 
         const alert = page.locator('.sid-alert--err');
         await expect(alert).toBeVisible();

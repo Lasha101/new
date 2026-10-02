@@ -134,11 +134,7 @@ def test_the_method_and_header_allow_lists_are_not_wildcards():
 # --- Step 6: authentication ---------------------------------------------
 
 def test_a_new_account_stores_an_argon2_hash(client, db_session):
-    response = client.post("/users/register", json={
-        "first_name": "Arg", "last_name": "On", "email": "argon@example.com",
-        "phone_number": "0600000000", "user_name": "argonuser", "password": GOOD_PASSWORD,
-    })
-    assert response.status_code == 200, response.text
+    make_user(db_session, "argonuser", password=GOOD_PASSWORD)
 
     import crud
     stored = crud.get_user_by_username(db_session, username="argonuser")
@@ -146,10 +142,7 @@ def test_a_new_account_stores_an_argon2_hash(client, db_session):
 
 
 def test_a_new_account_can_log_in_and_a_wrong_password_cannot(client, db_session):
-    client.post("/users/register", json={
-        "first_name": "Log", "last_name": "In", "email": "login@example.com",
-        "phone_number": "0600000000", "user_name": "loginuser", "password": GOOD_PASSWORD,
-    })
+    make_user(db_session, "loginuser", password=GOOD_PASSWORD)
 
     ok = client.post("/token", data={"username": "loginuser", "password": GOOD_PASSWORD})
     assert ok.status_code == 200, ok.text
@@ -161,10 +154,7 @@ def test_a_new_account_can_log_in_and_a_wrong_password_cannot(client, db_session
 
 
 def test_the_session_cookie_carries_all_three_flags(client, db_session):
-    client.post("/users/register", json={
-        "first_name": "Cook", "last_name": "Ie", "email": "cookie@example.com",
-        "phone_number": "0600000000", "user_name": "cookieuser", "password": GOOD_PASSWORD,
-    })
+    make_user(db_session, "cookieuser", password=GOOD_PASSWORD)
     os.environ["SESSION_COOKIE_SECURE"] = "1"   # force the production flag
     try:
         response = client.post("/token", data={"username": "cookieuser", "password": GOOD_PASSWORD})
@@ -184,10 +174,7 @@ def test_a_readable_marker_cookie_accompanies_the_session(client, db_session):
     expired session from a first visit — both are a 401. A second, readable
     cookie carrying only "1" restores that distinction without exposing
     anything: it is what keeps « Votre session a expiré » working."""
-    client.post("/users/register", json={
-        "first_name": "Hint", "last_name": "Cookie", "email": "hint@example.com",
-        "phone_number": "0600000000", "user_name": "hintuser", "password": GOOD_PASSWORD,
-    })
+    make_user(db_session, "hintuser", password=GOOD_PASSWORD)
     response = client.post("/token", data={"username": "hintuser", "password": GOOD_PASSWORD})
     assert response.status_code == 200
 
@@ -209,10 +196,7 @@ def test_a_readable_marker_cookie_accompanies_the_session(client, db_session):
 
 
 def test_logout_clears_the_marker_cookie_too(client, db_session):
-    client.post("/users/register", json={
-        "first_name": "Hint", "last_name": "Out", "email": "hintout@example.com",
-        "phone_number": "0600000000", "user_name": "hintout", "password": GOOD_PASSWORD,
-    })
+    make_user(db_session, "hintout", password=GOOD_PASSWORD)
     client.post("/token", data={"username": "hintout", "password": GOOD_PASSWORD})
     assert client.cookies.get(config.SESSION_HINT_COOKIE_NAME) == "1"
 
@@ -223,10 +207,7 @@ def test_logout_clears_the_marker_cookie_too(client, db_session):
 def test_the_cookie_alone_authenticates_a_request(client, db_session):
     """No Authorization header anywhere: the cookie the login set is the only
     credential, which is what makes an HttpOnly session possible."""
-    client.post("/users/register", json={
-        "first_name": "Only", "last_name": "Cookie", "email": "onlyc@example.com",
-        "phone_number": "0600000000", "user_name": "onlycookie", "password": GOOD_PASSWORD,
-    })
+    make_user(db_session, "onlycookie", password=GOOD_PASSWORD)
     login = client.post("/token", data={"username": "onlycookie", "password": GOOD_PASSWORD})
     assert login.status_code == 200
 
@@ -246,10 +227,7 @@ def test_the_bearer_header_still_works(client, db_session):
 
 
 def test_logout_clears_the_cookie(client, db_session):
-    client.post("/users/register", json={
-        "first_name": "Bye", "last_name": "Bye", "email": "bye@example.com",
-        "phone_number": "0600000000", "user_name": "byeuser", "password": GOOD_PASSWORD,
-    })
+    make_user(db_session, "byeuser", password=GOOD_PASSWORD)
     client.post("/token", data={"username": "byeuser", "password": GOOD_PASSWORD})
     assert client.get("/users/me").status_code == 200
 

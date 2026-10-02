@@ -14,8 +14,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 // Where the application itself lives — '/app/' in production, because the
 // public site occupies the origin root (see vite.config.js). Every history
 // rewrite below has to land here: pushing '/' would put the marketing site's
-// address in the bar, and the reload that follows registration would leave the
-// visitor on the home page instead of the login screen they just earned.
+// address in the bar instead of the application's.
 const APP_ROOT = import.meta.env.BASE_URL;
 
 // The views that have an address of their own under the app: the page a
@@ -55,7 +54,7 @@ const SITE_URL = 'https://scanid.fr/';
 const SITE_LINKS = [
     ['Présentation', `${SITE_URL}presentation.html`],
     ['Ressources', `${SITE_URL}ressources.html`],
-    ['Tarifs', `${SITE_URL}#tarifs`],
+    ['Tarifs', `${SITE_URL}tarifs.html`],
     ['FAQ', `${SITE_URL}faq.html`],
     ['Contact', `${SITE_URL}contact.html`],
 ];
@@ -297,20 +296,20 @@ const columnTranslations = {
     first_name: 'Prénom',
     last_name: 'Nom de famille',
     sex: 'Sexe', // F / M as read from the MRZ, empty when unreadable
-    birth_date: 'Date de Naissance',
+    birth_date: 'Date de naissance',
     // delivery_date removed
-    expiration_date: "Date d'Expiration",
+    expiration_date: "Date d'expiration",
     nationality: 'Nationalité',
     passport_number: 'Numéro de document',
-    confidence_score: 'Score de Confiance',
-    email: 'Email',
-    phone_number: 'Numéro de Téléphone',
-    user_name: "Nom d'Utilisateur",
+    confidence_score: 'Score de confiance',
+    email: 'E-mail',
+    phone_number: 'Numéro de téléphone',
+    user_name: "Nom d'utilisateur",
     role: 'Rôle',
     destination: 'Destination',
     actions: 'Actions',
     uploaded_pages_count: 'Documents traités',
-    page_credits: 'Crédits Pages' // NEW
+    page_credits: 'Crédits pages' // NEW
 };
 
 // --- HELPER COMPONENTS & ICONS ---
@@ -539,7 +538,7 @@ export default function App() {
     useEffect(() => { if (online && token && !user) fetchUser(); }, [online, token, user, fetchUser]);
     const renderView = () => {
         switch (view) {
-            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
+            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
             case 'forgot': return <ForgotPasswordPage onBackToLogin={() => setView('login')} />;
             case 'inscription': return <PackSignupPage
                 user={user}
@@ -548,9 +547,8 @@ export default function App() {
             case 'password': return <SetPasswordPage
                 onDone={(userName) => { setLoginPrefill(userName || ''); window.history.pushState({}, '', APP_ROOT); setUser(null); setToken(false); setView('login'); }}
                 onForgot={() => { window.history.pushState({}, '', APP_ROOT); setView('forgot'); }} />;
-            case 'signup': return <SelfRegistrationPage onBackToLogin={() => setView('login')} />;
             case 'dashboard': return <Dashboard user={user} logout={logout} token={token} fetchUser={fetchUser} />;
-            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onShowRegistration={() => setView('signup')} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
+            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
         }
     };
     const handleReconnect = useCallback(() => { reportNetworkResult(true); fetchUser(); }, [fetchUser]);
@@ -576,7 +574,7 @@ export default function App() {
 }
 
 // --- PAGE & VIEW COMPONENTS ---
-function Login({ setToken, fetchUser, onShowRegistration, onForgotPassword, sessionExpired = false, initialUsername = '' }) {
+function Login({ setToken, fetchUser, onForgotPassword, sessionExpired = false, initialUsername = '' }) {
     const [username, setUsername] = useState(initialUsername);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -643,9 +641,6 @@ function Login({ setToken, fetchUser, onShowRegistration, onForgotPassword, sess
                                 {isLoading ? 'Connexion...' : 'Se connecter'}
                             </button>
                         </form>
-                        <button type="button" onClick={onShowRegistration} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>
-                            Créer un compte
-                        </button>
                     </div>
                 </div>
             </div>
@@ -688,11 +683,11 @@ function ForgotPasswordPage({ onBackToLogin }) {
                         <p className="sid-alert sid-alert--ok">{message}</p>
                     ) : (
                         <>
-                            <p>Indiquez votre email ou votre nom d'utilisateur : nous vous envoyons un lien pour choisir un nouveau mot de passe.</p>
+                            <p>Indiquez votre e-mail ou votre nom d'utilisateur : nous vous envoyons un lien pour choisir un nouveau mot de passe.</p>
                             {error && <p className="sid-alert sid-alert--err">{error}</p>}
                             <form onSubmit={handleSubmit}>
                                 <div className="form-group">
-                                    <label className="sid-label" htmlFor="forgot-identifier">Email ou nom d'utilisateur</label>
+                                    <label className="sid-label" htmlFor="forgot-identifier">E-mail ou nom d'utilisateur</label>
                                     <input id="forgot-identifier" type="text" value={identifier} onChange={e => setIdentifier(e.target.value)} className="sid-input" autoComplete="username" required />
                                 </div>
                                 <button type="submit" className="sid-btn" style={{ width: '100%', marginTop: '0.5rem' }} disabled={isLoading}>{isLoading ? 'Envoi…' : 'Recevoir le lien'}</button>
@@ -845,7 +840,7 @@ function PackSignupPage({ user, onLogin, onBackToApp }) {
         <div className="sid-signup">
             <div className="sid-card sid-pack-summary">
                 <h2>Pack {formatCount(summary.scans)}</h2>
-                <p>{formatCount(summary.scans)} scans de passeports ou CNI françaises — crédits valables 12 mois, soit {formatEuros(summary.perScanHtCents)} HT le scan.</p>
+                <p>{formatCount(summary.scans)} documents (passeports ou CNI françaises) — crédits valables 12 mois, soit {formatEuros(summary.perScanHtCents)} HT le document.</p>
                 <dl className="sid-pack-summary__rows">
                     <dt>Prix HT</dt><dd>{formatEuros(summary.htCents)}</dd>
                     <dt>TVA 20 %</dt><dd>{formatEuros(summary.vatCents)}</dd>
@@ -867,7 +862,7 @@ function PackSignupPage({ user, onLogin, onBackToApp }) {
             ) : (
                 <form className="sid-card" onSubmit={handleSignup}>
                     <h2>Créer votre compte</h2>
-                    <p>Votre compte est créé avant le paiement : vos scans y sont ajoutés dès que Stripe confirme le règlement.</p>
+                    <p>Votre compte est créé avant le paiement : vos crédits y sont ajoutés dès que Stripe confirme le règlement.</p>
                     {error && <p className="sid-alert sid-alert--err">{error}</p>}
                     <div className="sid-form-grid">
                         {field('first_name', 'Prénom', { required: true, autoComplete: 'given-name' })}
@@ -875,7 +870,7 @@ function PackSignupPage({ user, onLogin, onBackToApp }) {
                     </div>
                     {field('company', 'Société / agence', { required: true, autoComplete: 'organization' })}
                     <div className="sid-form-grid">
-                        {field('email', 'Email professionnel', { type: 'email', required: true, autoComplete: 'email' })}
+                        {field('email', 'E-mail professionnel', { type: 'email', required: true, autoComplete: 'email' })}
                         {field('phone_number', 'Téléphone', { type: 'tel', required: true, autoComplete: 'tel' })}
                     </div>
                     <div className="form-group">
@@ -906,22 +901,6 @@ function PackSignupPage({ user, onLogin, onBackToApp }) {
             )}
         </div>
     );
-}
-
-function SelfRegistrationPage({ onBackToLogin }) {
-    const [formData, setFormData] = useState({ first_name: '', last_name: '', email: '', phone_number: '', user_name: '', password: '' });
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    const handleSubmit = async (e) => {
-        e.preventDefault(); setError(''); setSuccess('');
-        try {
-            const response = await fetch(`${API_URL}/users/register`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
-            if (response.ok) { setSuccess('Inscription réussie ! Vous allez être redirigé vers la page de connexion.'); setTimeout(() => { window.history.pushState({}, '', APP_ROOT); window.location.reload(); }, 2000); } else { const detail = (await response.json()).detail; setError(typeof detail === 'string' ? detail : "Échec de l'inscription. Veuillez vérifier les champs saisis."); }
-        } catch (err) { setError("Une erreur est survenue lors de l'inscription."); }
-    };
-    if (success) return <div className="sid-card"><p className="sid-alert sid-alert--ok">{success}</p></div>
-    return (<div className="sid-card"><h2>Créer un nouveau compte</h2>{error && <p className="sid-alert sid-alert--err">{error}</p>}<form onSubmit={handleSubmit}><div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Nom d'utilisateur</label><input type="text" name="user_name" value={formData.user_name} onChange={handleChange} className="sid-input" required /></div><div className="form-group"><label className="sid-label">Mot de passe</label><PasswordInput name="password" value={formData.password} onChange={handleChange} required={true} /><PasswordRules value={formData.password} /></div><button type="submit" className="sid-btn" style={{ width: '100%' }}>S'inscrire</button></form><button type="button" onClick={onBackToLogin} className="sid-btn-outline" style={{ width: '100%', marginTop: '0.75rem' }}>Retour à la connexion</button></div>);
 }
 
 // Static field configurations, at module scope so their identity is stable:
@@ -1113,7 +1092,7 @@ function TrialRequestsPage() {
             try { data = await response.json(); } catch { /* non-JSON body */ }
             if (response.ok) {
                 setMessage(action === 'validate'
-                    ? `Demande validée : ${request.email} reçoit l'email de bienvenue avec son lien pour choisir un mot de passe.`
+                    ? `Demande validée : ${request.email} reçoit l'e-mail de bienvenue avec son lien pour choisir un mot de passe.`
                     : `Demande de ${request.nom} refusée.`);
             } else {
                 setError(typeof data.detail === 'string' ? data.detail : 'Action impossible.');
@@ -1127,12 +1106,12 @@ function TrialRequestsPage() {
     };
 
     const formatDate = (value) => new Date(value).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const details = [['Email', 'email'], ['Téléphone', 'telephone'], ['Volume', 'volume'], ['SIRET', 'siret'], ['N° de TVA', 'tva'], ['Message', 'message']];
+    const details = [['E-mail', 'email'], ['Téléphone', 'telephone'], ['Volume', 'volume'], ['SIRET', 'siret'], ['N° de TVA', 'tva'], ['Message', 'message']];
 
     return (
         <div className="sid-trials">
             <h2>Demandes d'essai</h2>
-            <p>Chaque demande a créé un compte en attente avec 20 scans offerts. « Valider » ouvre le compte et envoie l'email de bienvenue avec un lien pour choisir le mot de passe ; « Refuser » le ferme sans email. Sans décision, une demande est supprimée après 30 jours.</p>
+            <p>Chaque demande a créé un compte en attente avec 20 documents offerts. « Valider » ouvre le compte et envoie l'e-mail de bienvenue avec un lien pour choisir le mot de passe ; « Refuser » le ferme sans e-mail. Sans décision, une demande est supprimée après 30 jours.</p>
             {message && <p className="sid-alert sid-alert--ok">{message}</p>}
             {error && <p className="sid-alert sid-alert--err">{error}</p>}
             {requests === null ? null : requests.length === 0 ? (
@@ -1242,7 +1221,7 @@ function AccountEditor({ user, fetchUser }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                     <div className="form-group"><label className="sid-label">Prénom</label><input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="sid-input" /></div>
                     <div className="form-group"><label className="sid-label">Nom de famille</label><input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="sid-input" /></div>
-                    <div className="form-group"><label className="sid-label">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" /></div>
+                    <div className="form-group"><label className="sid-label">E-mail</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="sid-input" /></div>
                     <div className="form-group"><label className="sid-label">Numéro de téléphone</label><input type="text" name="phone_number" value={formData.phone_number} onChange={handleChange} className="sid-input" /></div>
                     <div className="form-group">
                         <label className="sid-label">{columnTranslations['uploaded_pages_count']}</label>
@@ -2128,7 +2107,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             )}
             {/* --- END EXPORT PANEL --- */}
 
-            {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-1"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, Email...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="sid-input" autoComplete="off"/></div></div> )}
+            {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-1"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, E-mail...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="sid-input" autoComplete="off"/></div></div> )}
             {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-1">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><span className="sid-label" style={{ margin: 0 }}>Type</span><div className="sid-seg" role="group" aria-label="Filtrer par type de document (PP = passeport, PI = pièce d'identité)" data-name="document_type_filter">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <button key={option.value} type="button" value={option.value} className={docTypeFilter === option.value ? 'is-active' : ''} aria-pressed={docTypeFilter === option.value} onClick={() => handleDocTypeFilterChange(option.value)}>{option.label}</button> ))}</div></div> )} </div> )}
             {/* Both views are always mounted; only CSS decides which one shows,
                 so a resize never unmounts a view and never loses state. */}

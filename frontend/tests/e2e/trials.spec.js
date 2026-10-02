@@ -26,6 +26,8 @@ test.describe('Demandes d’essai', () => {
 
         await page.locator(SELECTORS.navButtons).filter({ hasText: "Demandes d'essai" }).click();
         await expect(page.getByRole('heading', { name: "Demandes d'essai" })).toBeVisible();
+        // Alex, after go-live (2026-10-02): « documents » and « e-mail ».
+        await expect(page.locator('.sid-trials > p').first()).toHaveText(/^Chaque demande a créé un compte en attente avec 20 documents offerts\. « Valider » ouvre le compte et envoie l'e-mail de bienvenue .* « Refuser » le ferme sans e-mail\./);
         const cards = page.locator('.sid-trial-request');
         await expect(cards).toHaveCount(2);
         await expect(cards.first()).toContainText('Marie Dupont-Test — Agence Horizon Test');
@@ -34,7 +36,7 @@ test.describe('Demandes d’essai', () => {
         await expect(cards.first()).toContainText('50 à 200 documents / mois');
 
         await cards.first().getByRole('button', { name: 'Valider' }).click();
-        await expect(page.locator('.sid-alert--ok')).toContainText("Marie.Test@agence-horizon.fr reçoit l'email de bienvenue");
+        await expect(page.locator('.sid-alert--ok')).toContainText("Marie.Test@agence-horizon.fr reçoit l'e-mail de bienvenue");
         await expect(cards).toHaveCount(1);
         expect(api.trialRequests[0].status).toBe('validated');
 

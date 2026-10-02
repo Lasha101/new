@@ -17,8 +17,8 @@ from tests.helpers import make_user, make_passport, auth_headers
 import os
 
 # Column order of the downloaded files = order of the on-screen table.
-FRENCH_HEADERS = ["Nom de famille", "Prénom", "Sexe", "Date de Naissance", "Date d'Expiration", "Nationalité",
-                  "Numéro de document", "Type", "Destination", "Score de Confiance"]
+FRENCH_HEADERS = ["Nom de famille", "Prénom", "Sexe", "Date de naissance", "Date d'expiration", "Nationalité",
+                  "Numéro de document", "Type", "Destination", "Score de confiance"]
 # Named column indexes, so the assertions read like the table.
 NOM, PRENOM, SEXE, NAISSANCE, EXPIRATION, NATIONALITE, NUMERO, TYPE, DESTINATION, SCORE = range(10)
 INTERNAL_COLUMNS = {"id", "owner_id", "ID", "OWNER_ID", "Identifiant", "Propriétaire"}
@@ -93,7 +93,7 @@ def test_csv_cell(value, expected):
 
 @pytest.mark.parametrize("value, expected", [
     (None, 0), ("", 0), ("ABC", 3), (0.8734, 6), (date(1990, 5, 17), 10),
-    (datetime(1990, 5, 17, 12, 0), 10), ("Score de Confiance", 18),
+    (datetime(1990, 5, 17, 12, 0), 10), ("Score de confiance", 18),
 ])
 def test_displayed_length(value, expected):
     assert main._displayed_length(value) == expected
@@ -253,7 +253,7 @@ def test_xlsx_dates_displayed_as_dd_mm_yyyy(client, user_with_documents):
     'dd/MM/yyyy' reads as day/month/year in both that grammar and Excel's."""
     ws = read_xlsx(client.get("/export/data", headers=user_with_documents["headers"]))
     header = [cell.value for cell in ws[1]]
-    date_columns = [header.index("Date de Naissance") + 1, header.index("Date d'Expiration") + 1]
+    date_columns = [header.index("Date de naissance") + 1, header.index("Date d'expiration") + 1]
     for row in ws.iter_rows(min_row=2):
         for column in date_columns:
             cell = row[column - 1]
@@ -302,9 +302,9 @@ def test_xlsx_column_widths_fit_longest_value(client, user_with_documents):
     widths = {letter: dim.width for letter, dim in ws.column_dimensions.items() if not dim.hidden}
     # Independent oracle: the longest displayed text of every column of the fixture.
     longest_expected = {
-        "A": len("Nom de famille"), "B": len("ÉLODIE"), "C": len("Sexe"), "D": len("Date de Naissance"),
-        "E": len("Date d'Expiration"), "F": len("Nationalité"), "G": len("Numéro de Passeport"), "H": len("Type"),
-        "I": len("Destination"), "J": len("Score de Confiance"),
+        "A": len("Nom de famille"), "B": len("ÉLODIE"), "C": len("Sexe"), "D": len("Date de naissance"),
+        "E": len("Date d'expiration"), "F": len("Nationalité"), "G": len("Numéro de Passeport"), "H": len("Type"),
+        "I": len("Destination"), "J": len("Score de confiance"),
     }
     assert set(widths) == set(longest_expected)
     for letter, longest in longest_expected.items():
@@ -318,7 +318,7 @@ def test_xlsx_column_widths_fit_longest_value(client, user_with_documents):
 
 def test_xlsx_unused_grid_columns_hidden(client, user_with_documents):
     """The sheet ends visually at the last data column: every grid column
-    after 'Score de Confiance' is hidden (one K..XFD range)."""
+    after 'Score de confiance' is hidden (one K..XFD range)."""
     ws = read_xlsx(client.get("/export/data", headers=user_with_documents["headers"]))
     trailing = ws.column_dimensions["K"]
     assert trailing.hidden is True

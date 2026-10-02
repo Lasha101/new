@@ -213,6 +213,14 @@ def stripe_webhook_secret() -> str:
     return os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
 
 
+def public_signup_held() -> bool:
+    """PUBLIC_SIGNUP=0 holds /api/config's `signup` false although the webhook
+    secret is set: the secret goes in first, one test purchase proves the
+    crediting, then the line goes (Alex's order, 2026-10-02). Unset, `signup`
+    follows the secret as before; nothing turns it on without the secret."""
+    return os.getenv("PUBLIC_SIGNUP", "").strip().lower() in ("0", "false", "no", "off")
+
+
 STRIPE_WEBHOOK_TOLERANCE_SECONDS = _env_int("STRIPE_WEBHOOK_TOLERANCE_SECONDS", 300)
 SIGNUP_RATE_LIMIT = os.getenv("SIGNUP_RATE_LIMIT", "5/minute")
 

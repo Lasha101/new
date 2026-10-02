@@ -15,7 +15,7 @@ test.describe('Mot de passe oublié', () => {
         await page.getByRole('button', { name: 'Mot de passe oublié ?' }).click();
 
         await expect(page.getByRole('heading', { name: 'Mot de passe oublié' })).toBeVisible();
-        await page.getByLabel("Email ou nom d'utilisateur").fill('alice@example.com');
+        await page.getByLabel("E-mail ou nom d'utilisateur").fill('alice@example.com');
         await page.getByRole('button', { name: 'Recevoir le lien' }).click();
 
         await expect(page.locator('.sid-alert--ok')).toHaveText(/Le lien est valable 48 heures\./);

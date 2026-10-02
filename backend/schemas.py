@@ -57,15 +57,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     page_credits: Optional[int] = 0
-    # Honored only on the admin create endpoint; self-registration builds its
+    # Honored only on the admin create endpoint; the public signup builds its
     # UserCreate server-side and never exposes this field.
     role: Literal["user", "admin"] = "user"
-
-
-class UserRegister(UserBase):
-    """Self-registration payload. Deliberately has no `page_credits` field:
-    the signup credit amount is fixed server-side."""
-    password: str
 
 
 class BillingIdentity(BaseModel):

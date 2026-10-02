@@ -11,6 +11,7 @@ import logging
 
 import pytest
 
+import billing_identity
 import password_policy
 from tests.helpers import make_user
 
@@ -104,30 +105,35 @@ def test_a_password_containing_the_account_name_is_rejected():
 
 # --- The server is the authority ----------------------------------------
 
+def signup(client, password, email="direct@example.com"):
+    """POST /signup (/app/inscription): the public form that sets a password,
+    now that self-registration is closed. Every other field is valid, so the
+    password is the only thing the server can refuse."""
+    siret = next(f"7328293200007{d}" for d in "0123456789" if billing_identity.is_valid_siret(f"7328293200007{d}"))
+    return client.post("/signup", json={
+        "pack": 100, "first_name": "Test", "last_name": "Direct", "company": "Agence Test",
+        "email": email, "password": password, "phone_number": "0600000000",
+        "billing_street": "1 rue de l'Essai", "billing_postal_code": "75001", "billing_city": "Paris",
+        "billing_country": "France", "siret": siret, "vat_number": "", "consent": True,
+    })
+
+
 def test_the_policy_is_enforced_server_side_bypassing_the_frontend(client):
     """Posted straight at the API — no form, no JavaScript, no frontend
     validation anywhere in the path. The server must still refuse."""
-    response = client.post("/users/register", json={
-        "first_name": "Test", "last_name": "Direct", "email": "direct@example.com",
-        "phone_number": "0600000000", "user_name": "direct", "password": "pw",
-    })
+    response = signup(client, "pw")
     assert response.status_code == 422, response.text
     assert "12 caractères" in response.json()["detail"]
 
 
-def test_a_compliant_registration_still_succeeds(client):
-    response = client.post("/users/register", json={
-        "first_name": "Test", "last_name": "Ok", "email": "ok@example.com",
-        "phone_number": "0600000000", "user_name": "okuser", "password": GOOD_PASSWORD,
-    })
+def test_a_compliant_signup_still_succeeds(client):
+    response = signup(client, GOOD_PASSWORD, email="ok@example.com")
     assert response.status_code == 200, response.text
+    assert response.json()["checkout_url"]
 
 
 def test_the_rejection_names_every_broken_rule_at_once(client):
-    response = client.post("/users/register", json={
-        "first_name": "Test", "last_name": "Multi", "email": "multi@example.com",
-        "phone_number": "0600000000", "user_name": "multi", "password": "abcdefghijkl",
-    })
+    response = signup(client, "abcdefghijkl", email="multi@example.com")
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert "majuscule" in detail
@@ -145,10 +151,7 @@ def test_a_rejected_password_appears_in_no_log_and_in_no_response(client, caplog
     root.addHandler(handler)
     try:
         with caplog.at_level(logging.DEBUG):
-            response = client.post("/users/register", json={
-                "first_name": "Test", "last_name": "Quiet", "email": "quiet@example.com",
-                "phone_number": "0600000000", "user_name": "quiet", "password": secret,
-            })
+            response = signup(client, secret, email="quiet@example.com")
     finally:
         root.removeHandler(handler)
 

@@ -131,6 +131,23 @@ def test_public_config(client, monkeypatch):
     assert client.get("/config").json() == {"signup": True, "trial": False}
 
 
+def test_signup_can_be_held_off_while_the_webhook_is_tested(client, monkeypatch):
+    # Alex's order (2026-10-02): the secret first, one test purchase, then signup.
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+    for held in ("0", "false", "no", "off", " OFF "):
+        monkeypatch.setenv("PUBLIC_SIGNUP", held)
+        assert client.get("/config").json()["signup"] is False, held
+    for other in ("", "1", "on"):
+        monkeypatch.setenv("PUBLIC_SIGNUP", other)
+        assert client.get("/config").json()["signup"] is True, other
+    monkeypatch.delenv("PUBLIC_SIGNUP")
+    assert client.get("/config").json()["signup"] is True
+    # It never turns signup on without the secret.
+    monkeypatch.delenv("STRIPE_WEBHOOK_SECRET")
+    monkeypatch.setenv("PUBLIC_SIGNUP", "1")
+    assert client.get("/config").json()["signup"] is False
+
+
 # --- « Demandes d'essai » --------------------------------------------------------
 
 @pytest.fixture()
@@ -168,7 +185,7 @@ def test_valider_sends_the_welcome_email_and_the_client_logs_in_with_20_credits(
     assert len(outbox) == 1
     welcome = outbox[0]
     assert welcome.to == "marie.test@agence-horizon.fr" and welcome.kind == "trial_welcome"
-    assert welcome.subject == "Votre espace ScanID est ouvert — 20 scans offerts"
+    assert welcome.subject == "Votre espace ScanID est ouvert — 20 documents offerts"
     assert "Adresse : https://scanid.fr/app/" in welcome.body
     assert "Identifiant : marie.test@agence-horizon.fr" in welcome.body
     assert "Bonjour Marie," in welcome.body and "guide-photo.html" in welcome.body

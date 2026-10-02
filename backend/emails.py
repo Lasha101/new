@@ -43,7 +43,7 @@ def password_reset(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
         f"{config.PASSWORD_TOKEN_HOURS} heures, utilisable une seule fois) :\n"
         f"{password_link(raw_token)}\n\n"
         f"Votre identifiant : {user.get('user_name')}\n\n"
-        "Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email : "
+        "Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail : "
         "votre mot de passe actuel reste valable.\n\n"
         f"{SIGNATURE}\n"
     )
@@ -53,11 +53,11 @@ def password_reset(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
 def trial_admin_notification(request: Dict[str, Any]) -> Tuple[str, str]:
     subject = f"Demande d'essai — {request.get('societe') or request.get('nom')}"
     lines = [
-        "Nouvelle demande d'essai sur scanid.fr/essai.html (20 scans offerts).",
+        "Nouvelle demande d'essai sur scanid.fr/essai.html (20 documents offerts).",
         "",
         f"Nom : {request.get('nom')}",
         f"Société : {request.get('societe') or '—'}",
-        f"Email : {request.get('email')}",
+        f"E-mail : {request.get('email')}",
         f"Téléphone : {request.get('telephone') or '—'}",
         f"Volume : {request.get('volume') or '—'}",
         f"SIRET : {request.get('siret') or '—'}",
@@ -74,10 +74,10 @@ def trial_admin_notification(request: Dict[str, Any]) -> Tuple[str, str]:
 
 
 def trial_welcome(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
-    subject = "Votre espace ScanID est ouvert — 20 scans offerts"
+    subject = "Votre espace ScanID est ouvert — 20 documents offerts"
     body = (
         f"Bonjour {user.get('first_name') or ''},\n\n"
-        "Votre espace ScanID est prêt. Vous disposez de 20 scans offerts — de quoi traiter un "
+        "Votre espace ScanID est prêt. Vous disposez de 20 documents offerts — de quoi traiter un "
         "premier dossier groupe complet sur vos propres passeports.\n\n"
         "Vos accès :\n"
         f"- Adresse : {config.app_public_url()}\n"
@@ -91,7 +91,7 @@ def trial_welcome(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
         "2. Importez-les dans votre espace, seuls ou par lot.\n"
         "3. Téléchargez votre fichier Excel/CSV.\n\n"
         "Le guide complet est ici : https://scanid.fr/guide.html\n\n"
-        "Une question, un doute, un document qui résiste ? Répondez simplement à cet email — "
+        "Une question, un doute, un document qui résiste ? Répondez simplement à cet e-mail — "
         "c'est moi qui vous lis.\n\n"
         f"{SIGNATURE}\n"
     )
@@ -99,10 +99,10 @@ def trial_welcome(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
 
 
 def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime) -> Tuple[str, str]:
-    subject = f"Vos {_scans(pack)} scans ScanID sont disponibles"
+    subject = f"Vos {_scans(pack)} documents ScanID sont disponibles"
     body = (
         f"Bonjour {user.get('first_name') or ''},\n\n"
-        f"Merci pour votre achat du Pack {_scans(pack)}. Vos {_scans(pack)} scans ont été ajoutés à "
+        f"Merci pour votre achat du Pack {_scans(pack)}. Vos {_scans(pack)} documents ont été ajoutés à "
         f"votre espace ScanID ; ils sont valables jusqu'au {_date_fr(expires_at)}.\n\n"
         f"Votre espace : {config.app_public_url()}\n"
         f"Votre identifiant : {user.get('user_name')}\n\n"
@@ -139,7 +139,7 @@ def payment_anomaly(reason: str, session: Dict[str, Any]) -> Tuple[str, str]:
         f"Raison : {reason}\n"
         f"Session Stripe : {session.get('id')}\n"
         f"client_reference_id : {session.get('client_reference_id') or '—'}\n"
-        f"Email du client : {details.get('email') or session.get('customer_email') or '—'}\n"
+        f"E-mail du client : {details.get('email') or session.get('customer_email') or '—'}\n"
         f"Montant HT (centimes) : {session.get('amount_subtotal')}\n"
         f"Montant TTC (centimes) : {session.get('amount_total')} {session.get('currency') or ''}\n\n"
         "Aucun crédit n'a été ajouté. Vérifiez le paiement dans le tableau de bord Stripe et créditez "

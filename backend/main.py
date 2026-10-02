@@ -60,10 +60,6 @@ logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
-# Every self-registered account starts with exactly this many page credits
-# (1 credit = 1 successfully extracted document; failures are not charged).
-SIGNUP_PAGE_CREDITS = 5
-
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 CSV_MEDIA_TYPE = "text/csv"
 # French Excel splits a double-clicked CSV on the Windows list separator,
@@ -117,9 +113,9 @@ EXPORT_COLUMNS = ["last_name", "first_name", "sex", "birth_date", "expiration_da
                   "passport_number", "document_type", "destination", "confidence_score"]
 EXPORT_HEADERS = {
     "document_type": "Type", "first_name": "Prénom", "last_name": "Nom de famille", "sex": "Sexe",
-    "birth_date": "Date de Naissance", "expiration_date": "Date d'Expiration",
+    "birth_date": "Date de naissance", "expiration_date": "Date d'expiration",
     "nationality": "Nationalité", "passport_number": "Numéro de document",
-    "destination": "Destination", "confidence_score": "Score de Confiance",
+    "destination": "Destination", "confidence_score": "Score de confiance",
 }
 
 
@@ -870,9 +866,11 @@ def public_config():
     """What scanid.fr may switch on (Spec v3 §3). `signup` sends « Souscrire »
     to /app/inscription instead of straight to Stripe, so it is only true once
     the Stripe webhook secret is configured — before that, a paid pack could
-    never be credited automatically. `trial` needs email: the request is useless
-    if nobody is told about it."""
-    return {"signup": bool(config.stripe_webhook_secret()), "trial": mailer.is_configured()}
+    never be credited automatically — and PUBLIC_SIGNUP=0 can still hold it off
+    while the first purchase is tested. `trial` needs email: the request is
+    useless if nobody is told about it."""
+    signup = bool(config.stripe_webhook_secret()) and not config.public_signup_held()
+    return {"signup": signup, "trial": mailer.is_configured()}
 
 
 # --- Free trial (Spec v2 §1) ---
@@ -1014,26 +1012,9 @@ async def events(request: Request, token: Optional[str] = Query(None), db: Sessi
 
 
 # --- User Routes ---
-@app.post("/users/register", response_model=schemas.User)
-@limiter.limit("5/minute")
-def self_register_user(request: Request, user: schemas.UserRegister, db: Session = Depends(get_db)):
-    """Autonomous self-registration: no invitation needed, and the account
-    starts with exactly SIGNUP_PAGE_CREDITS page credits."""
-    if crud.get_user_by_email(db, email=user.email):
-        raise HTTPException(status_code=400, detail="Email déjà enregistré")
-    if crud.get_user_by_username(db, username=user.user_name):
-        raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà enregistré")
-
-    # The server is the authority on the password policy. The registration form
-    # shows the same four rules live as the user types, but that is convenience
-    # only: a request posted straight to this endpoint is held to exactly the
-    # same standard. The rejected value is never logged and never echoed back.
-    password_policy.assert_valid_password(
-        user.password, email=user.email, user_name=user.user_name
-    )
-
-    new_user = schemas.UserCreate(**user.model_dump(), page_credits=SIGNUP_PAGE_CREDITS)
-    return crud.create_user(db=db, user=new_user, role="user")
+# There is no public self-registration (Alex, after go-live, 2026-10-02): an
+# account is opened by a validated trial request (/trial-requests), by the pack
+# purchase (/signup), or by an administrator (POST /admin/users/).
 
 
 @app.get("/users/me", response_model=schemas.User)

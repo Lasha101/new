@@ -79,7 +79,7 @@ test.describe('Tri du tableau', () => {
 
     test('le tri par date utilise la valeur stockée, pas le texte affiché', async ({ page }) => {
         await login(page);
-        await header(page, 'birth_date', 'Date de Naissance').locator('.sort-checkbox').check();
+        await header(page, 'birth_date', 'Date de naissance').locator('.sort-checkbox').check();
 
         // Displayed DD/MM/YYYY, but sorted on the ISO value behind it: sorting
         // the *strings* would put 03/11/1982 before 09/07/2001 before 17/05/1990.
@@ -312,32 +312,20 @@ test.describe('Formulaires', () => {
         await expect(field).toHaveAttribute('type', 'password');
     });
 
-    test('l’inscription aboutit et signale un identifiant déjà pris', async ({ page }) => {
+    test('l’écran de connexion ne propose que la connexion, sans « Créer un compte »', async ({ page }) => {
+        // Alex, after go-live (2026-10-02): no public self-registration. The
+        // card shows E-mail, Mot de passe, « Mot de passe oublié ? » and
+        // « Se connecter », nothing else (the eye belongs to the password field).
         await page.goto(APP_BASE);
-        await page.getByRole('button', { name: 'Créer un compte' }).click();
-        await expect(page.getByRole('heading', { name: 'Créer un nouveau compte' })).toBeVisible();
-
-        const fill = async (values) => {
-            for (const [name, value] of Object.entries(values)) {
-                await page.locator(`input[name="${name}"]`).fill(value);
-            }
-        };
-        // The username the mock already owns => the server's French error shows.
-        await fill({
-            first_name: 'Nouvelle', last_name: 'Agence', email: 'nouvelle@example.com',
-            // Conforme à la politique du paquet C (12+, 1 majuscule, 2 chiffres,
-            // 2 spéciaux) : ce test porte sur les conflits d'identifiant,
-            // pas sur le mot de passe.
-            phone_number: '0601020304', user_name: 'alice', password: 'Girafe!!12Nuage',
-        });
-        await page.getByRole('button', { name: "S'inscrire" }).click();
-        await expect(page.locator(SELECTORS.errorMessage))
-            .toHaveText("Nom d'utilisateur déjà enregistré");
-
-        // A free username succeeds.
-        await fill({ user_name: 'agence-lyon' });
-        await page.getByRole('button', { name: "S'inscrire" }).click();
-        await expect(page.locator('.sid-alert--ok')).toContainText('Inscription réussie');
+        const card = page.locator(SELECTORS.loginForm);
+        await expect(card).toBeVisible();
+        await expect(card.locator('label')).toHaveText(['E-mail', 'Mot de passe']);
+        await expect(card.locator('input')).toHaveCount(2);
+        const buttons = await card.getByRole('button').evaluateAll(list =>
+            list.map(button => (button.getAttribute('aria-label') || button.textContent).trim()));
+        expect(buttons).toEqual(['Afficher le mot de passe', 'Mot de passe oublié ?', 'Se connecter']);
+        await expect(page.getByRole('button', { name: 'Créer un compte' })).toHaveCount(0);
+        await expect(page.getByText('Créer un nouveau compte')).toHaveCount(0);
     });
 
     test('« Mon Compte » se pré-remplit et enregistre', async ({ page, api }) => {

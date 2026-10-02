@@ -6,36 +6,40 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§F) exactly where it stopped, under the same
+> instruction to **resume the current task (§G) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
 > 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`; the site's
 >    source of truth is read-only — since task F it is
 >    `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/`, §F.3.1; work in stages; update this
 >    file after every stage; outside the repository: read **only when needed for the demand**,
->    write only with permission). The user's rule for task F: a demand of the current prompt wins
->    over a restriction of this file (§F.1).
-> 2. Read **§F** (the current task, 2026-10-02 — Alex's new website + « à la carte » credits)
->    first: §F.0 says which stage is next, §F.4 lists the stages. §B.0.3 still holds the
->    environment and the commands (test suites, e2e, lint, build), all valid for §F.
-> 3. Check the working tree matches §F.0 (`git status --short`) and compare.
-> 4. Continue at the **first stage of §F.4 not marked DONE** (inside F5, at the first unticked
->    sub-step of §F.5). After each stage, mark it `DONE` in §F.4, append its record below §F.4, and
->    update §F.0. **If every stage is DONE** (the state on 2026-10-02): check the tree against §F.0
->    and run its quick baseline (backend 357, unit 89), then wait for the user — when they ship,
->    guide §F.6 steps 1–7 **one command per message**, tick them in §F.0, and mark task F SHIPPED.
+>    write only with permission). The user's rule (§F.1, repeated for §G): a demand of the current
+>    prompt wins over a restriction of this file.
+> 2. Read **§G** (the current task, 2026-10-02 — Alex's « after go-live » list) first: **§G.0.0 lists
+>    every prompt of the session that produced §F's shipping and §G, with what is done and what is
+>    left**; §G.0 says which stage is next, §G.4 lists the stages. §B.0.3 still holds the environment and the
+>    commands (test suites, e2e, lint, build), all valid for §G; §F.5 holds the real-stack harness.
+> 3. Check the working tree matches §G.0 (`git status --short`) and compare.
+> 4. Continue at the **first stage of §G.4 not marked DONE**. After each stage, mark it `DONE` in
+>    §G.4, append its record below §G.4, and update §G.0. **If every stage is DONE**: run §G.0's
+>    quick baseline, then wait for the user — when they ship, guide §G's ship steps **one command
+>    per message** and tick them in §G.0.
 > 5. Keep answering the user in their conversation language; keep the UI in French.
-> 6. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
->    open: the user's checks, §D.7.3 steps 5–7 (workflows, journal + column on the VPS, acceptance).
->    Guide them **one command per message** (the user's rule, §D.0) when the user returns to them.
->    Once §D.0 says **SHIPPED**, §D is a record.
+> 6. **Task F is pushed (`e9d527d`) and live, except the nginx reload** (§F.0 ship step 4: the cache
+>    headers and the two 301s wait for `sudo nginx -t && sudo systemctl reload nginx` on the VPS).
+>    Task G changes the vhost again: one reload after G ships covers both.
+> 7. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
+>    open: the user's checks, §D.7.3 steps 5–7. Guide them **one command per message** when the
+>    user returns to them. (Alex's « after go-live » note confirms « Sexe » live in the list and the
+>    XLSX export.)
 >
 > §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
 > `68dde4a`), §E (committed `bf7dc3c`, pushed) and §1–§9 (the v5 site task, live) are records only.
 
-Last updated: 2026-10-02 (task F — Alex's new website + « à la carte » credits — **done and verified locally,
-not committed**; the user ships it per §F.6. Task E committed `bf7dc3c` and pushed. Task D pushed as `cfbcd58`
-and live; the user's checks §D.7.3 steps 5–7 still open)
+Last updated: 2026-10-02 (task G — Alex's « after go-live » list — **done and verified locally, not committed**; the
+user ships it per §G.5. Task F pushed as `e9d527d` and live, nginx reload pending (done by §G.5 step 3). Every prompt of
+this session and what is done: §G.0.0. Task E committed `bf7dc3c` and pushed. Task D pushed as `cfbcd58` and live; the
+user's checks §D.7.3 steps 5–7 still open)
 
 ---
 
@@ -94,27 +98,389 @@ they applied to the previous one (v4).
 
 ---
 
-## F. CURRENT TASK (2026-10-02) — ALEX'S NEW WEBSITE (« nouveau-site ») + « À LA CARTE » CREDITS
+## G. CURRENT TASK (2026-10-02) — ALEX'S « AFTER GO-LIVE » LIST
+
+### G.0.0 THIS SESSION (2026-10-02, the session after task F's) — EVERY PROMPT, WHAT IS DONE, WHAT IS LEFT
+
+Asked by the user (verbatim): « Wen you finich this stage update the SCANID-HANDOVER.md to mark what is aready done
+from the prompts of the current session! » — this table. **Done** = finished and checked in this session; **Left** = what
+is still open, and who does it.
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « Read SCANID-HANDOVER.md and resume = continue from the interrupted stage! All what you need to implement is in frontend/ScanID-nouveau-site-2026-09-30, but partially it is already implemented, resume = continue where it was interrupted! CRUCIAL if current prompt violates the restriction from SCANID-HANDOVER.md respect current prompt and neglect restriction from SCANID-HANDOVER.md! » + Alex's PDF « Lasha-Deploy-New-Website-2026-09-30.pdf » | **DONE.** Task F was already complete (F0–F6); re-checked: tree == §F.0, `HEAD` = `origin/master` = `bf7dc3c`, folder unchanged (63 files), backend 357, unit 89, `VITE_API_URL=/api npm run build` 64 files / 0 rewrites, guard 5/5, `dist/` root == folder + `sw.js`, no harness leftovers — nothing left to implement; shipping guided (rows 2–6) | — |
+| 2 | « Why i need "back up the live site on the server"? » then « it is deployed using github acctions and there is all version of the old codebase! » | **DONE.** Explained (Alex's PDF §3.1 assumes a hand upload; here the web root is rebuilt from Git); §F.6 step 1 **skipped by the user's decision**, ticked in §F.0 | — |
+| 3 | « All is tested and confirmed that it works? » | **DONE.** Answered: verified locally (suites, e2e 442/1, real stack 21/21 + 26/26) vs. only after the deploy (nginx 1.24 + reload, the workflow edits, real Formspree / Stripe) | — |
+| 4 | « There is nothing that must be in .gitignoe and is not in already? » | **DONE.** The 82 paths checked: no build output, logs, archives, caches or secrets (only fake test values); `backend/.env`, `frontend/.env.local`, `dist`, `node_modules`, `test-results`, `newvenv`, `__pycache__` still ignored → nothing to add | — |
+| 5 | « provide short git commit text! only text! » then « ? » | **DONE.** Message given; the user committed **`e9d527d`** « Site: Alex's new website, nginx cache and redirects, « à la carte » credits » | — |
+| 6 | « i commited! can push it? » | **DONE.** Commit checked (82 files, tree clean, parent `bf7dc3c`); the user pushed: `origin/master` = `e9d527d`; « Deploy » ran — site live (Alex's note: 63 files byte-identical) | **nginx reload on the VPS** (task F's cache headers + 301s): not done yet — folded into §G.5 step 3 (one reload for F and G) |
+| 7 | « CRUCIAL the restrictions and permissions remains same! Execute what is in attached .pdf file! » + Alex's PDF « Lasha-After-Go-Live-2026-10-02.pdf » | **DONE locally (G0–G8).** Section 2: « Créer un compte » + form removed, `POST /users/register` removed (404) — answer to Alex: such an account got **5 credits**. Section 3: « documents » / « e-mail » in the app and all e-mail templates. Section 4: `PUBLIC_SIGNUP=0` hold + runbook. Section 5: gzip, www → scanid.fr, « Tarifs » → `tarifs.html`, sentence-case headers. Verified: backend 365, unit 89, e2e 442 / 1 skipped, real stack 34 + 2 + 2 | **The user:** ship (§G.5 steps 1–5: commit + push, workflows, nginx reload, laptop checks); server steps A (the account list for Alex), B (`trial` = SMTP), C (`signup` = secret + hold + test purchase). Nothing committed (§0.3) |
+| 8 | « Wen you finich this stage update the SCANID-HANDOVER.md to mark what is aready done from the prompts of the current session! » | **DONE.** This table; « Last updated » and the resume protocol point here | — |
+
+### G.0 State in one line (update after every stage)
+
+**G0–G8 DONE — task G is complete locally and verified. NEXT: the user ships it — §G.5 steps 1–5 (commit + push, the
+two workflows, the nginx reload on the VPS — which also finishes task F —, the laptop checks), then the server steps A–C
+(the list for Alex, `trial` via SMTP, `signup` via secret + `PUBLIC_SIGNUP=0` + test purchase). Do not re-implement
+anything.** Nothing committed (§0.3).
+
+**Ship progress** (tick as the user reports each §G.5 step; one command per message when guiding):
+- [ ] 1 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
+- [ ] 2 « CI » green · « Deploy » green
+- [ ] 3 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED (also ticks §F.0 step 4)
+- [ ] 4 laptop checks of §G.5 step 4 (+ §F.6 step 5)
+- [ ] 5 SHIPPED → §G.0 and §F.0 say SHIPPED (hash, date); memory notes updated
+- [ ] A list for Alex · [ ] B `trial` true · [ ] C `signup` true (server steps, §G.5)
+
+**Expected `git status --short` (nothing staged) — 27 modified, 1 untracked:** ` M` `.github/workflows/ci.yml`,
+`README.md`, `SCANID-HANDOVER.md`, `backend/{.env.example,config.py,emails.py,main.py,schemas.py}`,
+`backend/tests/{helpers.py,test_existing_api.py,test_export.py,test_pack_purchase.py,test_password_policy.py,
+test_security_hardening.py,test_trial_requests.py,test_unit_purchase.py}`, `deploy/nginx-travelapp.conf`,
+`frontend/src/App.jsx`, `frontend/tests/e2e/{a11y,design-system,features,password-policy,password,signup,sitenav,
+trials}.spec.js`, `frontend/tests/mock/api.js`; `??` `backend/tests/test_email_wording.py`. Any other difference: report
+it, do not « fix » it.
+**Quick baseline for a resumed session:** `cd backend && ../newvenv/bin/python -m pytest -q` → **365 passed**;
+`cd frontend && npm run test:unit` → **89 passed**; full e2e **442 passed, 1 skipped**. If `docker ps` or
+`ps -eo pid,args | grep -E "uvicorn mai[n]|postgre[s] -D"` show leftovers of an interrupted G6/G7 run, stop them first
+(§F.5 « Stopping »). Git at the start of task G: `master` = `origin/master` = `e9d527d`; `git status --short` = only
+` M SCANID-HANDOVER.md`. Baseline before any change: backend **357**, unit **89**.
+
+### G.1 The demand, verbatim (user, 2026-10-02)
+
+> CRUCIAL the restrictions and permissions remains same!
+> Execute what is in attached .pdf file!
+
+The PDF was attached to the message (it is **not** in the repository): « Lasha-After-Go-Live-2026-10-02.pdf », Alex's
+note, 2 pages, headed « SCANID · FOR LASHA = for you- Claude Code! », « After go-live — confirmed and remaining »
+(checked live on 02/10 without an account; three things to do, sections 2–4; section 5 optional). In substance:
+1. **Confirmed — nothing to do.** Website (63 files byte-identical, 22 pages clean desktop + mobile, 404 page with
+   status 404); removals gone (temoignages.html, /iftm/, images/, og-image.png, the video, /fonts/site.css, /scripts/);
+   login page fixes; « Sexe » in the list and the XLSX export, PP / PI; forms reached contact@scanid.fr through
+   Formspree, « the trial request works end to end (Alex's test) »; the four Stripe links; `/api/docs` and
+   `/api/openapi.json` 404.
+2. **« Créer un compte » on the login page — to close.** Under « Se connecter », « Créer un compte » opens « Créer un
+   nouveau compte » (Prénom, Nom de famille, Email, Numéro de téléphone, Nom d'utilisateur, Mot de passe) → `POST
+   /api/users/register`: anyone can open an account without trial validation or a pack. **Question: how many credits
+   does such an account receive?** Requested: (1) remove the button and the form — the two ways in are the trial
+   request (validated in « Demandes d'essai ») and `/app/inscription?pack=…` (Spec v3); (2) close `POST
+   /api/users/register` to the public (remove it, or admin only) — only this form calls it; (3) if accounts were created
+   through it since go-live, send Alex the list (date, e-mail, credits). If self-registration must stay, tell Alex first
+   (at least 0 credits, e-mail as identifier). **Test:** `/app/` shows E-mail, Mot de passe, « Mot de passe oublié ? »
+   and « Se connecter », nothing else; a POST to `/api/users/register` no longer creates an account.
+3. **« scans » → « documents » in the app** (the site says « documents », Alex's decision of 14/09):
+   | Where | Now | Change to |
+   | --- | --- | --- |
+   | /app/inscription, pack summary | « 1 000 scans de passeports ou CNI françaises — crédits valables 12 mois, soit 0,69 € HT le scan. » | « 1 000 documents (passeports ou CNI françaises) — crédits valables 12 mois, soit 0,69 € HT le document. » |
+   | /app/inscription, under « Créer votre compte » | « … vos scans y sont ajoutés dès que Stripe confirme le règlement. » | « … vos crédits y sont ajoutés dès que Stripe confirme le règlement. » |
+   | Admin, « Demandes d'essai » | « Chaque demande a créé un compte en attente avec 20 scans offerts. » | « … avec 20 documents offerts. » In the same text, « email » → « e-mail ». |
+   | Field labels | « Email », « Email professionnel » | « E-mail », « E-mail professionnel » (as on the login page) |
+
+   « Please check the e-mail templates too (welcome, trial, purchase). » Alex updates the four Stripe product
+   descriptions himself. **Test:** no « scan » left on `/app/inscription?pack=1000`.
+4. **The two switches in `GET /api/config`** (today `{"signup": false, "trial": false}`): **trial → true, now** (only
+   effect on the site: the confirmation after a trial request says the password link arrives after validation);
+   **signup → true, after three things:** (1) section 3 done; (2) the Stripe webhook — Alex creates the endpoint
+   (`https://scanid.fr/api/stripe/webhook`, event `checkout.session.completed`) and gives the signing secret through the
+   dashboard, never by chat; (3) one test purchase: credits added once, the purchase in « Mes achats ». From then on the
+   site's « Choisir ce pack » opens `/app/inscription?pack=…`; nothing to change on the site.
+5. **Optional — server and small details:** compression (`gzip_types text/css application/javascript application/json
+   image/svg+xml text/xml;` — CSS and JS are sent uncompressed, site.css 113 KB); `https://www.scanid.fr/…` serves the
+   site without redirecting → 301 to `https://scanid.fr/…`; 301 `/temoignages.html` → `/presentation.html` and `/iftm/`
+   → `/essai.html` (today 404); app top menu « Tarifs » → `https://scanid.fr/tarifs.html` (today `/#tarifs`, which still
+   works); column headers, table and export, in sentence case as on the site: « Date de naissance », « Date
+   d'expiration », « Score de confiance ».
+   Later, nothing to do now: the « à la carte » payment link (§F.6 a–e).
+
+Constraints and permissions: §0, unchanged (« the restrictions and permissions remains same »); the user's rule of §F.1
+still applies. « Execute what is in the pdf » covers section 5 too.
+
+### G.2 Findings before touching anything
+
+1. **Self-registration** = `POST /users/register` (`main.py` `self_register_user`, 5/minute, `schemas.UserRegister`):
+   an **active** account with **`SIGNUP_PAGE_CREDITS = 5` credits** (the answer to Alex's question), usable at once,
+   with a freely chosen « Nom d'utilisateur » (not the e-mail). Only the login page's « Créer un compte » →
+   `SelfRegistrationPage` (view `signup`, no URL of its own) calls it. Other users of the route: the CI smoke test
+   (`openapi.json` must contain `"/users/register"`), backend tests (`test_existing_api` 1, `test_password_policy` 4 —
+   the server-side policy, `test_security_hardening` 7 — a quick way to create a user with a known password), e2e
+   (`features.spec.js` 1 test on that form, `password-policy.spec.js` 9 tests on its live password rules — the same
+   `PasswordRules` component is on `/app/inscription`), the e2e mock (route + `API_PATHS`). The remaining ways in:
+   `/trial-requests` (validated by Alex), `/signup` (`/app/inscription`, 0 credits + pending purchase), `POST
+   /admin/users/` (admin only).
+2. **The `users` table has no creation date** → for Alex's list (2.3): e-mail and credits from the database, dates from
+   the backend journal (uvicorn logs one `"POST /users/register HTTP/1.1" 200` line per account; production runs
+   `uvicorn main:app --port 8001` with its access log) or nginx's access logs (`/api/users/register`, rotated). In the
+   data, a self-registered account looks like an admin-created one: candidates = role `user`, no trial request, no
+   purchase (the trial and pack flows always leave one).
+3. **Visible « scans »:** `App.jsx` pack summary, the line under « Créer votre compte », the admin « Demandes d'essai »
+   text. E-mails (`emails.py`): trial notification to Alex (« 20 scans offerts »), welcome (subject + body), purchase
+   (subject + body). **Visible « email »:** field labels `columnTranslations.email` (admin users table + admin forms),
+   « Email professionnel » (inscription), the trial details « Email », « Mon Compte » « Email », the forgot page label
+   « Email ou nom d'utilisateur » and its sentence, the admin search placeholder « Rechercher (Nom, Email...) », the
+   admin trial text and its confirmation « … reçoit l'email de bienvenue … »; templates « cet email » (reset, welcome),
+   « Email : » (trial notification), « Email du client » (anomaly). The site writes « e-mail » (43×, never « email » in
+   text) and « 20 documents offerts ». Server error messages also say « email » (`crud`/`main` « Email déjà
+   enregistré », « L'adresse email n'est pas valide. », « Un compte existe déjà avec cette adresse email… », the
+   forgot-password answer « un email contenant un lien… », « L'envoi d'emails n'est pas configuré… », `trials.py` ×2).
+4. **Switches** (§C.2.4): derived, not stored — `signup = bool(STRIPE_WEBHOOK_SECRET)`, `trial = mailer.is_configured()`
+   (SMTP_HOST in production). « trial → true » = the SMTP variables on the server (§C.5.1), no code. « signup »:
+   installing the secret turns it on **at once**, i.e. at Alex's step (2), before his test purchase (3) — following his
+   order needs a way to hold it off.
+5. **Live, 2026-10-02 after the push of `e9d527d`:** site live; **nginx not reloaded** (no `Cache-Control`;
+   `/temoignages.html`, `/iftm/` → 404) — Alex's « Removed pages (today: 404) » is exactly task F's pending reload, no
+   code. CSS not gzipped (`content-length: 113379` with `Accept-Encoding: gzip`; HTML is: the server's `nginx.conf` has
+   `gzip on` with the default `text/html` only). `https://www.scanid.fr/` → 200: the 443 block has `server_name
+   scanid.fr www.scanid.fr` and the certificate covers www; port 80 already redirects everything to `https://scanid.fr`.
+6. **Column headers:** export `main.py` (French headers dict) and table `App.jsx` `columnTranslations` (« Date de
+   Naissance », « Date d'Expiration », « Score de Confiance »; the admin users table also « Numéro de Téléphone »,
+   « Nom d'Utilisateur »). Pinned by `test_export.py`, the mock, `design-system.spec.js`, `features.spec.js`.
+7. **Tarifs:** `SITE_LINKS` (top bar + the app's site menu) → `https://scanid.fr/#tarifs`. Also `#tarifs`: the « Ce pack
+   n'existe pas » page link and the backend's `UNKNOWN_PACK` message (both still work).
+
+### G.3 Decisions
+
+1. **Section 2 — removed, not made admin-only:** the admin path already exists (`POST /admin/users/`). Frontend: the
+   button, the `onShowRegistration` prop, the `signup` view, `SelfRegistrationPage`. Backend: the route,
+   `schemas.UserRegister`, `SIGNUP_PAGE_CREDITS` → `POST /api/users/register` answers **404** and creates nothing.
+   Existing accounts untouched (Alex decides from the list). Tests: the register-based fixtures → `make_user(…,
+   password=…)` (same `crud.create_user` every creation path uses); the 4 policy tests → `/signup` (the public form that
+   remains); the register test → « the route is closed » (404, no account); e2e: the registration test → Alex's test
+   (the login card holds exactly E-mail, Mot de passe, « Mot de passe oublié ? », « Se connecter »); the password-rules
+   spec → `/app/inscription?pack=100`; mock route removed; CI smoke → `"/signup"`. Alex's list: read-only commands for
+   the user on the VPS (§G ship steps).
+2. **Section 3 — Alex's four rows as written;** « email » → « e-mail » in every field label, column header and
+   placeholder of the app, the admin trial screen (text + confirmation), the forgot page (label + its sentence, same
+   card), and **all** e-mail templates (« check the e-mail templates too »: « scans » → « documents », « email » →
+   « e-mail »). Not changed: server error messages (G.2.3 — not labels, not templates; reported to the user), internal
+   names (`scans`, `perScanHtCents`, `_scans`), the e-mail signature's tagline.
+3. **Section 4 — trial:** no code (SMTP on the server, runbook). **signup:** new `PUBLIC_SIGNUP` — `0` / `false` /
+   `no` / `off` keeps `signup` false whatever the secret; unset = today's behaviour (never true without the secret).
+   Runbook: secret + `PUBLIC_SIGNUP=0` → test purchase through `/app/inscription?pack=100` → remove the line → `signup`
+   true.
+4. **Section 5:** nginx 443 block: `gzip on; gzip_vary on; gzip_types text/css application/javascript text/javascript
+   application/json image/svg+xml text/xml;` (Alex's list + `text/javascript`, which newer nginx `mime.types` use for
+   `.js`) and `if ($host = www.scanid.fr) { return 301 https://scanid.fr$request_uri; }` at server level (one block: an
+   HTTP/2 connection reused between the two names cannot bypass it). Removed pages: nothing (the reload). Tarifs:
+   `SITE_LINKS` only (the menu Alex names); the pack-not-found link and `UNKNOWN_PACK` keep `#tarifs` (reported).
+   Headers: sentence case in the export and the table, including the admin users table's two (same dictionary, same
+   rule).
+5. **Ship:** one commit; then the nginx reload (covers task F's too); the server steps are the user's.
+
+### G.4 Stages
+
+| Stage | Content | Status |
+| --- | --- | --- |
+| G0 | Survey (PDF, register route + users, texts, e-mails, switches, live headers, nginx, tests) + baselines (backend 357, unit 89) | **DONE** |
+| G1 | Demand, findings, decisions, plan here | **DONE** |
+| G2 | Section 2: remove self-registration (app, API, tests, mock, CI) | **DONE** |
+| G3 | Section 3: « scans » → « documents », « email » → « e-mail » (app, e-mail templates, tests) | **DONE** |
+| G4 | Section 5, app: « Tarifs » → `tarifs.html`; sentence-case headers (table + export, tests) | **DONE** |
+| G5 | Section 4: `PUBLIC_SIGNUP` hold (config, `/config`, `.env.example`, tests) | **DONE** |
+| G6 | Section 5, nginx: gzip + www → 301; tested on a docker nginx with the real vhost (§F.5 harness) | **DONE** |
+| G7 | Verification: backend, unit, lint, build + guard, full e2e, rendered checks of Alex's two tests | **DONE** |
+| G8 | Record + how to ship + the server runbook (reload; the list for Alex; trial = SMTP; signup = secret + hold + test purchase) | **DONE** (§G.5) |
+
+### Stage G2 — self-registration removed — DONE
+
+- `frontend/src/App.jsx`: « Créer un compte » button gone from `Login`; its `onShowRegistration` prop, the `signup` view
+  and `SelfRegistrationPage` (the « Créer un nouveau compte » form, the only caller of `/users/register`) removed; the
+  `APP_ROOT` comment no longer cites the registration reload.
+- `backend/main.py`: route `POST /users/register` and `SIGNUP_PAGE_CREDITS` removed; a 3-line comment under « User
+  Routes » says where accounts come from. `backend/schemas.py`: `UserRegister` removed; the `UserCreate.role` comment
+  names the public signup instead. → `POST /users/register` = **404** (no route, no other `/users/{…}` path matches).
+- Tests: `tests/helpers.py` `make_user(…, password=…)` (default unchanged); `test_security_hardening.py` 7 accounts made
+  with it (same `crud.create_user` as every creation path); `test_existing_api.py`
+  `test_self_registration_is_closed` (404, no user by e-mail or name, absent from `openapi.json`);
+  `test_password_policy.py` 4 server-side tests through `/signup` (local `signup()` helper, valid SIRET, only the
+  password can fail; « compliant registration » → « compliant signup » + `checkout_url`). E2E: `features.spec.js` —
+  the registration test → « l'écran de connexion ne propose que la connexion, sans « Créer un compte » » (Alex's test:
+  labels E-mail / Mot de passe, 2 inputs, buttons exactly « Afficher le mot de passe », « Mot de passe oublié ? »,
+  « Se connecter »); `password-policy.spec.js` → `/app/inscription?pack=100` (same `PasswordRules`), the server-message
+  test fills the inscription form by `name`. Mock: route + `API_PATHS` entry removed. CI smoke: `"/signup"`.
+- `README.md` items 2–3 described the removed feature → « No self-registration » / « Starting credits ».
+- Results: backend **357 passed** (count unchanged: 1 test replaced one for one); unit **89**; `password-policy` +
+  `features` desktop **35 passed**; eslint: `App.jsx` 11 problems (baseline 12 — one unused `err` left with the form),
+  the 3 touched test files clean.
+
+### Stage G3 — « documents » and « e-mail » — DONE
+
+- `frontend/src/App.jsx`: Alex's rows as written — pack summary « {n} documents (passeports ou CNI françaises) — crédits
+  valables 12 mois, soit {x} HT le document. »; « … vos crédits y sont ajoutés dès que Stripe confirme le règlement. »;
+  admin « Demandes d'essai » « … 20 documents offerts. « Valider » … l'e-mail de bienvenue … « Refuser » le ferme sans
+  e-mail. »; labels « E-mail » (`columnTranslations.email` — admin users table + admin forms; Mon Compte; trial
+  details), « E-mail professionnel » (inscription), « E-mail ou nom d'utilisateur » + its sentence « Indiquez votre
+  e-mail… » (forgot page), placeholder « Rechercher (Nom, E-mail...) », admin confirmation « … reçoit l'e-mail de
+  bienvenue … ». Internal names (`summary.scans`, `perScanHtCents`) unchanged.
+- `backend/emails.py`: trial notification « (20 documents offerts) », « E-mail : »; welcome subject « Votre espace ScanID
+  est ouvert — 20 documents offerts », body « Vous disposez de 20 documents offerts », « cet e-mail »; purchase subject
+  « Vos 1 000 documents ScanID sont disponibles », body « Vos 1 000 documents ont été ajoutés »; reset « cet e-mail »;
+  anomaly « E-mail du client ». Only the module docstring still says « email » (developer text). Server error messages
+  not changed (G.3.2).
+- Tests: 3 backend asserts follow (`test_pack_purchase`, `test_trial_requests`, `test_unit_purchase`); new
+  `tests/test_email_wording.py` (7: every template rendered — no `\bscans?\b`, no `\b[Ee]mails?\b`; the three named
+  texts) — against `HEAD`'s `emails.py`: **6 failed / 1 passed** (the à la carte e-mail was already clean), restored →
+  7 passed. E2E: `signup.spec.js` label « E-mail professionnel », Alex's pack-summary sentence, the « crédits » line and
+  **no `\bscans?\b` in the page text of `/app/inscription?pack=1000`** (Alex's test); `trials.spec.js` the intro text
+  (regex) + « l'e-mail de bienvenue »; `password.spec.js` label « E-mail ou nom d'utilisateur ».
+- Results: backend **364 passed** (357 + 7); `signup` / `trials` / `password` / `account` desktop **17 passed**, then
+  `trials` with the intro check **3 passed**.
+
+### Stage G4 — « Tarifs » and sentence-case headers — DONE
+
+- `frontend/src/App.jsx` `SITE_LINKS`: « Tarifs » → `https://scanid.fr/tarifs.html` (the top bar and the app's site menu
+  both render this list). The « Ce pack n'existe pas » link and the backend `UNKNOWN_PACK` message keep `#tarifs`
+  (G.3.4 — reported).
+- Headers, sentence case: `backend/main.py` `EXPORT_HEADERS` and `App.jsx` `columnTranslations` — « Date de
+  naissance », « Date d'expiration », « Score de confiance »; the admin users table's « Numéro de téléphone », « Nom
+  d'utilisateur » (same dictionary, same rule). The apostrophe stays the ASCII one the app uses everywhere (the site
+  writes « d’expiration » with ’; Alex asked for the case only).
+- Tests: `test_export.py` (10 strings — header list, date-column lookup, widths: lengths unchanged), the mock's export
+  headers, `design-system.spec.js` (4), `features.spec.js` (1), `sitenav.spec.js` (« Tarifs » href).
+- Results: backend **364**, unit **89**; `design-system` / `features` / `sitenav` / `sex-column` / `confidence` desktop
+  **49 passed**.
+
+### Stage G5 — the `PUBLIC_SIGNUP` hold — DONE
+
+- `backend/config.py` `public_signup_held()`: `PUBLIC_SIGNUP` = `0` / `false` / `no` / `off` (trimmed, any case) → true.
+  `backend/main.py` `public_config`: `signup = bool(STRIPE_WEBHOOK_SECRET) and not public_signup_held()` (docstring
+  says why); `trial` unchanged. `/signup` and `/orders` are NOT gated — the test purchase goes through them. Only the
+  site reads `/api/config` (`core.js` pack buttons, `essai.js` confirmation); the app never does.
+- `backend/.env.example`: `# PUBLIC_SIGNUP=0` under `STRIPE_WEBHOOK_SECRET=` with the three-step use.
+- Test `test_trial_requests.py::test_signup_can_be_held_off_while_the_webhook_is_tested` (held values → false; `""`,
+  `1`, `on`, unset → true; never true without the secret). Mutation: `/config` ignoring the hold → **1 failed**;
+  restored → passed. Backend **365 passed**.
+
+### Stage G6 — nginx: gzip and www → 301 — DONE
+
+- `deploy/nginx-travelapp.conf`, 443 block, right **below** `include …/nginx-security-headers.conf`: `if ($host =
+  www.scanid.fr) { return 301 https://scanid.fr$request_uri; }` — below on purpose: the include's `set $scanid_csp`
+  must run before the `return` (first placed above it, the www 301 left with **no CSP** — seen in the probe, moved);
+  then `gzip on; gzip_vary on; gzip_types text/css application/javascript text/javascript application/json
+  image/svg+xml text/xml;` (comments say why; `text/javascript` = RFC 9239's name — nginx 1.27's `mime.types` still
+  says `application/javascript` for `.js`, checked). Port 80 block and every location unchanged.
+- **Harness** (scratchpad, rebuildable — §F.5 items 1–2 + `nginx/probe.sh`): certs SAN scanid.fr + www.scanid.fr;
+  `make_conf.sh`; `scanid-nginx-new` (this vhost, 8081/8443) and `scanid-nginx-head` (`git show HEAD:` vhost,
+  8082/8444), `nginx:1.27-alpine`, `--network host`; backend = `stack/backend.sh` (uvicorn on 8001, ENVIRONMENT
+  production, scratch PostgreSQL on 55433 — SQLite is refused: production passes PostgreSQL-only connect options).
+  `probe.sh <https> <http>`: 43 lines (status, Location, Cache-Control, Content-Type, Content-Encoding, Vary, CSP zone
+  + count, nosniff/X-Frame/Referrer) with `Accept-Encoding: gzip` — NB the system `awk` is mawk: headers are matched
+  after `tolower`.
+- Results: `nginx -t` ok on both (only the old `listen … http2` warning). Diff HEAD → new = exactly: `Content-Encoding:
+  gzip` + `Vary: Accept-Encoding` on HTML (site pages, 404 bodies, `/app/`), CSS, JS (site + app bundle + `sw.js`), SVG,
+  `sitemap.xml`, `/api/config` JSON; **not** on ico, png, txt, pdf, woff2, jpeg, webmanifest; `www.scanid.fr` `/`,
+  `/tarifs.html?x=1`, `/app/`, `/api/config`, `/nope`, a POST → **301 `https://scanid.fr<same path + query>`** with the
+  app CSP + the 3 security headers (was 200 / served). Everything else identical (statuses, cache headers, CSP zones,
+  security headers; the 301s of `/temoignages.html` and `/iftm*` differ only by the test port in Location); `POST
+  /api/users/register` → 404 JSON. Integrity: gunzipped == plain == file (sha256) for site.css, core.js, tarifs.html,
+  favicon.svg, sitemap.xml, app/index.html; no `Accept-Encoding` → no encoding header; **site.css 113 379 → 30 832
+  bytes**, core.js 14 137 → 5 579, tarifs.html 19 371 → 6 013. Revalidation: gzip's weak ETag `W/"…"` and the plain
+  strong one both → **304**.
+
+### Stage G7 — verification — DONE
+
+| Check | Result |
+| --- | --- |
+| `cd backend && ../newvenv/bin/python -m pytest -q` | **365 passed** (357 + 7 wording + 1 hold; the register test replaced one for one) |
+| `cd frontend && npm run test:unit` | **89 passed** |
+| eslint, touched files | `App.jsx` **11** problems (baseline 12: one unused `err` left with the form); every touched test file clean. NB `npm run lint` (`eslint .`) also lints Alex's site scripts (`ScanID-nouveau-site-2026-09-30/…/assets/js`, 341 problems — browser globals) since task F; CI runs no lint (only the build); the read-only folder is not touched |
+| Full e2e, all projects | first run **439 passed, 3 failed, 1 skipped**: `a11y.spec.js` « les boutons de l'écran de connexion aussi » counted ≥ 2 design-system buttons (« Se connecter » + « Créer un compte ») → now ≥ 1, purpose kept (every one ≥ 44 px); clean rerun **442 passed, 1 skipped** (4.0 min, exit 0) = the pre-task count |
+| `VITE_API_URL=/api npm run build` + guard | 64 files, 0 rewrites; guard **5/5**; `dist/` root == the folder + `sw.js`; bundle `index-CXHlP1c2.js`: 0 × « Créer un compte », `users/register`, « HT le scan », « 20 scans », « Email professionnel », the title-case headers, `localhost`; 1 × « HT le document », « vos crédits y sont ajoutés », « 20 documents offerts », « E-mail professionnel », `tarifs.html`, `"/api"`; the one `#tarifs` = the « Ce pack n'existe pas » link (G.3.4) |
+| Real stack (docker nginx with the new vhost + uvicorn production mode + scratch PostgreSQL), Chromium (`stack/g7_check.cjs`, `--host-resolver-rules`, `--ignore-certificate-errors` — without it the self-signed test certificate blocks the service worker's script, the 4 « SSL certificate error » console lines of a first pass) | phase **base** (no secret) **34/34**: `/app/` desktop + 375 px — labels exactly « E-mail », « Mot de passe », 2 inputs, buttons exactly eye / « Mot de passe oublié ? » / « Se connecter », no « Créer un compte », every « Tarifs » → `tarifs.html`, no console error / failed request / CSP violation; `POST /api/users/register` from the page → **404** `{"detail":"Not Found"}`, database: 0 probe accounts (only `admin`); `/app/inscription?pack=1000` — **no `\bscans?\b` in the page text** (Alex's test), his sentence, « vos crédits… », « E-mail professionnel »; admin « Demandes d'essai » text, users table headers « E-mail », « Numéro de téléphone », « Nom d'utilisateur », « Crédits pages » (no capital after a space), placeholder « Rechercher (Nom, E-mail...) »; site `/`, `/tarifs.html`, `/presentation.html` — site.css + core.js arrived **gzip**, Mona Sans loaded, clean; `/api/config` signup false, « Choisir ce pack » → the Stripe link. Phase **held** (`STRIPE_WEBHOOK_SECRET` + `PUBLIC_SIGNUP=0`) **2/2**: signup false, button → Stripe; webhook live (bad signature → **400**, not 503). Phase **open** (secret, no hold) **2/2**: signup true, button → `/app/inscription?pack=1000`. Screenshots looked at (login card, inscription) |
+| Found and fixed during G7 | « Crédits Pages » — a 3rd title-case header in the same dictionary → « Crédits pages » (no test pinned it) |
+| Harness stopped | backend killed, both containers removed, PostgreSQL stopped; ports 8001 / 8081 / 8082 / 8443 / 8444 / 55433 / 5173 / 4173 free; `git status --short` = §G.0 (28 entries), nothing staged |
+
+### G.5 How to ship task G — and the server steps (stage G8)
+
+**What ships** (nothing committed, §0.3): 27 modified files + `backend/tests/test_email_wording.py` — `git add --dry-run .`
+= **28 paths** (§G.0 lists them). No new dependency, no database migration, no `.env` change required.
+
+**The user ships it** (one command per message when guided):
+1. **Laptop:** `git status --short` (= §G.0) → `git add --dry-run . | wc -l` (28) → `git add .` →
+   `git commit -m "App: close self-registration, « documents » and « e-mail » wording, sentence-case headers, Tarifs link; nginx gzip and www to scanid.fr; PUBLIC_SIGNUP hold"`
+   → `git push origin master`.
+2. **GitHub:** « CI » green (its smoke test now looks for `"/signup"`), « Deploy » green. The deploy restarts the backend
+   — `/users/register` disappears at that moment — and syncs the vhost (not yet active).
+3. **VPS — reload nginx** (activates task F's cache headers + 301s AND task G's gzip + www): `sudo nginx -t && sudo
+   systemctl reload nginx`, then `bash /opt/travelapp/ops/verify-front-end.sh` → « ALL CHECKS PASSED ».
+4. **Laptop checks** (public requests — the assistant may run them):
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{}' https://scanid.fr/api/users/register   # 404
+   curl -sI https://www.scanid.fr/tarifs.html | grep -iE '^(HTTP|location)'                       # 301 → https://scanid.fr/tarifs.html
+   curl -sI -H 'Accept-Encoding: gzip' 'https://scanid.fr/assets/css/site.css?v=202609302115' | grep -iE '^(content-encoding|cache-control|vary)'   # gzip, max-age=31536000, Accept-Encoding
+   curl -sI https://scanid.fr/tarifs.html | grep -i cache-control                                   # no-cache (task F)
+   curl -sI https://scanid.fr/temoignages.html | grep -iE '^(HTTP|location)'                         # 301 → /presentation.html (task F)
+   curl -sI https://scanid.fr/iftm/ | grep -iE '^(HTTP|location)'                                   # 301 → /essai.html (task F)
+   B=$(curl -s https://scanid.fr/app/ | grep -o '/app/assets/index-[^"]*\.js'); curl -s "https://scanid.fr$B" | grep -c -e 'Créer un compte' -e 'users/register' -e 'HT le scan'   # 0
+   curl -s https://scanid.fr/api/config                                                             # {"signup":false,"trial":false} until B / C below
+   ```
+5. Then task F's §F.0 steps 4–5 and task G are both shipped → mark §F.0 and §G.0 **SHIPPED** (hash, date).
+
+**Server steps — the user's (outside the repository), any time after step 2:**
+- **A. The list for Alex (PDF 2.3)** — read-only, on the VPS. The `users` table has no creation date (G.2.2), so:
+  - accounts that are neither trial nor pack (self-registered — or created by hand in Administration):
+    `sudo -u postgres psql -d travelapp -c "SELECT u.email, u.user_name, u.page_credits AS credits, u.uploaded_pages_count AS documents, u.status, (SELECT min(j.created_at) FROM ocr_jobs j WHERE j.user_id = u.id) AS first_upload FROM users u WHERE u.role = 'user' AND NOT EXISTS (SELECT 1 FROM trial_requests t WHERE t.user_id = u.id) AND NOT EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = u.id) ORDER BY u.email;"`
+    (tested on the scratch database: lists a stand-in self-registered account, not the admin);
+  - the dates, one line per account created: `sudo journalctl -u travelapp.service --no-pager -o short-iso | grep '"POST /users/register HTTP/1.1" 200'`;
+    how far the journal goes back: `sudo journalctl -u travelapp.service --no-pager -o short-iso | head -1`; nginx keeps
+    ~14 days: `sudo zgrep -h 'POST /api/users/register' /var/log/nginx/access.log* | grep '" 200 '`.
+  Nothing is deleted or changed — Alex decides what happens to those accounts.
+- **B. `trial` → true (PDF 4, « now »)** = e-mail on the server (§C.5.1): in `/opt/travelapp/backend/.env`
+  `SMTP_HOST=smtp.ionos.fr`, `SMTP_USERNAME=contact@scanid.fr`, `SMTP_PASSWORD=<the mailbox password — typed on the
+  server, never in a chat>` → `sudo systemctl restart travelapp.service` → `curl -s https://scanid.fr/api/config` →
+  `"trial":true`. Then Alex's run (§C.1): essai.html with his test address → notification at contact@scanid.fr + the
+  request in « Demandes d'essai » → Valider → welcome e-mail (« 20 documents offerts ») → password link (48 h) → login
+  « Crédits : 20 » → delete the test account.
+- **C. `signup` → true (PDF 4, after three things):** (1) section 3 — shipped with this task; (2) Alex creates the
+  endpoint `https://scanid.fr/api/stripe/webhook` (event `checkout.session.completed`; add
+  `checkout.session.async_payment_succeeded` so a bank transfer credits too, §C.5.2) and the signing secret goes into
+  `.env` — never through a chat — **together with `PUBLIC_SIGNUP=0`**: `STRIPE_WEBHOOK_SECRET=whsec_…` +
+  `PUBLIC_SIGNUP=0` → restart → `/api/config` still `"signup":false` while the webhook is live (checked in G7: a bad
+  signature → 400, not 503); (3) the test purchase: open `https://scanid.fr/app/inscription?pack=100` directly, create an
+  account with a test address, pay → « Crédits : 100 » once; in Stripe, « Resend » the event → credits unchanged;
+  « Mon Compte » → « Mes achats » shows « Pack 100 »; refund in Stripe if wanted. Then **delete the `PUBLIC_SIGNUP=0`
+  line** → restart → `"signup":true` → the site's « Choisir ce pack » opens `/app/inscription?pack=…` (checked in G7).
+  Without the hold line the flag turns on at step (2)'s restart.
+
+**Answers for Alex** (the user forwards them):
+- « How many credits does an account created this way receive? » — **5**, usable at once, with a freely chosen « Nom
+  d'utilisateur » (code: `SIGNUP_PAGE_CREDITS = 5`, now removed).
+- Section 2: the button and the form are gone; `POST /api/users/register` no longer exists (404, nothing created);
+  the list = step A.
+- Section 3: done as written, plus « e-mail » in every field label of the app and in all e-mail templates (welcome,
+  trial notification, purchase, password reset, anomaly). The four Stripe product descriptions are Alex's.
+- Section 4: `trial` = step B; `signup` = step C (the `PUBLIC_SIGNUP=0` hold makes his order possible).
+- Section 5: gzip, www → scanid.fr, « Tarifs » → tarifs.html, sentence-case headers in the table and the exports (also
+  « Numéro de téléphone », « Nom d'utilisateur », « Crédits pages » in the admin users table); the two 301s are live
+  once nginx is reloaded (step 3).
+- **Not changed — Alex's call:** server error messages still write « email » (e.g. « L'adresse email n'est pas
+  valide. », « Un compte existe déjà avec cette adresse email… », « Email déjà enregistré »); the « Ce pack n'existe
+  pas » page and its server message still link `scanid.fr/#tarifs` (works); « Crédits pages » still says « pages »
+  where the site says « documents »; headers keep the app's straight apostrophe (« Date d'expiration »).
+
+---
+
+## F. TASK F (2026-10-02) — ALEX'S NEW WEBSITE (« nouveau-site ») + « À LA CARTE » CREDITS — PUSHED `e9d527d`, LIVE; NGINX RELOAD PENDING
 
 ### F.0 State in one line (update after every stage)
 
-**F0–F6 DONE — task F is complete locally and verified. NEXT: the user ships it — §F.6 steps 1–7 (back up the web
-root, commit + push, watch « Deploy », reload nginx on the VPS, the laptop checks, Alex's ten-minute check). Do not
-re-implement anything.** Nothing committed (§0.3). « À la carte » is switched on later, with Alex (§F.6 a–e).
-*Resume check 2026-10-02 (later session, « resume where it was interrupted »): tree == the list below, `HEAD` =
-`origin/master` = `bf7dc3c`, folder unchanged (63 files, 30/09), backend 357, unit 89, `VITE_API_URL=/api npm run build`
-→ 64 files / 0 rewrites, guard 5/5, `dist/` root == folder + `sw.js`, no harness leftovers — nothing left to implement;
-waiting for the user at ship step 1.*
+**F0–F6 DONE; shipped as `e9d527d` (pushed 2026-10-02, live). Only open: §F.6 step 4, the nginx reload on the VPS
+(cache headers + the two 301s), then the laptop checks of step 5 — after task G ships, one reload covers both (§G).**
+« À la carte » is switched on later, with Alex (§F.6 a–e).
 
 **Ship progress** (tick as the user reports each §F.6 step; one command per message when guiding):
 - [x] 1 web root backup — **skipped by the user's decision (2026-10-02)**: the web root is rebuilt from Git by « Deploy »
   (`rsync --delete`, no exclusion), so every live version is in the repository; rollback = `git revert` + push
   (~5 min of CI + deploy)
-- [ ] 2 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
-- [ ] 3 « CI » green · « Deploy » green (probe `/assets/css/site.css` 200)
-- [ ] 4 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED
-- [ ] 5 laptop checks of §F.6 step 5 (new home, no-cache / max-age, 301s, 404, sitemap 21, `/api/config` unchanged)
-- [ ] 6 Alex's ten-minute check (essai → Formspree e-mail today, §F.6 step 6)
+- [x] 2 committed **`e9d527d`** (82 files, tree clean) and pushed by the user, 2026-10-02 — `git ls-remote origin
+  refs/heads/master` = `e9d527d…` = local `HEAD` (checked)
+- [x] 3 « Deploy » ran: the site is live (Alex's « after go-live » note, 02/10: the 63 files served are byte-identical to
+  the folder, `/fonts/site.css` and `/scripts/` gone; checked here: `/` 200, `/assets/css/site.css` 200, new app bundle
+  `index-PW3lKQZ5.js`). The run pages themselves are not visible from here (`gh` not installed).
+- [ ] 4 **nginx NOT reloaded yet** — checked live 2026-10-02: no `Cache-Control` on `/tarifs.html` or `/assets/…`,
+  `/temoignages.html` and `/iftm/` answer **404** (Alex: « Removed pages … today: 404 »). The user runs
+  `sudo nginx -t && sudo systemctl reload nginx` on the VPS — after task G ships, one reload covers F and G (§G).
+- [ ] 5 laptop checks of §F.6 step 5 — after the reload
+- [x] 6 Alex's ten-minute check — done by Alex (« after go-live » note §1: pages, forms → contact@scanid.fr, trial end to
+  end, Stripe links, login page, « Sexe », `/api/docs` 404); his remaining points are task G
 - [ ] 7 SHIPPED → §F.0 says SHIPPED (hash, date); §F becomes a record; memory note updated
 
 **Expected `git status --short` from F4 on (nothing staged) — 18 modified, 2 untracked:**

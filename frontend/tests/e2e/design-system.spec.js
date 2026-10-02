@@ -17,8 +17,8 @@ import { DOC_TYPE_PASSPORT, DOC_TYPE_ID_CARD } from '../../src/resultsHelpers.js
  * the results screen cannot silently reorder the downloaded files.
  */
 const BASELINE_EXPORT_HEADERS = [
-    'Nom de famille', 'Prénom', 'Sexe', 'Date de Naissance', "Date d'Expiration", 'Nationalité',
-    'Numéro de document', 'Type', 'Destination', 'Score de Confiance',
+    'Nom de famille', 'Prénom', 'Sexe', 'Date de naissance', "Date d'expiration", 'Nationalité',
+    'Numéro de document', 'Type', 'Destination', 'Score de confiance',
 ];
 
 /** English words that must never appear in this French UI. */
@@ -130,7 +130,7 @@ test.describe('Téléchargements', () => {
         expect(xlsx[0]).toEqual(BASELINE_EXPORT_HEADERS);
 
         // Accented French survived both encodings (UTF-8 BOM / shared strings).
-        for (const header of ['Prénom', 'Nationalité', "Date d'Expiration"]) {
+        for (const header of ['Prénom', 'Nationalité', "Date d'expiration"]) {
             expect(csv[0]).toContain(header);
             expect(xlsx[0]).toContain(header);
         }

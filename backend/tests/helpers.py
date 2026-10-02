@@ -8,10 +8,10 @@ import crud
 import schemas
 
 
-def make_user(db, user_name: str, role: str = "user", page_credits: int = 10):
+def make_user(db, user_name: str, role: str = "user", page_credits: int = 10, password: str = "secret-pass"):
     user = schemas.UserCreate(
         first_name=user_name.capitalize(), last_name="Test", email=f"{user_name}@example.com",
-        phone_number="0102030405", user_name=user_name, password="secret-pass", page_credits=page_credits,
+        phone_number="0102030405", user_name=user_name, password=password, page_credits=page_credits,
     )
     return crud.create_user(db=db, user=user, role=role)
 

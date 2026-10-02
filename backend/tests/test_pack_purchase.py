@@ -162,7 +162,7 @@ def test_full_purchase_then_webhook_replay_credits_once(client, db_session):
     assert (expires.year - paid_at.year) * 12 + expires.month - paid_at.month == 12
 
     assert [(e.to, e.kind) for e in mailer.OUTBOX] == [("claire.achat@agence-test.fr", "purchase_confirmation")]
-    assert "Vos 1 000 scans ont été ajoutés" in mailer.OUTBOX[0].body
+    assert "Vos 1 000 documents ont été ajoutés" in mailer.OUTBOX[0].body
 
     # Stripe « Resend »: a new delivery, freshly signed, of the same event.
     for _ in range(3):

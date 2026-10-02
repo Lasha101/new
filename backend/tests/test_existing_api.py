@@ -136,21 +136,16 @@ def test_destinations_voyages_and_jobs(client, user_with_documents):
     assert client.get("/ocr/jobs/does-not-exist", headers=headers).status_code == 404
 
 
-def test_self_registration_gives_signup_credits(client):
-    # The password satisfies the policy introduced in package C (12+ chars,
-    # 1 uppercase, 2 digits, 2 specials, not a common password). The rest of
-    # this test — credits, role, and the duplicate-email refusal — is
-    # unchanged, and is what it was always asserting.
+def test_self_registration_is_closed(client, db_session):
+    # Alex, after go-live (2026-10-02): no public self-registration. The route
+    # is gone — a POST creates nothing — and the API schema no longer offers
+    # it. Accounts come from a validated trial, the pack signup or an admin.
     response = client.post("/users/register", json={
         "first_name": "New", "last_name": "User", "email": "new@example.com",
         "phone_number": "0600000000", "user_name": "newbie", "password": "Girafe!!12Nuage",
     })
-    assert response.status_code == 200, response.text
-    assert response.json()["page_credits"] == 5
-    assert response.json()["role"] == "user"
-    again = client.post("/users/register", json={
-        "first_name": "New", "last_name": "User", "email": "new@example.com",
-        "phone_number": "0600000000", "user_name": "newbie2", "password": "Girafe!!12Nuage",
-    })
-    assert again.status_code == 400
-    assert again.json()["detail"] == "Email déjà enregistré"
+    assert response.status_code == 404, response.text
+    import crud
+    assert crud.get_user_by_email(db_session, email="new@example.com") is None
+    assert crud.get_user_by_username(db_session, username="newbie") is None
+    assert "/users/register" not in client.get("/openapi.json").json()["paths"]

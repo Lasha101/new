@@ -50,7 +50,8 @@ test.describe('Cibles tactiles', () => {
         await expect(page.locator(SELECTORS.loginForm)).toBeVisible();
 
         const targets = await measureTapTargets(page, BUTTON_SELECTOR);
-        expect(targets.length).toBeGreaterThanOrEqual(2);
+        // « Se connecter »: « Créer un compte » left with self-registration (2026-10-02).
+        expect(targets.length).toBeGreaterThanOrEqual(1);
         expect(targets.filter(target => target.height < MIN_TAP_PX)).toEqual([]);
     });
 });

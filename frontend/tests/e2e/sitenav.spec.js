@@ -9,7 +9,7 @@ import {
 const SITE_LINKS = [
     ['Présentation', 'https://scanid.fr/presentation.html'],
     ['Ressources', 'https://scanid.fr/ressources.html'],
-    ['Tarifs', 'https://scanid.fr/#tarifs'],
+    ['Tarifs', 'https://scanid.fr/tarifs.html'],
     ['FAQ', 'https://scanid.fr/faq.html'],
     ['Contact', 'https://scanid.fr/contact.html'],
 ];

@@ -293,7 +293,7 @@ def test_a_pack_link_never_reads_line_items(client, db_session, stripe_items):
     assert signed(client, pack).json()["result"] == "credited"
     assert credits_of(db_session, marc) == 1000
     assert db_session.query(models.Purchase).one().pack == 1000
-    assert mailer.OUTBOX[0].subject == "Vos 1 000 scans ScanID sont disponibles"   # the pack e-mail, unchanged
+    assert mailer.OUTBOX[0].subject == "Vos 1 000 documents ScanID sont disponibles"   # the pack e-mail, not the à la carte one
     assert stripe_items.calls == []
 
 

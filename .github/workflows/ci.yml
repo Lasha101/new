@@ -59,7 +59,7 @@ jobs:
             sleep 1
           done
           curl -sf http://127.0.0.1:8001/docs >/dev/null
-          curl -sf http://127.0.0.1:8001/openapi.json | grep -q '"/users/register"'
+          curl -sf http://127.0.0.1:8001/openapi.json | grep -q '"/signup"'
           # Startup tolerates an unreachable DB, so prove connectivity for real:
           # table creation + admin bootstrap must have happened.
           PGPASSWORD=ci psql -h 127.0.0.1 -p 5432 -U postgres -d travelapp \

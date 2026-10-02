@@ -26,14 +26,17 @@ original implementation, with these changes:
    table mirrors the export and is fed by `GET /export/data?preview=true`
    (JSON). Exported cell values are sanitized against Excel formula
    injection.
-2. **Self-registration** — a « Créer un compte » button on the login page lets
-   users sign up autonomously via `POST /users/register`. Admin invitation
-   links were removed entirely (endpoints, admin UI and the `/register/<token>`
-   page); admins can still create accounts directly from « Gérer les
-   Utilisateurs ».
-3. **Signup credits** — every self-registered account starts with exactly
-   **5 page credits** (1 credit = 1 extracted page), enforced server-side
-   (`SIGNUP_PAGE_CREDITS` in `backend/main.py`); the client cannot influence it.
+2. **No self-registration** — the login page has no « Créer un compte » and
+   `POST /users/register` no longer exists (closed 2026-10-02). An account is
+   opened by a trial request validated in « Demandes d'essai »
+   (`/trial-requests`), by the pack purchase (`/app/inscription` →
+   `POST /signup`), or by an admin from « Gérer les Utilisateurs ». Admin
+   invitation links were removed entirely (endpoints, admin UI and the
+   `/register/<token>` page).
+3. **Starting credits** — a trial account gets **20 credits**
+   (`TRIAL_CREDITS`); a pack account starts at 0 and receives its pack from
+   the Stripe webhook (1 credit = 1 extracted document), enforced
+   server-side; the client cannot influence it.
 4. **French National ID support** — in addition to French passports, the OCR
    pipeline extracts French national identity cards (CNI), both old-format
    (laminated, 2-line MRZ + « Carte valable jusqu'au » expiry on the back) and
