@@ -113,6 +113,24 @@ def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime)
     return subject, body
 
 
+def unit_purchase_confirmation(user: Dict[str, Any], quantity: int, expires_at: datetime) -> Tuple[str, str]:
+    """« À la carte »: documents bought one by one, 1 document = 1 credit."""
+    many = quantity > 1
+    documents = f"{_scans(quantity)} document{'s' if many else ''}"
+    subject = f"Vos {documents} ScanID sont disponibles" if many else "Votre document ScanID est disponible"
+    body = (
+        f"Bonjour {user.get('first_name') or ''},\n\n"
+        f"Merci pour votre achat à la carte : {documents} {'ont été ajoutés' if many else 'a été ajouté'} à "
+        f"votre espace ScanID ; {'ils sont valables' if many else 'il est valable'} jusqu'au {_date_fr(expires_at)}.\n\n"
+        f"Votre espace : {config.app_public_url()}\n"
+        f"Votre identifiant : {user.get('user_name')}\n\n"
+        "Le détail de vos achats est dans « Mon Compte » → « Mes achats ». Le reçu de paiement "
+        "vous a été envoyé par Stripe.\n\n"
+        f"{SIGNATURE}\n"
+    )
+    return subject, body
+
+
 def payment_anomaly(reason: str, session: Dict[str, Any]) -> Tuple[str, str]:
     subject = "Paiement Stripe à rattacher manuellement"
     details = session.get("customer_details") or {}

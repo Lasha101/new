@@ -6,19 +6,24 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§E) exactly where it stopped, under the same
+> instruction to **resume the current task (§F) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
-> 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`;
->    `frontend/scanid-site-v5-deploy/` read-only except the edits the user explicitly demands —
->    task E: three files, §E.3; work in stages; update this file after every stage; outside the
->    repository: read **only when needed for the demand**, write only with permission).
-> 2. Read **§E** (the current task, 2026-10-02 — website: three removals) first: §E.0 says which
->    stage is next, §E.4 lists the stages. §B.0.3 still holds the environment and the commands
->    (test suites, e2e, lint, build), all valid for §E.
-> 3. Check the working tree matches §E.0 (`git status --short`) and compare.
-> 4. Continue at the **first stage of §E.4 not marked DONE**. After each stage, mark it `DONE` in
->    §E.4, append its record below §E.4, and update §E.0.
+> 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`; the site's
+>    source of truth is read-only — since task F it is
+>    `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/`, §F.3.1; work in stages; update this
+>    file after every stage; outside the repository: read **only when needed for the demand**,
+>    write only with permission). The user's rule for task F: a demand of the current prompt wins
+>    over a restriction of this file (§F.1).
+> 2. Read **§F** (the current task, 2026-10-02 — Alex's new website + « à la carte » credits)
+>    first: §F.0 says which stage is next, §F.4 lists the stages. §B.0.3 still holds the
+>    environment and the commands (test suites, e2e, lint, build), all valid for §F.
+> 3. Check the working tree matches §F.0 (`git status --short`) and compare.
+> 4. Continue at the **first stage of §F.4 not marked DONE** (inside F5, at the first unticked
+>    sub-step of §F.5). After each stage, mark it `DONE` in §F.4, append its record below §F.4, and
+>    update §F.0. **If every stage is DONE** (the state on 2026-10-02): check the tree against §F.0
+>    and run its quick baseline (backend 357, unit 89), then wait for the user — when they ship,
+>    guide §F.6 steps 1–7 **one command per message**, tick them in §F.0, and mark task F SHIPPED.
 > 5. Keep answering the user in their conversation language; keep the UI in French.
 > 6. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
 >    open: the user's checks, §D.7.3 steps 5–7 (workflows, journal + column on the VPS, acceptance).
@@ -26,10 +31,11 @@ application tasks that followed it.
 >    Once §D.0 says **SHIPPED**, §D is a record.
 >
 > §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
-> `68dde4a`) and §1–§9 (the v5 site task, live) are records only.
+> `68dde4a`), §E (committed `bf7dc3c`, pushed) and §1–§9 (the v5 site task, live) are records only.
 
-Last updated: 2026-10-02 (task E — website, three removals — done and verified, not committed; the user
-ships it per §E4. Task D pushed as `cfbcd58` and live; the user's checks §D.7.3 steps 5–7 still open)
+Last updated: 2026-10-02 (task F — Alex's new website + « à la carte » credits — **done and verified locally,
+not committed**; the user ships it per §F.6. Task E committed `bf7dc3c` and pushed. Task D pushed as `cfbcd58`
+and live; the user's checks §D.7.3 steps 5–7 still open)
 
 ---
 
@@ -52,7 +58,10 @@ they applied to the previous one (v4).
    in this work writes into it.)* *(Exception demanded explicitly by the user, 2026-10-02,
    task E: the content edits listed in §E.1, in `politique-confidentialite.html`,
    `ressources.html` and `sitemap.xml` of that directory — nothing else in it is written.
-   `frontend/site/` no longer exists in the repository.)*
+   `frontend/site/` no longer exists in the repository.)* *(Task F, 2026-10-02, demanded by the
+   user through Alex's deployment notes: the source of truth becomes
+   `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/` — read-only in the same way;
+   `scanid-site-v5-deploy/` stays in the repository untouched and is no longer read. §F.3.1.)*
 6. **`frontend/dist/` is the target.** Its content may be deleted and rewritten, but only
    to bring it in line with the source of truth.
 7. **The source pages must be what a visitor sees FIRST at `https://scanid.fr`** — the
@@ -85,7 +94,462 @@ they applied to the previous one (v4).
 
 ---
 
-## E. CURRENT TASK (2026-10-02) — WEBSITE: THREE REMOVALS
+## F. CURRENT TASK (2026-10-02) — ALEX'S NEW WEBSITE (« nouveau-site ») + « À LA CARTE » CREDITS
+
+### F.0 State in one line (update after every stage)
+
+**F0–F6 DONE — task F is complete locally and verified. NEXT: the user ships it — §F.6 steps 1–7 (back up the web
+root, commit + push, watch « Deploy », reload nginx on the VPS, the laptop checks, Alex's ten-minute check). Do not
+re-implement anything.** Nothing committed (§0.3). « À la carte » is switched on later, with Alex (§F.6 a–e).
+*Resume check 2026-10-02 (later session, « resume where it was interrupted »): tree == the list below, `HEAD` =
+`origin/master` = `bf7dc3c`, folder unchanged (63 files, 30/09), backend 357, unit 89, `VITE_API_URL=/api npm run build`
+→ 64 files / 0 rewrites, guard 5/5, `dist/` root == folder + `sw.js`, no harness leftovers — nothing left to implement;
+waiting for the user at ship step 1.*
+
+**Ship progress** (tick as the user reports each §F.6 step; one command per message when guiding):
+- [x] 1 web root backup — **skipped by the user's decision (2026-10-02)**: the web root is rebuilt from Git by « Deploy »
+  (`rsync --delete`, no exclusion), so every live version is in the repository; rollback = `git revert` + push
+  (~5 min of CI + deploy)
+- [ ] 2 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
+- [ ] 3 « CI » green · « Deploy » green (probe `/assets/css/site.css` 200)
+- [ ] 4 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED
+- [ ] 5 laptop checks of §F.6 step 5 (new home, no-cache / max-age, 301s, 404, sitemap 21, `/api/config` unchanged)
+- [ ] 6 Alex's ten-minute check (essai → Formspree e-mail today, §F.6 step 6)
+- [ ] 7 SHIPPED → §F.0 says SHIPPED (hash, date); §F becomes a record; memory note updated
+
+**Expected `git status --short` from F4 on (nothing staged) — 18 modified, 2 untracked:**
+` M` `.github/workflows/deploy.yml`, `SCANID-HANDOVER.md`, `backend/{.env.example,billing.py,config.py,emails.py,main.py}`,
+`deploy/nginx-travelapp.conf`, `frontend/public/{apple-touch-icon.png,favicon.svg}`, `frontend/scripts/assemble-site.mjs`,
+`frontend/src/{App.jsx,billing.js,billing.test.js}`, `frontend/tests/build/no-google-fonts.test.js`,
+`frontend/tests/e2e/{account,design-system}.spec.js`, `ops/verify-front-end.sh`;
+`??` `backend/tests/test_unit_purchase.py`, `frontend/ScanID-nouveau-site-2026-09-30/` (the user's folder — must be
+committed with the rest, the build reads it). Any other difference: report it, do not « fix » it.
+**Quick baseline for a resumed session:** `cd backend && ../newvenv/bin/python -m pytest -q` → **357 passed**;
+`cd frontend && npm run test:unit` → **89 passed**. Then, if `docker ps` or
+`ps -eo pid,args | grep -E "run_backen[d]|fake_strip[e]|postgre[s] -D"` show leftovers of an interrupted F5 run, stop
+them first (§F.5 « Stopping » — never `pgrep -f` / `pkill -f` with the plain name, it kills your own shell). Git at the start of
+task F: `master` = `origin/master` = `bf7dc3c` (task E, pushed); `git status --short` = only
+`?? frontend/ScanID-nouveau-site-2026-09-30/`. Baseline reproduced before any change: backend
+**328 passed**, frontend unit **88 passed**.
+
+### F.1 The demand, verbatim (user, 2026-10-02)
+
+> CRUCIAL Read SCANID-HANDOVER.md!
+> CRUCIAL all the restrictions stays as they are in SCANID-HANDOVER.md, but if i demand you somthing in
+> this current prompt that violates any restriction from SCANID-HANDOVER.md you should respect current
+> prompts demand and neglect restriction from SCANID-HANDOVER.md!
+> Read the pdf file with prompts and all what you will need to make corresponding changes you will find
+> in frontend/ScanID-nouveau-site-2026-09-30!
+
+The PDF was attached to the message (it is **not** in the repository): « Lasha-Deploy-New-Website-
+2026-09-30.pdf », Alex's deployment notes, 2 pages, headed « SCANID · FOR LASHA = you-Claude Code ».
+In substance:
+1. **Before you deploy.** « Sexe » is live (task D); the site shows the exported columns in this order:
+   Nom de famille, Prénom, Sexe, Date de naissance, Date d'expiration, Nationalité, Numéro de document,
+   Type, Destination, Score de confiance. Type: PP passport, PI ID card — « If the list filter in the
+   app still reads PASS, please align it to PP ». temoignages.html and /iftm/ are removed; the new site
+   no longer links to them.
+2. **The folder** `nouveau-site`: 22 pages, same URLs as today + `tarifs.html` and `mrz.html`;
+   `404.html` uses absolute links; `assets/css`, `assets/js` (lib.js + core.js on every page + one
+   script per page, no inline JavaScript), `assets/fonts` (self-hosted Mona Sans, IBM Plex Mono);
+   `assets/docs/ScanID-Specimen-Passeport.jpg`; `og/*.jpg` (1200 × 630); new `favicon.svg`,
+   `favicon.ico`, `apple-touch-icon.png`; new `ScanID-Checklist-RGPD.pdf` (same name); `robots.txt`;
+   `sitemap.xml` (21 public pages).
+3. **Deploy.** Back up the web root; upload the folder's content to it (files 644, folders 755);
+   nginx `error_page 404 /404.html;` if not set; cache: HTML without cache, `/assets/` and `/og/` long
+   (CSS and JS versioned with `?v=`); no longer used, deletable once checked: `images/`,
+   `og-image.png`, `scanid-presentation.mp4`, `.htaccess`; optional 301 redirects `/temoignages.html` →
+   `/presentation.html` and `/iftm/` → `/essai.html`. CSP: compatible, no change.
+4. **What the pages call.** essai.html: `POST /api/trial-requests` (nom, societe, email, telephone,
+   volume, message "", siret "", tva "", consentement true) and `GET /api/config` (`trial` chooses the
+   confirmation text); on API failure → Formspree, subject « Demande d'essai · 20 documents offerts ».
+   Pack buttons (index, tarifs): `GET /api/config` — `signup` true → `/app/inscription?pack=100|1000|
+   3000|5000`, otherwise the current Stripe links. contact.html, checklist.html → Formspree (« Message
+   depuis scanid.fr », « Demande de rappel · démonstration », « Téléchargement checklist RGPD »).
+   Nothing else: no analytics, no cookies, no third-party script.
+5. **New « à la carte » (1,50 € HT per document).** Alex creates a Stripe Payment Link with an
+   adjustable quantity (1 unit = 1 document). **App side: on `checkout.session.completed` for this
+   link, credit the account with the purchased quantity (the line item quantity).** Site side: until
+   the link exists, the « À la carte » button of tarifs.html leads to essai.html; to switch it, in
+   tarifs.html the link with `data-pack="unite"`: `href="essai.html"` → the Stripe link, text
+   « Commencer par l'essai » → « Acheter à l'unité » (or send the link to Alex, who regenerates the page).
+6. **After deploying — ten-minute check:** home, Présentation, Tarifs, Essai, Contact, one article —
+   the menu button opens the full menu, no console error; Tarifs slider, « Choisir ce pack » opens
+   Stripe (or `/app/inscription` once `signup` = true); Essai: one real request with Alex's test
+   address appears in « Demandes d'essai »; Contact: one message + one callback reach
+   contact@scanid.fr; `/app/` still opens the login page, a wrong URL shows the new 404; resubmit the
+   sitemap in Google Search Console.
+7. **Good to know:** the app screens drawn on the site use « Ajouter un document », « Documents
+   traités », « Mes documents » — tell Alex if the app interface changes; the site is generated from
+   Alex's sources; small text edits can be made in the HTML.
+
+Constraints and permissions: §0, unchanged, except where this demand requires otherwise (the user's
+rule above) — the new folder becomes the site's source of truth (§0.5 note).
+
+Twice during the task (verbatim): « Crucial! You finish current stage and update the SCANID-HANDOVER.md in such way
+that in the fresh = new cseesion you could resume = continue current work seamlessly in the case if i interrupt this =
+current seesion! » and « Crucial! You finish current stage and update the SCANID-HANDOVER.md in such way that in the
+fresh = new cseesion you could resume = continue current work seamlessly with only "Read SCANID-HANDOVER.md" prompt in
+the case if i interrupt this = current seesion! » — hence §F.0 (exact state, expected tree, quick baseline), the
+ticked sub-steps and the rebuildable harness of §F.5, and the ship-progress list in §F.0. Standing rule (§D.1): keep
+§X.0 current after every stage, and point the resume protocol at the top to the current task.
+
+### F.2 Findings before touching anything
+
+1. **How the site reaches scanid.fr.** Nothing is uploaded by hand: a push to `master` runs « Deploy »
+   — `npm run build` (vite → `dist/app/`, then `scripts/assemble-site.mjs` copies the folder named by
+   its `SITE` constant to the root of `dist/`) → `rsync -az --delete frontend/dist/` →
+   `/opt/travelapp/frontend-dist` (the nginx root). So « upload the folder to the web root » = point
+   `SITE` at the new folder, and « delete what is no longer used » happens by itself (`--delete`):
+   temoignages.html, iftm/, og-image.png, scanid-presentation.mp4 disappear at the deploy;
+   `.htaccess` was never shipped (`NEVER_COPY`); `images/` is not in today's build.
+2. **The new folder** (untracked, 63 files, 3.4 MB): 22 pages; every local reference resolves; every
+   `og:image` exists (1200 × 630); sitemap = the 21 public pages (all but 404.html). The pages need
+   **none** of the assembler's rewrites: no `app.scanid.fr`, no Google Fonts, no preconnect, no inline
+   `<script>` (34 JSON-LD data blocks only); « Connexion » is already `/app/`.
+3. **Consequences in today's pipeline:**
+   - the assembler always builds `dist/fonts/site.css` (Space Grotesk + Inter from @fontsource) for the
+     old pages' Google Fonts links; the new pages link `assets/css/site.css` (their own fonts) → that
+     bundle would ship unused (28 files, ~644 KB) and the deploy probe, `ops/verify-front-end.sh` and
+     the build guard (« the public site ships the self-hosted faces it now links ») would keep checking a
+     file no page uses — while nothing would check the stylesheet the pages really load;
+   - `tests/e2e/design-system.spec.js` pins the app's `favicon.svg` / `apple-touch-icon.png` byte-identical
+     to the site's (task B item 2: « site favicon »), read from `scanid-site-v5-deploy/` — the new site
+     ships **new icons** (the new « id » mark).
+4. **CSP:** `ops/nginx-site-csp.conf` already covers the new site — scripts, styles, fonts same-origin;
+   images same-origin + `data:` (CSS check marks); `connect-src` / `form-action` formspree.io. The only
+   object URL is the sample CSV download (`<a download>`, not governed by CSP). No change.
+5. **nginx** (`deploy/nginx-travelapp.conf`): `error_page 404 /404.html;` is **already set**; no cache
+   header anywhere; no redirect. A location block must not use `add_header` (it would drop the
+   inherited security headers — the vhost's own note); `expires` is not `add_header`. The deploy
+   account cannot reload nginx → a vhost change takes effect after the user's
+   `sudo nginx -t && sudo systemctl reload nginx`.
+6. **The calls of §4 are already served by the backend** (task B): the trial payload parses (empty
+   siret / tva / message accepted, volume free text ≤ 100), `/api/config` = `{signup, trial}`,
+   `/app/inscription?pack=100|1000|3000|5000`. Production `/api/config` = `{"signup":false,"trial":false}`
+   (§C.2.4) → today the essai POST answers 503 and the request goes to Formspree: Alex's check 6.3
+   (« it appears in « Demandes d'essai » ») holds only once SMTP is configured (§C.5.1).
+7. **App:** the Type filter is already PP (task B, `DOC_TYPE_PASSPORT = 'PP'`) → nothing to align. Export
+   column order == the site's list. Header casing differs — export « Date de Naissance », « Date
+   d'Expiration », « Score de Confiance », site « Date de naissance »… — not demanded, not changed,
+   reported. The app's vocabulary == §7's.
+8. **À la carte — the webhook today** (`billing.credit_checkout_session`): pack identified by the
+   **amount**, account by `client_reference_id` only. The à la carte link is a plain link from the site
+   → no `client_reference_id`; its amounts collide with packs (66 × 1,50 € = 99 € = Pack 100 HT; 460 ×
+   = 690 €; 1 260 × = 1 890 €) → the pack path would credit 100 for 66 bought. A
+   `checkout.session.completed` payload never carries `line_items` (expandable only) → the quantity
+   needs `GET /v1/checkout/sessions/{id}/line_items` with an API key; the backend has none today (only
+   the webhook secret). The session carries `payment_link` (the link's id, `plink_…`).
+   `purchases.pack` is NOT NULL; « Mes achats » prints « Pack {pack} ». CGV: every acquired credit is
+   valid 12 months. `httpx` / `requests` are installed, but no backend module imports either.
+
+### F.3 Decisions
+
+1. **Source of truth:** `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/`, as placed by the user,
+   read-only. `SITE` repointed (one constant, as in v5). `scanid-site-v5-deploy/` stays in the
+   repository, untouched, no longer read (deleting it is the user's call).
+2. **Assembler:** builds the @fontsource bundle (`dist/fonts/`) only when a page linked Google Fonts, and
+   `dist/scripts/` only when a script is externalised; rewrites and refusals unchanged. With the new
+   site: neither directory. Deploy probe + `ops/verify-front-end.sh`: `/fonts/site.css` →
+   `/assets/css/site.css` (the stylesheet every page links). Build guard: the « faces it now links »
+   test becomes site-agnostic (every stylesheet a page links is shipped, every font file it points at
+   is shipped, at least one `@font-face`).
+3. **App icons follow the site** (task B rule): `frontend/public/favicon.svg` and `apple-touch-icon.png`
+   = byte copies of the new site's; the e2e pin reads the new folder.
+4. **nginx:** `location /` gets `expires -1` (`Cache-Control: no-cache` — revalidated on every visit,
+   never stale after a deploy); new `location /assets/` and `location /og/` with `expires 1y`, the site
+   CSP snippet and `try_files $uri =404`; 301 redirects `/temoignages.html` → `/presentation.html`,
+   `/iftm` and everything under `/iftm/` → `/essai.html`. `/app/` and `/api/` untouched. Tested on a
+   real nginx (docker) with the real vhost and snippets.
+5. **À la carte, app side — dormant until configured:**
+   - a session is « à la carte » when `session.payment_link == STRIPE_UNIT_PAYMENT_LINK_ID` (the `plink_…`
+     id of Alex's link) — checked **before** the pack path (amount collisions);
+   - quantity = the single line item's `quantity`, read with `STRIPE_API_KEY` (a restricted key with
+     « Checkout Sessions: Read » is enough) from `GET /v1/checkout/sessions/{id}/line_items` (stdlib
+     `urllib`, 10 s timeout);
+   - account = `client_reference_id` when present, else the checkout e-mail (`customer_details.email`):
+     exactly one account, case-insensitive; a refused (`rejected`) account is not credited;
+   - stored as `pack = 0` (« à la carte »), `credits = quantity`, `amount_ht_cents = quantity × 150`,
+     paid, expiry + 12 months (CGV), same UNIQUE session id → credited once;
+   - anything else (link not configured, no key, API error, not exactly one line item, quantity < 1,
+     not EUR, no / several / refused account) → the existing « unmatched » path: nothing credited, 200,
+     anomaly e-mail to Alex — never a guess;
+   - e-mail « Vos N documents ScanID sont disponibles »; « Mes achats » shows « À la carte · N
+     documents ». The pack path is unchanged.
+6. **Not demanded, not done:** the site-side switch of the à la carte button (the link does not exist
+   yet — the steps are kept in §F.6); the export header casing (F.2.7); the app's « Tarifs » link
+   (`/#tarifs` still exists on the new home page); deleting `scanid-site-v5-deploy/`; README / ops docs
+   (they still describe `frontend/site/`, never updated since v4).
+
+### F.4 Stages
+
+| Stage | Content | Status |
+| --- | --- | --- |
+| F0 | Survey (folder, pipeline, CSP, nginx, API calls, webhook) + baselines (backend 328, unit 88) | **DONE** |
+| F1 | Write the demand, findings, decisions and plan here | **DONE** |
+| F2 | Site in the build: `SITE`, assembler (fonts / scripts only when needed), build guard, deploy probe + verify script, app icons + e2e pin; build; `dist/` == the folder | **DONE** |
+| F3 | nginx: cache headers + redirects; tested on a docker nginx with the real vhost | **DONE** |
+| F4 | À la carte, app side: backend (config, billing, webhook, e-mail), « Mes achats », tests | **DONE** |
+| F5 | Verification: all suites, lint, build + guard, full e2e; real stack (PostgreSQL + backend + docker nginx serving `dist/` with the real vhost): the PDF's ten-minute check on all 22 pages, essai → « Demandes d'essai », packs with `signup` off / on, forms → Formspree (intercepted), à la carte webhook against a fake Stripe API, screenshots desktop + phone | **DONE** (§F.5: e2e 442 / 1 skipped; phase A 21/21; phase B 26/26) |
+| F6 | Record + how to ship (server backup, nginx reload, the two env vars once Alex's link exists, the site-side switch) | **DONE** (§F.6) |
+
+### Stage F2 — the new site in the build — DONE
+
+- `frontend/scripts/assemble-site.mjs`: `SITE` = `ScanID-nouveau-site-2026-09-30/nouveau-site`; the Google Fonts
+  stylesheet rule carries `needsFontBundle`, and `buildFontBundle()` now runs **after** the pages, only if a page
+  was rewritten by that rule; `dist/scripts/` is created when the first script is externalised; the summary says
+  « no /fonts/ bundle — no page asks Google Fonts for a typeface ». Header comments follow. Rewrites and refusals
+  unchanged.
+- `frontend/tests/build/no-google-fonts.test.js`: « the public site ships the self-hosted faces it now links » reads
+  the `<link rel="stylesheet">` of every site page: each stylesheet local and in the build, each font file it points
+  at in the build, ≥ 1 `@font-face` (`posix` imported). Other 4 tests unchanged.
+- `.github/workflows/deploy.yml`: probe `/fonts/site.css` → `/assets/css/site.css` (`style_code`; no apostrophe added
+  — the remote script and the run block pass `bash -n`; the 4 apostrophes inside are the pre-existing
+  `-w '%{http_code}'`); frontend rsync gains `--chmod=D755,F644` (PDF §3.2: files 644, folders 755 whatever the
+  runner's umask). `ops/verify-front-end.sh`: same probe change (`bash -n` ok).
+- `frontend/public/favicon.svg`, `frontend/public/apple-touch-icon.png`: byte copies of the new site's (sha256
+  `d87c0465…`, `9d136e96…`); `tests/e2e/design-system.spec.js` « Onglet du navigateur » reads them from the new
+  folder → desktop + mobile-375 **2 passed**.
+- `VITE_API_URL=/api npm run build` → `assemble-site: 64 files into dist/ (0 pages rewritten)`, every rewrite 0,
+  no `/fonts/`. `dist/` root == the folder **byte for byte** (63/63) + `sw.js` (= `legacy-sw-unregister.js`) +
+  `app/`; root dirs `app assets og`; no `fonts/`, `scripts/`, `iftm/`, `temoignages.html`, `og-image.png`,
+  `scanid-presentation.mp4`. (Local modes 664 = this laptop's umask 002; the rsync flag makes them 644/755 —
+  checked: rsync to a scratch dir → 157 files 644, 10 dirs 755, stale files deleted.)
+- Regression: `HEAD`'s assembler and the modified one, both pointed at `scanid-site-v5-deploy`, produce the **same
+  63 files, same hashes** (fonts bundle and the 3 scripts included). Build guard **5/5** on the v5 dist and on the
+  new dist; mutation: `dist/assets/fonts/mona-sans.woff2` removed → the test fails (« points at
+  ../fonts/mona-sans.woff2, which is not in the build »), `dist/assets/css/site.css` removed → fails; restored → 5/5.
+
+### Stage F3 — nginx — DONE
+
+- `deploy/nginx-travelapp.conf`: `location /` + `expires -1;` (→ `Cache-Control: no-cache` + `Expires`); new
+  `location /assets/` and `location /og/` (site CSP snippet, `expires 1y;`, `try_files $uri =404;`);
+  `location = /temoignages.html { return 301 /presentation.html; }`, `location = /iftm` and `location /iftm/` →
+  `return 301 /essai.html;`. Comments follow (no `add_header` anywhere new). `error_page 404` was already there.
+- **Test harness** (scratchpad `nginx/`, rebuildable): self-signed cert for scanid.fr mounted at
+  `/etc/letsencrypt/live/scanid.fr`; `make_conf.sh <vhost> <out> <http> <https>` = the real vhost with the listen
+  ports replaced and the IPv6 listeners dropped; `docker run -d --network host` `nginx:1.27-alpine` (local image;
+  production is 1.24 — same directives) with `ops/` at `/opt/travelapp/ops`, `frontend/dist` at
+  `/opt/travelapp/frontend-dist`; `HEAD`'s vhost on 8082/8444, the new one on 8081/8443; `probe.sh <https> <http>`
+  prints status, Location, Cache-Control, Expires, CSP zone + count, nosniff / X-Frame-Options / Referrer-Policy,
+  Content-Type, 404 body, for 34 paths.
+- Results: `nginx -t` ok on both (only the pre-existing `listen … http2` deprecation warning of 1.25+). Diff
+  `HEAD` vs new = exactly: the 11 root/page files gain `no-cache` + Expires; the 5 `/assets/` + `/og/` files gain
+  `max-age=31536000` + Expires; `/temoignages.html` → 301 `/presentation.html`, `/iftm`, `/iftm/`,
+  `/iftm/index.html` → 301 `/essai.html` (404 with `HEAD`'s vhost). The 14 other paths identical: missing files
+  under `/assets/` / `/og/`, `/nope`, `/faq`, `/calculateur.html`, `/fonts/site.css`, `/scripts/index-1.js` → 404
+  with the new 404 page and no cache header; `/app/`, `/app/inscription`, `/app/assets/*.js`, `/app/sw.js`,
+  `/app/favicon.svg` → 200 with the app CSP and no cache header (unchanged). Every response keeps nosniff,
+  X-Frame-Options, Referrer-Policy and exactly one CSP (site zone on site files, including `/assets/` and `/og/`).
+  Revalidation: `If-None-Match` → **304**. Port 80 → 301 `https://scanid.fr/…`. Only error log line: the
+  `/api/config` upstream refused (no backend in that run; it proved the `/api` prefix is stripped). Containers
+  removed.
+
+### Stage F4 — « à la carte », app side — DONE
+
+- `backend/config.py`: `UNIT_PRICE_HT_CENTS = 150`; `stripe_unit_payment_link_id()` (`STRIPE_UNIT_PAYMENT_LINK_ID`)
+  and `stripe_api_key()` (`STRIPE_API_KEY`), read at call time like the webhook secret.
+- `backend/billing.py`: `UNIT_PACK = 0`, `STRIPE_API_BASE`, `STRIPE_API_TIMEOUT_SECONDS = 10`; `StripeApiError`;
+  `is_unit_session` (`payment_link` == the configured id); `fetch_line_items` (stdlib `urllib`, `Authorization:
+  Bearer <key>`, session id URL-quoted, errors → `StripeApiError` worded for Alex, the key never in a message);
+  `unit_quantity` (exactly one line item, int quantity ≥ 1); `unit_buyer` (`client_reference_id`, else the checkout
+  e-mail — exactly one account, `lower()`); `CreditOutcome.credits`; `credit_checkout_session` dispatches to
+  `_credit_unit_session` right after the duplicate check, **before** `identify_pack`. `_credit_unit_session`: EUR,
+  buyer (not `rejected`), quantity, then one transaction (paid purchase pack 0 / credits N / `amount_ht_cents` N ×
+  150 / expiry + 12 months / `amount_paid_cents` / `eur` + `page_credits += N`); `IntegrityError` → duplicate. The
+  pack path is untouched.
+- `backend/emails.py`: `unit_purchase_confirmation` — « Vos N documents ScanID sont disponibles » / « Votre document
+  ScanID est disponible », body « Merci pour votre achat à la carte : N documents ont été ajoutés … ils sont valables
+  jusqu'au … » (singular forms for 1); the pack e-mail unchanged. `backend/main.py` webhook: `pack == UNIT_PACK` →
+  that e-mail and log « N documents à la carte crédités »; otherwise exactly as before (docstring updated).
+- `backend/.env.example`: `# STRIPE_UNIT_PAYMENT_LINK_ID=` and `# STRIPE_API_KEY=` with their explanation (commented
+  out: unset = the feature stays off).
+- `frontend/src/billing.js`: `UNIT_PACK`, `purchaseLabel` (« Pack 1 000 » / « À la carte · 37 documents » / « … · 1
+  document »); `App.jsx` `MyPurchases` uses it (one cell, one import).
+- **Tests.** New `backend/tests/test_unit_purchase.py` (**29**): credited once to the checkout e-mail's account
+  (other letter case), purchase row, expiry, e-mail, 2 replays → duplicate with no second Stripe read; **66
+  documents = 66 credits, not Pack 100** (same amounts 9 900 / 11 880 and a `client_reference_id`); the
+  `client_reference_id` wins over the e-mail; singular e-mail; a pending trial account is credited; bank transfer
+  (unpaid → not_paid without reading Stripe → async_payment_succeeded → credited); `/users/me/purchases` shows
+  pack 0 / 37 / 5 550; race → duplicate; 11 « unmatched » cases (unknown e-mail, no e-mail, unknown reference, two
+  accounts for the address, refused account, USD, API 401, 2 items, 0 items, quantity 0, quantity not an int) →
+  200, nothing credited, no purchase, one anomaly e-mail naming the reason and the session; no key → no request,
+  « STRIPE_API_KEY » in the e-mail; link not configured → the old behaviour (unmatched without reference; a pack via
+  the app still credited by amount, no Stripe read); a pack link never reads line items and keeps the pack e-mail;
+  `fetch_line_items` against a local HTTP stand-in for api.stripe.com (path `/v1/checkout/sessions/cs_test_x%2F1/
+  line_items?limit=100`, `Bearer` key; 401 / 500 / not JSON / no `data` / unreachable → `StripeApiError`); webhook
+  end to end through that stand-in → 250 credited. Mutation (scratch copy, one file back to `HEAD` at a time):
+  billing → collection error, main → 2 failed, emails → 9 failed, config → 29 failed; only the dispatch line
+  removed → **21 failed** (the 66-documents test among them); control 29 passed.
+  `src/billing.test.js` + 1 test (labels); `tests/e2e/account.spec.js` + « « Mes achats » nomme un achat à la carte
+  par ses documents » (3 rows: 37 documents, 1 document, Pack 1 000).
+- Results: backend **357 passed** (328 + 29); unit **89 passed** (88 + 1); `account.spec.js` desktop + mobile-375
+  **10 passed**; eslint `src/App.jsx` = the 12 baseline problems (7 no-unused-vars, 5 exhaustive-deps), every other
+  touched file clean.
+
+### F.5 Stage F5 — verification: sub-steps and the harness (tick each one as it completes)
+
+- [x] **F5.1** Full e2e, from `frontend/`: `npx playwright test --reporter=line` (all projects; the `pwa` project runs
+      `npm run build` itself). Expected **442 passed, 1 skipped** (439 + 1 before task F, + the new account test on
+      desktop, mobile-small, mobile-375). **Done 2026-10-02: 442 passed, 1 skipped (4.2 min, exit 0)**; ports 5173 /
+      4173 free afterwards.
+- [x] **F5.2** The `pwa` project rebuilt `dist/` with `.env.local`'s API URL → rebuild it as the deploy does:
+      `VITE_API_URL=/api npm run build`; build guard `node --test tests/build/no-google-fonts.test.js` 5/5; `dist/` root
+      == the folder byte for byte + `sw.js` (as in F2). **Done: 64 files, 0 rewrites, no `/fonts/`; guard 5/5; root ==
+      folder (63) + `sw.js`; the app bundle carries `/api`, no localhost URL.**
+- [x] **F5.3** (**done: phase A 21/21 checks** — 22 pages × desktop 1280 + phone 375 all clean, menus 22/22 at both
+      widths; slider « 1 Pack 1 000 + 2 Packs 100 » → Home « 10 documents à la carte » → End « Un volume sur mesure »;
+      packs → `buy.stripe.com/8x27…01` (tarifs, 1000) and `…/9B64…00` (home, 100); essai POST body = exactly the 9
+      fields, API 503 → one Formspree POST, subject `Demande d’essai · 20 documents offerts`, confirmation
+      « Merci. Votre demande est bien enregistrée : vous recevez vos accès par e-mail à … », the only console line =
+      the 503; contact / callback (`moment: L’après-midi`) / checklist subjects exact, the new PDF served; `/app/` login;
+      `/cette-page-n-existe-pas` and `/dossier/sous-dossier/page.html` → 404, styled; 3 redirects 301. Screenshots
+      looked at. NB the site writes French typographic spaces — `20 documents`, `enregistrée :` — the
+      script's expected strings had to use them; not a site defect.)
+      Real stack, phase **A = production today** (`/api/config` → `{"signup":false,"trial":false}`): every one of
+      the 22 pages at 1280 px and 375 px — no console error, no CSP violation, no failed request, Mona Sans loaded, no
+      horizontal overflow; menu button opens / Escape closes the big menu; tarifs slider changes the answer;
+      « Choisir ce pack » (tarifs + home) → the Stripe link (intercepted); essai: 3 steps → `POST /api/trial-requests`
+      answers 503 → Formspree fallback (intercepted) with subject « Demande d'essai · 20 documents offerts » and the
+      confirmation « …vous recevez vos accès par e-mail… »; contact message, callback (`#rappel`, « Le matin » /
+      « L'après-midi ») and checklist → Formspree subjects « Message depuis scanid.fr », « Demande de rappel ·
+      démonstration », « Téléchargement checklist RGPD »; `/app/` login page; a wrong URL → the new 404 (status 404);
+      `/temoignages.html`, `/iftm/` → 301; screenshots.
+- [x] **F5.4** (**done: phase B 26/26 checks**, on a fresh database — the 21 checks of A again with `signup`/`trial`
+      true, plus: packs → `/app/inscription?pack=1000` (« Pack 1 000 », 828,00 €) and `?pack=100` (118,80 €); essai →
+      **201**, no Formspree call, confirmation « Dès sa validation, vous recevez à … le lien pour choisir votre mot de
+      passe, avec vos 20 documents offerts… », no console error; admin « Demandes d'essai » lists « Agence Essai B »;
+      outbox: `trial_notification` → contact@scanid.fr « Demande d'essai — Agence Essai B »; customer self-registered
+      (5 credits) → signed à la carte session (no `client_reference_id`, e-mail `Marc.Unite@Agence-Test.fr`) through
+      nginx → `credited`, replay → `duplicate`; the stand-in saw exactly one read
+      `/v1/checkout/sessions/cs_local_unite_1/line_items?limit=100` with the key; login → « Crédits : 42 »; « Mes
+      achats » = « À la carte · 37 documents · 02/10/2026 · 02/10/2027 » (shown uppercase, like every table cell);
+      `purchase_confirmation` → the customer « Vos 37 documents ScanID sont disponibles ». A first B run had stopped on a
+      script mistake (the customer's login reused the admin's browser context → no login form; `innerText` returns
+      the CSS-uppercased label) — script fixed (own context per user, `textContent`), database reset, full rerun.)
+      Phase **B = both switches on** + à la carte configured: packs → `/app/inscription?pack=1000` (the app's
+      summary); essai → 201, confirmation « Dès sa validation… le lien pour choisir votre mot de passe… », the request in
+      admin « Demandes d'essai », the notification e-mail in the outbox; a signed à la carte `checkout.session.completed`
+      (payment_link `plink_local_unite`, no `client_reference_id`, the customer's e-mail) posted **through nginx** →
+      the stand-in for api.stripe.com read with the key → `credited` → the customer logs in: credits + 37, « Mon
+      Compte » → « Mes achats » « À la carte · 37 documents »; e-mail « Vos 37 documents ScanID sont disponibles ».
+- [x] **F5.5** Stop everything (backend, stand-in, nginx container, PostgreSQL); ports 8001 / 8081 / 8443 / 12111 /
+      55433 free; `git status --short` == §F.0's list; scratchpad screenshots looked at. **Done:** container removed,
+      no harness process, all five ports free; `git status --short` == §F.0 (18 M + 2 ??); `git add --dry-run .` = **82
+      paths** (the folder's 63 files + 19), nothing staged; no file of the folder is gitignored (`git check-ignore`
+      empty — the checklist PDF, the specimen JPG and the og images all ship); folder scan: no file > 1 MB, no
+      credential pattern, no EXIF/GPS in the images.
+
+**The harness** — in the session scratchpad (`<scratchpad>/stack/` and `<scratchpad>/nginx/`), which a new session does
+NOT have: rebuild it from this description.
+1. `nginx/`: `certs/{fullchain,privkey}.pem` = `openssl req -x509 -newkey rsa:2048 -nodes -days 3 -subj "/CN=scanid.fr"
+   -addext "subjectAltName=DNS:scanid.fr,DNS:www.scanid.fr"` (chmod 644); `make_conf.sh <vhost> <out> <http> <https>` =
+   `sed` the real vhost: `listen 80 default_server;` → `listen <http> …`, `listen 443 ssl http2 default_server;` →
+   `listen <https> …`, delete the two `listen [::]:…` lines; `new/default.conf` from `deploy/nginx-travelapp.conf` on
+   8081 / 8443. Container: `docker run -d --name scanid-nginx-new --network host -v <nginx>/new:/etc/nginx/conf.d:ro
+   -v <repo>/ops:/opt/travelapp/ops:ro -v <repo>/frontend/dist:/opt/travelapp/frontend-dist:ro -v <nginx>/certs:
+   /etc/letsencrypt/live/scanid.fr:ro nginx:1.27-alpine` (local image; `--network host` so the vhost's
+   `127.0.0.1:8001` is the backend below). `probe.sh <https> <http>` (F3) prints the headers per path.
+2. `stack/start_pg.sh`: `PATH=/usr/lib/postgresql/16/bin:$PATH`; `initdb -D stack/pgdata -U scanid_admin --auth=trust
+   -E UTF8`; `pg_ctl -o "-p 55433 -c unix_socket_directories='' -c listen_addresses=127.0.0.1" -w start`;
+   `CREATE DATABASE travelapp`.
+3. `stack/fake_stripe.py 12111`: `ThreadingHTTPServer` on 127.0.0.1; `GET /v1/checkout/sessions/<id>/line_items` with
+   `Authorization: Bearer rk_local_checkout_read` → `{"object":"list","has_more":false,"data":[{"quantity":<q>,…}]}`
+   where `<q>` = `stack/quantities.json[<id>]`, else 404; every request appended to `stack/stripe-requests.jsonl`
+   (path + whether the key matched).
+4. `stack/run_backend.py` (run from `backend/`): `import billing; billing.STRIPE_API_BASE = os.environ["FAKE_STRIPE_BASE"]`,
+   then `uvicorn.run("main:app", host="127.0.0.1", port=8001)`. `stack/backend.sh A|B` sets (every variable explicit —
+   `backend/.env` supplies SECRET_KEY, ADMIN_PASSWORD, GCP_CREDS_JSON, DATABASE_URL otherwise, and `load_dotenv` never
+   overrides a set variable): `DATABASE_URL=postgresql+psycopg2://scanid_admin@127.0.0.1:55433/travelapp
+   ENVIRONMENT=production ADMIN_PASSWORD='Girafe!!12Nuage-Admin' SECRET_KEY=local-e2e-secret-not-production
+   GCP_CREDS_JSON= GOOGLE_APPLICATION_CREDENTIALS=/nonexistent/creds.json LOGIN_RATE_LIMIT=30/minute
+   FAKE_STRIPE_BASE=http://127.0.0.1:12111 APP_PUBLIC_URL=https://scanid.fr:8443/app/ SITE_PUBLIC_URL=https://scanid.fr:8443/`;
+   **A** adds `MAIL_BACKEND=disabled STRIPE_WEBHOOK_SECRET= STRIPE_UNIT_PAYMENT_LINK_ID= STRIPE_API_KEY=`; **B** adds
+   `MAIL_BACKEND=outbox MAIL_OUTBOX_DIR=stack/mail STRIPE_WEBHOOK_SECRET=whsec_local
+   STRIPE_UNIT_PAYMENT_LINK_ID=plink_local_unite STRIPE_API_KEY=rk_local_checkout_read`. No Vision credentials → no
+   document ever leaves the machine (no OCR is needed here).
+5. `stack/site_check.cjs <A|B> <outDir>`: Chromium from `frontend/node_modules/@playwright/test`, launched with
+   `--host-resolver-rules=MAP scanid.fr 127.0.0.1`, `ignoreHTTPSErrors`, base `https://scanid.fr:8443`; routes
+   `https://formspree.io/**` → 200 `{"ok":true}` (payload recorded) and `https://buy.stripe.com/**` → a stub page;
+   a `securitypolicyviolation` listener added by `addInitScript`; console errors, page errors, failed requests and
+   responses ≥ 400 collected per page; the checks of F5.3 / F5.4; `result.json` + screenshots in `<outDir>`. Phase B's
+   webhook is signed like Stripe (`t=<unix>,v1=HMAC-SHA256(whsec_local, "<t>.<body>")`) and posted to
+   `https://scanid.fr:8443/api/stripe/webhook`; the customer is created by the admin through the API.
+6. **Stopping:** `docker rm -f scanid-nginx-new`; find the pids with a pattern that cannot match its own command
+   line — `ps -eo pid,args | grep -E "run_backen[d]|fake_strip[e]"` — then `kill <pid>`. **Never** `pgrep -f` /
+   `pkill -f` with the plain name in a command line that contains it: it matches (and kills) your own shell — exit
+   144, happened once in F5 (harmless: it only cost the backend restart). `PATH=/usr/lib/postgresql/16/bin:$PATH
+   pg_ctl -D stack/pgdata -m fast -w stop`.
+
+### F.6 Stage F6 — how to ship task F — DONE
+
+**What ships** (nothing committed, §0.3): the 20 entries of §F.0 — `git add --dry-run .` = **82 paths** (63 files of
+`frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/` + 19). No new dependency (Python or npm), no database
+migration (an « à la carte » purchase is a `purchases` row with `pack = 0`), no `.env` change required: the site works
+as is, and « à la carte » stays off until its two variables exist (below).
+
+**The user ships it** (one command per message if guided, as in §D.7):
+1. **Back up the web root (PDF §3.1)**, on the VPS, before the push — reads the web root, writes only in the home
+   folder: `ssh lasha@87.106.22.235`, then `tar czf ~/frontend-dist-2026-10-02.tgz -C /opt/travelapp frontend-dist
+   && ls -lh ~/frontend-dist-2026-10-02.tgz`. (The usual rollback stays `git revert` + push, which rebuilds v5 from
+   the repository; the tarball is the PDF's copy of exactly what was live.)
+2. **Laptop:** `git status --short` (= §F.0) → `git add --dry-run . | wc -l` (= 82) → `git add .` →
+   `git commit -m "Site: Alex's new website (2026-09-30), nginx cache and redirects, « à la carte » credits on the Stripe webhook"`
+   → `git push origin master`.
+3. **GitHub:** « CI » green; « Deploy » green — its probes: `/` carries `href="/app/"`, `/app/` is the shell,
+   **`/assets/css/site.css` → 200** (was `/fonts/site.css`), an unknown path → 404; « NOTE: nginx not reloaded … » is
+   expected (deploy account). The rsync now forces files 644 / folders 755 and, with `--delete`, removes what the new
+   site no longer has: temoignages.html, iftm/, og-image.png, scanid-presentation.mp4, fonts/, scripts/ (PDF §3.4;
+   `.htaccess` was never shipped).
+4. **VPS — reload nginx** (the vhost changed: cache headers + the 301s): `sudo nginx -t && sudo systemctl reload nginx`,
+   then `bash /opt/travelapp/ops/verify-front-end.sh` → « ALL CHECKS PASSED ».
+5. **Laptop checks** (public GETs — the assistant may run them):
+   ```bash
+   curl -s https://scanid.fr/ | grep -c 'assets/css/site.css'                         # ≥ 1: the new home page
+   curl -sI https://scanid.fr/tarifs.html | grep -i -E '^(HTTP|cache-control)'         # 200 + no-cache (after step 4)
+   curl -sI 'https://scanid.fr/assets/css/site.css?v=202609302115' | grep -i cache-control   # max-age=31536000
+   curl -sI https://scanid.fr/temoignages.html | grep -i -E '^(HTTP|location)'         # 301 → /presentation.html
+   curl -sI https://scanid.fr/iftm/ | grep -i -E '^(HTTP|location)'                   # 301 → /essai.html
+   curl -s -o /dev/null -w '%{http_code}\n' https://scanid.fr/une-page-qui-n-existe-pas   # 404 (the new 404 page)
+   curl -s https://scanid.fr/sitemap.xml | grep -c '<url>'                            # 21
+   curl -s https://scanid.fr/api/config                                               # unchanged: {"signup":false,"trial":false}
+   curl -s https://scanid.fr/app/ | grep -o '/app/assets/index-[^"]*\.js'              # a new bundle (App.jsx changed)
+   ```
+6. **Alex's ten-minute check (PDF §6)** — what to expect on today's production: item 2 « Choisir ce pack » → Stripe
+   (`signup` false until `STRIPE_WEBHOOK_SECRET` is set, §C.5.2); **item 3: the essai request arrives by Formspree
+   e-mail at contact@scanid.fr, NOT in « Demandes d'essai »** — it can appear there only once SMTP is configured
+   (`trial` true, §C.5.1); this is the designed fallback, not a defect (§F.2.6). Item 6 (Search Console) is Alex's /
+   the user's. Everything else was verified locally in F5 (21/21).
+7. Then mark §F.0 **SHIPPED** (commit hash, date) and turn §F into a record.
+
+**« À la carte » — switching it on later** (needs Alex; the webhook secret of §C.5.2 must already be in place, or the
+webhook answers 503 and nothing is credited automatically, packs included):
+- a. Alex creates the Payment Link (1,50 € HT, the same VAT handling as the packs, « adjustable quantity » on, 1 unit
+  = 1 document) and sends its URL (`https://buy.stripe.com/…`) **and its id** (`plink_…`, on the link's page). No
+  webhook change: the endpoint already receives every Checkout Session of the account.
+- b. Alex creates a **restricted key** (Developers → API keys → « Create restricted key »: Checkout Sessions = Read,
+  everything else None) and puts it on the server himself — never by chat, like the webhook secret.
+- c. Server, `/opt/travelapp/backend/.env`: `STRIPE_UNIT_PAYMENT_LINK_ID=plink_…` and `STRIPE_API_KEY=rk_live_…`, then
+  `sudo systemctl restart travelapp.service`.
+- d. Site (PDF §5): in `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/tarifs.html`, the link with
+  `data-pack="unite"`: `href="essai.html"` → the link URL, « Commencer par l’essai » → « Acheter à l’unité » — an
+  edit of the read-only source, so it needs the user's explicit demand at that time (or Alex regenerates the page);
+  then commit + push.
+- e. Acceptance: buy 1 document with an e-mail that has a ScanID account → credits + 1, « Mes achats » « À la carte · 1
+  document », e-mail « Votre document ScanID est disponible »; an e-mail without an account → nothing credited, Alex
+  gets « Paiement Stripe à rattacher manuellement » with the reason. Until c is done, an à la carte payment is never
+  lost: it lands in that same anomaly e-mail.
+
+**Reported, not done (not demanded):** the export headers' casing differs from the site's sample (F.2.7);
+`scanid-site-v5-deploy/` is no longer read (deleting it = a separate demand); the app's « Tarifs » link still points
+at `https://scanid.fr/#tarifs` (that section exists on the new home page; `tarifs.html` is the new dedicated page);
+README / ops docs still describe `frontend/site/`; measured on the live server (2026-10-02, `Accept-Encoding: gzip`):
+HTML is gzipped, CSS is not (the server's `gzip_types` does not list it) — the new `site.css` (113 KB) and the scripts
+will travel uncompressed, a possible later improvement; the Vision quota note of §D.6 still stands.
+
+---
+
+## E. TASK E (2026-10-02) — WEBSITE: THREE REMOVALS — COMMITTED `bf7dc3c`, PUSHED — RECORD ONLY
 
 ### E.0 State in one line (update after every stage)
 

@@ -63,6 +63,22 @@ test.describe('Mon Compte — facturation et achats', () => {
         await expect(rows.nth(1).locator('td')).toHaveText(['Pack 100', '01/08/2026', '01/08/2027']);
     });
 
+    test('« Mes achats » nomme un achat à la carte par ses documents', async ({ page, api }) => {
+        // The server stores an « à la carte » purchase as pack 0, the documents bought in `credits`.
+        api.purchases = [
+            { id: 'pu-3', pack: 0, credits: 37, amount_ht_cents: 5550, paid_at: '2026-10-02T10:00:00Z', expires_at: '2027-10-02T10:00:00Z' },
+            { id: 'pu-2', pack: 0, credits: 1, amount_ht_cents: 150, paid_at: '2026-09-20T10:00:00Z', expires_at: '2027-09-20T10:00:00Z' },
+            { id: 'pu-1', pack: 1000, credits: 1000, amount_ht_cents: 69000, paid_at: '2026-09-14T10:00:00Z', expires_at: '2027-09-14T10:00:00Z' },
+        ];
+        await login(page);
+        await openAccount(page);
+        const rows = page.locator('.sid-purchases tbody tr');
+        await expect(rows).toHaveCount(3);
+        await expect(rows.nth(0).locator('td')).toHaveText(['À la carte · 37 documents', '02/10/2026', '02/10/2027']);
+        await expect(rows.nth(1).locator('td')).toHaveText(['À la carte · 1 document', '20/09/2026', '20/09/2027']);
+        await expect(rows.nth(2).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027']);
+    });
+
     test('sans achat, un état vide en français', async ({ page }) => {
         await login(page);
         await openAccount(page);

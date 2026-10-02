@@ -5,7 +5,7 @@ import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUE
 import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
 import { PASSWORD_RULES, evaluatePassword, generateExamplePassword } from './passwordRules.js';
 import OfflineScreen from './OfflineScreen.jsx';
-import { packSummary, formatEuros, formatCount, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { packSummary, formatEuros, formatCount, purchaseLabel, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -1296,7 +1296,7 @@ function MyPurchases() {
                         <tbody>
                             {purchases.map(purchase => (
                                 <tr key={purchase.id}>
-                                    <td>Pack {formatCount(purchase.pack)}</td>
+                                    <td>{purchaseLabel(purchase)}</td>
                                     <td>{day(purchase.paid_at)}</td>
                                     <td>{day(purchase.expires_at)}</td>
                                 </tr>

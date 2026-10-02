@@ -10,8 +10,10 @@
 //     dist/presentation.html   <- site/presentation.html   scanid.fr/presentation.html
 //     dist/faq.html, guide.html, cgv.html, ... every page of the site
 //     dist/iftm/index.html     <- site/iftm/index.html     scanid.fr/iftm/
-//     dist/fonts/              <- self-hosted Space Grotesk + Inter  (see below)
+//     dist/fonts/              <- self-hosted Space Grotesk + Inter, only if a page
+//                                 asks Google Fonts for them  (see below)
 //     dist/scripts/            <- the pages' inline <script> blocks, externalised
+//                                 (only if a page carries one)
 //     dist/sw.js               <- scripts/legacy-sw-unregister.js  (see below)
 //
 //     dist/app/                <- vite build (base '/app/')  scanid.fr/app/
@@ -40,12 +42,13 @@ import { join, dirname, extname, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const FRONTEND = dirname(dirname(fileURLToPath(import.meta.url)));
-// The site's source of truth. Since v5 it is scanid-site-v5-deploy/, which
-// replaces the content of site/; site/ (v4) stays in the repository untouched
-// and read-only, and nothing reads it any more. This constant is the only place
-// the source directory is named — the rest of this file says "site/" for
-// whichever directory it points at.
-const SITE = join(FRONTEND, 'scanid-site-v5-deploy');
+// The site's source of truth. Since 2026-10-02 it is the new site Alex
+// delivered on 2026-09-30 (ScanID-nouveau-site-2026-09-30/nouveau-site/), which
+// replaces v5; scanid-site-v5-deploy/ stays in the repository untouched and
+// nothing reads it any more. This constant is the only place the source
+// directory is named — the rest of this file says "site/" for whichever
+// directory it points at.
+const SITE = join(FRONTEND, 'ScanID-nouveau-site-2026-09-30', 'nouveau-site');
 const DIST = join(FRONTEND, 'dist');
 const MODULES = join(FRONTEND, 'node_modules', '@fontsource');
 
@@ -126,6 +129,8 @@ const HTML_REWRITES = [
         from: /<link href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]*" rel="stylesheet">/g,
         to: `<link href="/${FONT_STYLESHEET}" rel="stylesheet">`,
         why: 'Google Fonts stylesheet → the self-hosted bundle',
+        // A page rewritten by this rule links the bundle, so the bundle is built.
+        needsFontBundle: true,
     },
     {
         // The preconnects that went with it. Harmless if left, but they would
@@ -294,12 +299,11 @@ if (!existsSync(appEntry)) {
 }
 
 const removed = clearSiteHalf();
-const fonts = buildFontBundle();
-mkdirSync(join(DIST, SCRIPT_DIR), { recursive: true });
 
 let copied = 0;
 let rewritten = 0;
 let scriptsExtracted = 0;
+let linksFontBundle = false;
 const rewriteCounts = new Map(HTML_REWRITES.map(r => [r.why, 0]));
 
 for (const rel of walk(SITE)) {
@@ -323,12 +327,14 @@ for (const rel of walk(SITE)) {
         if (!hits) continue;
         html = html.replace(rule.from, rule.to);
         rewriteCounts.set(rule.why, rewriteCounts.get(rule.why) + hits.length);
+        if (rule.needsFontBundle) linksFontBundle = true;
         touched = true;
     }
 
     const { html: withoutInline, emitted } = externaliseInlineScripts(html, rel);
     html = withoutInline;
     for (const script of emitted) {
+        mkdirSync(join(DIST, SCRIPT_DIR), { recursive: true });
         writeFileSync(join(DIST, SCRIPT_DIR, script.name), script.code);
         scriptsExtracted += 1;
         copied += 1;
@@ -348,6 +354,13 @@ for (const rel of walk(SITE)) {
     if (touched) rewritten += 1;
 }
 
+// The self-hosted Space Grotesk + Inter exist for pages that asked Google Fonts
+// for them: the rewrite above points those pages at /fonts/site.css, so the
+// bundle is built exactly when one did. A site that ships its own typefaces —
+// the 2026-09-30 site carries them in assets/fonts/ — needs no bundle, and
+// building one anyway would deploy 28 font files that no page loads.
+const fonts = linksFontBundle ? buildFontBundle() : null;
+
 // The application's own service worker now lives at /app/sw.js, scoped to
 // /app/. The one that used to live here, at the root, is still registered in
 // the browser of everyone who has opened the app — with a navigation fallback
@@ -366,7 +379,9 @@ console.log(
     `assemble-site: ${copied} files into dist/ (${rewritten} pages rewritten)\n` +
     `${rewriteSummary}\n` +
     `      ${scriptsExtracted} × inline <script> → /${SCRIPT_DIR}/ (script-src 'self')\n` +
-    `      ${fonts.faces} @font-face, ${fonts.files} files, ${(fonts.bytes / 1024).toFixed(0)} KB → /${FONT_DIR}/ (font-src 'self')\n` +
+    (fonts
+        ? `      ${fonts.faces} @font-face, ${fonts.files} files, ${(fonts.bytes / 1024).toFixed(0)} KB → /${FONT_DIR}/ (font-src 'self')\n`
+        : `      no /${FONT_DIR}/ bundle — no page asks Google Fonts for a typeface\n`) +
     `      site  → dist/            (${removed.length} stale root entries cleared)\n` +
     `      app   → dist/${APP_DIR}/  (left untouched)`
 );

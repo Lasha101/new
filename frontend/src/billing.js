@@ -16,6 +16,15 @@ export const PACKS = {
 /** « 1 000 » — thin French thousands grouping, the way the site writes packs. */
 export const formatCount = count => String(count).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
+/** An « à la carte » purchase (1 document = 1 credit) has no pack: the server
+ * stores it as pack 0 with the documents bought in `credits` (billing.UNIT_PACK). */
+export const UNIT_PACK = 0;
+
+/** « Mes achats »: « Pack 1 000 », or « À la carte · 37 documents ». */
+export const purchaseLabel = purchase => (purchase.pack === UNIT_PACK
+    ? `À la carte · ${formatCount(purchase.credits)} document${purchase.credits > 1 ? 's' : ''}`
+    : `Pack ${formatCount(purchase.pack)}`);
+
 /** « 1 890,00 € » */
 export function formatEuros(cents) {
     const euros = Math.floor(cents / 100);

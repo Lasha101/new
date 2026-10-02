@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guide d’utilisation ScanID · Vos passeports en cinq étapes</title>
+<meta name="description" content="Se connecter, importer les passeports et cartes d’identité, lancer l’analyse, vérifier avec le score de confiance, exporter en Excel ou CSV : le guide pas à pas de ScanID.">
+<link rel="canonical" href="https://scanid.fr/guide.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#0B1522">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ScanID">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Le guide d’utilisation, en cinq étapes · ScanID">
+<meta property="og:description" content="Se connecter, importer les passeports et cartes d’identité, lancer l’analyse, vérifier avec le score de confiance, exporter en Excel ou CSV : le guide pas à pas de ScanID.">
+<meta property="og:url" content="https://scanid.fr/guide.html">
+<meta property="og:image" content="https://scanid.fr/og/guide.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://scanid.fr/og/guide.jpg">
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/mona-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css?v=202609302115">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"HowTo","name":"Extraire les données de passeports vers Excel avec ScanID","inLanguage":"fr","step":[{"@type":"HowToStep","position":1,"name":"Connectez-vous à votre espace","text":"Rendez-vous sur scanid.fr/app/ et connectez-vous avec vos identifiants."},{"@type":"HowToStep","position":2,"name":"Importez vos documents","text":"Indiquez une destination si vous le souhaitez, puis glissez les passeports et cartes d’identité, en photo ou en PDF."},{"@type":"HowToStep","position":3,"name":"Lancez l’analyse","text":"ScanID lit la zone visible et la bande MRZ de chaque document."},{"@type":"HowToStep","position":4,"name":"Vérifiez les données","text":"Relisez les lignes dont le score de confiance est plus bas."},{"@type":"HowToStep","position":5,"name":"Exportez votre fichier","text":"Téléchargez le fichier Excel ou CSV, pour une destination ou pour toutes."}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://scanid.fr/"},{"@type":"ListItem","position":2,"name":"Guide d’utilisation","item":"https://scanid.fr/guide.html"}]}</script>
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+<header class="site-bar">
+  <div class="wrap site-bar__in">
+    <a class="lk " href="index.html" aria-label="ScanID, accueil"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <div class="site-nav__main"><a href="presentation.html" aria-current="page">Produit</a><a href="securite.html">Sécurité</a><a href="tarifs.html">Tarifs</a><a href="ressources.html">Ressources</a></div>
+      <a class="site-nav__login" href="/app/">Connexion</a>
+      <a class="btn btn--main" href="essai.html">Essai gratuit</a>
+      <button class="menu-btn" type="button" data-menu-open aria-expanded="false" aria-controls="menu-panel"><i aria-hidden="true"></i><span class="t">Menu</span><span class="sr">Ouvrir le grand menu</span></button>
+    </nav>
+  </div>
+</header>
+<div class="menu-panel" id="menu-panel" role="dialog" aria-modal="true" aria-label="Grand menu" hidden>
+  <div class="menu-panel__guil" aria-hidden="true"><canvas></canvas></div>
+  <div class="wrap menu-panel__head"><a class="lk " href="index.html" aria-label="ScanID, accueil"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></a><button class="menu-btn" type="button" data-menu-close><span>Fermer</span></button></div>
+  <div class="wrap menu-panel__cols">
+    <div class="menu-panel__col"><h2>Produit</h2><a href="presentation.html">Présentation</a><a href="presentation.html#fichier">Le fichier obtenu</a><a href="guide.html" aria-current="page">Guide d’utilisation</a><a href="guide-photo.html">Guide photo</a></div><div class="menu-panel__col"><h2>Sécurité</h2><a href="securite.html">Sécurité et RGPD</a><a href="securite.html#roles">Qui fait quoi</a><a href="checklist.html">Checklist RGPD</a><a href="politique-confidentialite.html">Confidentialité</a></div><div class="menu-panel__col"><h2>Tarifs</h2><a href="tarifs.html">Les packs</a><a href="essai.html">Essai gratuit</a><a href="contact.html#rappel">Démonstration</a><a href="cgv.html">CGV</a></div><div class="menu-panel__col"><h2>Ressources</h2><a href="ressources.html#articles">Articles</a><a href="faq.html">Questions fréquentes</a><a href="mrz.html">Lire la bande MRZ</a><a href="alternatives.html">Alternatives</a></div>
+  </div>
+  <div class="wrap menu-panel__foot"><a href="contact.html">Contact</a><a href="/app/">Connexion</a><a href="mentions-legales.html">Mentions légales</a><a class="btn btn--light" href="essai.html">Essai gratuit</a></div>
+</div>
+<main id="contenu" tabindex="-1">
+<header class="page-head">
+  <div class="wrap">
+    <div class="page-head__in">
+      <nav class="crumbs" aria-label="Fil d’Ariane"><a href="index.html">Accueil</a><span aria-hidden="true">/</span><span aria-current="page">Guide d’utilisation</span></nav>
+      <p class="label">Guide d’utilisation</p>
+      <h1 class="h1">De l’import au fichier, <em>en cinq étapes</em>.</h1>
+      <p class="lead">Tout se passe dans votre navigateur, sur ordinateur, tablette ou téléphone. Voici chaque écran, dans l’ordre.</p>
+    </div>
+    <p class="mrz-line" aria-hidden="true">P&lt;FRASCANID&lt;&lt;GUIDE&lt;&lt;CINQ&lt;ETAPES&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+  </div>
+</header>
+
+<section class="section section--flush" aria-label="Les cinq étapes">
+  <div class="wrap">
+    <ol class="gsteps">
+      <li>
+        <div class="gsteps__txt" data-rise>
+          <h2>Connectez-vous à votre espace</h2>
+          <p>Rendez-vous sur <a class="link link--l" href="/app/">scanid.fr/app/</a>, ou cliquez sur « Connexion » en haut de chaque page, et entrez vos identifiants. Rien à installer.</p>
+          <p class="small">Pas encore de compte ? <a class="link link--l" href="essai.html">Demandez vos 20 documents offerts</a>.</p>
+        </div>
+        <div class="gsteps__vis gsteps__vis--pad" data-rise aria-hidden="true">
+          <div class="login-mock"><b>Connexion</b><span>E-mail</span><span>Mot de passe</span><i>Se connecter</i></div>
+        </div>
+      </li>
+      <li>
+        <div class="gsteps__txt" data-rise>
+          <h2>Importez vos documents</h2>
+          <p>Indiquez si vous le souhaitez une destination, le nom du dossier, par exemple « Séminaire Lisbonne ». Puis glissez un ou plusieurs passeports ou cartes d’identité, en photo (PNG, JPG, HEIC) ou en PDF, jusqu’à 10 Mo. Plusieurs documents peuvent être réunis dans un même PDF.</p>
+          <p class="small">Sur téléphone, « Prendre une photo » ouvre directement l’appareil photo. Pour une lecture fiable : <a class="link link--l" href="guide-photo.html">le guide photo</a>.</p>
+        </div>
+        <div class="gsteps__vis appmock" data-rise aria-hidden="true"><div class="app"><section class="app__card">
+          <h5>Ajouter un document</h5>
+          <p>Glissez votre document ci-dessous pour lancer l’extraction automatique.</p>
+          <label>Destination (optionnel)</label>
+          <div class="app__input"><span class="val">Séminaire Lisbonne</span></div>
+          <label>Document (image ou PDF)</label>
+          <div class="app__drop"><svg viewBox="0 0 24 24" fill="none" stroke="#2A3240" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg><b>Fichier prêt : dossier-lisbonne.pdf</b><small>PNG, JPG, HEIC ou PDF jusqu’à 10 Mo</small></div>
+          <div class="app__row"><span class="app__btn">Prendre une photo</span><span class="app__link">Guide : réussir la photo de votre document</span></div>
+          <div class="app__row app__row--end"><span class="app__btn">Annuler</span><span class="app__btn app__btn--go ready">Lancer l’analyse</span></div>
+        </section></div></div>
+      </li>
+      <li>
+        <div class="gsteps__txt" data-rise>
+          <h2>Lancez l’analyse</h2>
+          <p>Cliquez sur « Lancer l’analyse ». ScanID lit chaque document, la zone visible et la bande MRZ, et en extrait les données. Vous suivez l’avancement à l’écran, document par document.</p>
+          <p class="small">Chaque document lu consomme un crédit ; le compteur reste visible en haut de l’écran.</p>
+        </div>
+        <div class="gsteps__vis gsteps__vis--pad" data-rise aria-hidden="true">
+          <div class="gmock" id="g-job"><b>Traitement en cours</b><div class="gmock__job"><span>dossier-lisbonne.pdf</span><span class="bar"><i></i></span><span class="st">12 / 12 · terminé</span></div></div>
+        </div>
+      </li>
+      <li>
+        <div class="gsteps__txt" data-rise>
+          <h2>Vérifiez les données</h2>
+          <p>Les documents lus s’ajoutent à la liste « Mes documents ». Chaque ligne porte un score de confiance : proche de 1, la lecture est sûre ; plus bas, un coup d’œil sur le document suffit.</p>
+          <p class="small">Un filtre affiche seulement les passeports ou les cartes d’identité, un autre une destination.</p>
+        </div>
+        <div class="gsteps__vis gsteps__vis--pad" data-rise>
+          <div class="tw" id="g-table"></div>
+          <p class="gsteps__cap">Voyageurs fictifs. La ligne surlignée, au score plus bas, est à relire.</p>
+        </div>
+      </li>
+      <li>
+        <div class="gsteps__txt" data-rise>
+          <h2>Exportez votre fichier</h2>
+          <p>Choisissez une destination, ou toutes, puis téléchargez le fichier Excel ou CSV. Les colonnes sont toujours les mêmes, dans le même ordre : il se colle tel quel dans vos listes et vos formulaires.</p>
+          <p class="small">Le détail de chaque colonne : <a class="link link--l" href="presentation.html#fichier">le fichier, colonne par colonne</a>.</p>
+        </div>
+        <div class="gsteps__vis appmock" data-rise aria-hidden="true"><div class="app"><section class="app__card"><h5>Exportation des données</h5><div class="app__input"><span class="val">Séminaire Lisbonne</span></div><div class="app__row"><span class="app__link">Aperçu</span><span class="app__btn app__btn--blue">Télécharger Excel</span><span class="app__btn">Télécharger CSV</span></div></section></div></div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section tint" aria-labelledby="t-conseils">
+  <div class="wrap">
+    <div class="split split--top">
+      <div class="stack" data-rise>
+        <p class="label">Conseils</p>
+        <h2 class="h2" id="t-conseils">Pour un résultat <em>optimal</em>.</h2>
+        <p class="lead">Quelques habitudes suffisent pour des lignes sûres dès le premier import.</p>
+      </div>
+      <ul class="checks" data-rise>
+        <li>Posez le document bien à plat, dans une lumière douce, sans reflet.</li>
+        <li>Cadrez le document entier, net et lisible, y compris les deux lignes du bas.</li>
+        <li>Photo (PNG, JPG, HEIC) ou PDF, y compris plusieurs documents par fichier.</li>
+        <li>Nommez vos dossiers par destination : l’export n’en sera que plus simple.</li>
+        <li>Relisez les lignes dont le score de confiance est plus bas avant de les utiliser.</li>
+        <li>Les échanges sont chiffrés et les documents lus dans l’Union européenne, puis détruits : ils ne sont jamais stockés.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="t-aide">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">Aller plus loin</p>
+      <h2 class="h3" id="t-aide">Besoin d’un coup de main ?</h2>
+    </div>
+    <div class="cards" data-rise>
+      <a class="rc" href="guide-photo.html"><span class="k">Guide · Voyageurs</span><h3>La bonne photo, en six règles</h3><p>Le guide à envoyer à vos voyageurs, avec un message prêt à copier.</p><span class="go">Voir le guide photo <span class="ar" aria-hidden="true">→</span></span></a>
+      <a class="rc" href="faq.html"><span class="k">Aide</span><h3>Questions fréquentes</h3><p>Documents pris en charge, sécurité, tarifs : toutes les réponses.</p><span class="go">Voir la FAQ <span class="ar" aria-hidden="true">→</span></span></a>
+      <a class="rc" href="contact.html"><span class="k">Contact</span><h3>Nous écrire</h3><p>Une question sur votre espace ? Réponse sous un jour ouvré.</p><span class="go">Nous contacter <span class="ar" aria-hidden="true">→</span></span></a>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="site-footer" role="contentinfo">
+  <div class="wrap">
+    <div class="site-footer__top">
+      <div class="site-footer__brand">
+        <span class="lk " aria-hidden="true"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></span>
+        <p class="site-footer__sig">Lire · Extraire · Exporter</p>
+        <p>Les passeports et cartes d’identité de vos voyageurs, rendus en tableau Excel. Pour les agences de voyages.</p>
+        <div class="site-footer__contact"><a href="mailto:contact@scanid.fr">contact@scanid.fr</a><a href="tel:+33695811866">+33 6 95 81 18 66</a><span>Du lundi au vendredi, 9 h à 18 h</span></div>
+      </div>
+      <div class="site-footer__col"><h2>Produit</h2><a href="presentation.html">Présentation</a><a href="tarifs.html">Tarifs</a><a href="essai.html">Essai gratuit</a><a href="guide.html">Guide d’utilisation</a><a href="/app/">Connexion</a></div><div class="site-footer__col"><h2>Sécurité</h2><a href="securite.html">Sécurité et RGPD</a><a href="checklist.html">Checklist RGPD</a><a href="politique-confidentialite.html">Politique de confidentialité</a></div><div class="site-footer__col"><h2>Ressources</h2><a href="ressources.html#articles">Articles</a><a href="guide-photo.html">Guide photo</a><a href="mrz.html">Lire la bande MRZ</a><a href="faq.html">Questions fréquentes</a><a href="alternatives.html">Alternatives</a></div><div class="site-footer__col"><h2>Société</h2><a href="contact.html">Contact</a><a href="contact.html#rappel">Démonstration</a><a href="mentions-legales.html">Mentions légales</a><a href="cgv.html">CGV</a></div>
+    </div>
+    <p class="mrz-line" aria-hidden="true">P&lt;SCANID&lt;&lt;LIRE&lt;EXTRAIRE&lt;EXPORTER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+SCANID&lt;SASU&lt;&lt;PARIS&lt;&lt;RCS&lt;107858557&lt;&lt;FRA&lt;&lt;&lt;&lt;&lt;&lt;</p>
+    <div class="site-footer__bottom"><span>© 2026 ScanID SASU · 169 avenue de Choisy, 75013 Paris · RCS Paris 107 858 557</span><span>Aucun cookie de mesure d’audience.</span></div>
+  </div>
+</footer>
+<div class="phone-bar" aria-hidden="true"><a class="btn btn--main" href="essai.html" tabindex="-1">Essai gratuit</a><a class="btn btn--line" href="tarifs.html" tabindex="-1">Tarifs</a></div>
+<script src="assets/js/lib.js?v=202609302115" defer></script><script src="assets/js/core.js?v=202609302115" defer></script><script src="assets/js/guide.js?v=202609302115" defer></script>
+</body>
+</html>

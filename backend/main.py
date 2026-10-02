@@ -828,7 +828,8 @@ def order_pack(payload: schemas.OrderRequest, db: Session = Depends(get_db), cur
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """checkout.session.completed (and async_payment_succeeded, for bank
-    transfers) → credits the pack paid for, once. Signature verified with
+    transfers) → credits the pack paid for — or, for the « à la carte » link,
+    the quantity of documents bought — once. Signature verified with
     STRIPE_WEBHOOK_SECRET. Anything that cannot be credited automatically is
     acknowledged (Stripe would otherwise retry for days) and reported to Alex."""
     secret = config.stripe_webhook_secret()
@@ -848,8 +849,12 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db
 
     outcome = await asyncio.to_thread(billing.credit_checkout_session, db, session)
     if outcome.status == "credited":
-        logger.info("Stripe: pack %s crédité (session traitée).", outcome.pack)
-        subject, text_body = emails.purchase_confirmation(outcome.user, outcome.pack, outcome.expires_at)
+        if outcome.pack == billing.UNIT_PACK:
+            logger.info("Stripe: %s documents à la carte crédités (session traitée).", outcome.credits)
+            subject, text_body = emails.unit_purchase_confirmation(outcome.user, outcome.credits, outcome.expires_at)
+        else:
+            logger.info("Stripe: pack %s crédité (session traitée).", outcome.pack)
+            subject, text_body = emails.purchase_confirmation(outcome.user, outcome.pack, outcome.expires_at)
         background_tasks.add_task(mailer.send, outcome.user["email"], subject, text_body, "purchase_confirmation")
         await manager.send_update(outcome.user["id"], {"type": "credit_update"})
     elif outcome.status == "unmatched":

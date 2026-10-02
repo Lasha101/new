@@ -77,9 +77,9 @@ grep -q 'href="/app/"' <<<"$root_html" \
 c=$(code /app/)
 [ "$c" = "200" ] && ok "the application answers /app/" || fail "/app/ returned $c, expected 200"
 
-c=$(code /fonts/site.css)
-[ "$c" = "200" ] && ok "the self-hosted typefaces are served" \
-  || fail "/fonts/site.css returned $c — every page would fall back to a system font"
+c=$(code /assets/css/site.css)
+[ "$c" = "200" ] && ok "the site stylesheet and its self-hosted typefaces are served" \
+  || fail "/assets/css/site.css returned $c — every page would render unstyled, in a system font"
 
 # --- What the CONFIGURATION produces. These are the two that stay wrong until
 #     nginx is reloaded, and they are the reason this script exists. ----------

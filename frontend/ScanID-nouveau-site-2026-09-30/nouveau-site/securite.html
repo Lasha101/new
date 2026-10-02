@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sécurité et RGPD · Le document ne fait que passer · ScanID</title>
+<meta name="description" content="Où va le passeport d’un voyageur quand une agence l’importe dans ScanID : lu en mémoire, détruit après lecture, résultats chiffrés et hébergés dans l’Union européenne. Qui fait quoi au sens du RGPD.">
+<link rel="canonical" href="https://scanid.fr/securite.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#0B1522">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ScanID">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Le document ne fait que passer · Sécurité ScanID">
+<meta property="og:description" content="Où va le passeport d’un voyageur quand une agence l’importe dans ScanID : lu en mémoire, détruit après lecture, résultats chiffrés et hébergés dans l’Union européenne. Qui fait quoi au sens du RGPD.">
+<meta property="og:url" content="https://scanid.fr/securite.html">
+<meta property="og:image" content="https://scanid.fr/og/securite.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://scanid.fr/og/securite.jpg">
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/mona-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css?v=202609302115">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://scanid.fr/"},{"@type":"ListItem","position":2,"name":"Sécurité et RGPD","item":"https://scanid.fr/securite.html"}]}</script>
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+<header class="site-bar">
+  <div class="wrap site-bar__in">
+    <a class="lk " href="index.html" aria-label="ScanID, accueil"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <div class="site-nav__main"><a href="presentation.html">Produit</a><a href="securite.html" aria-current="page">Sécurité</a><a href="tarifs.html">Tarifs</a><a href="ressources.html">Ressources</a></div>
+      <a class="site-nav__login" href="/app/">Connexion</a>
+      <a class="btn btn--main" href="essai.html">Essai gratuit</a>
+      <button class="menu-btn" type="button" data-menu-open aria-expanded="false" aria-controls="menu-panel"><i aria-hidden="true"></i><span class="t">Menu</span><span class="sr">Ouvrir le grand menu</span></button>
+    </nav>
+  </div>
+</header>
+<div class="menu-panel" id="menu-panel" role="dialog" aria-modal="true" aria-label="Grand menu" hidden>
+  <div class="menu-panel__guil" aria-hidden="true"><canvas></canvas></div>
+  <div class="wrap menu-panel__head"><a class="lk " href="index.html" aria-label="ScanID, accueil"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></a><button class="menu-btn" type="button" data-menu-close><span>Fermer</span></button></div>
+  <div class="wrap menu-panel__cols">
+    <div class="menu-panel__col"><h2>Produit</h2><a href="presentation.html">Présentation</a><a href="presentation.html#fichier">Le fichier obtenu</a><a href="guide.html">Guide d’utilisation</a><a href="guide-photo.html">Guide photo</a></div><div class="menu-panel__col"><h2>Sécurité</h2><a href="securite.html" aria-current="page">Sécurité et RGPD</a><a href="securite.html#roles">Qui fait quoi</a><a href="checklist.html">Checklist RGPD</a><a href="politique-confidentialite.html">Confidentialité</a></div><div class="menu-panel__col"><h2>Tarifs</h2><a href="tarifs.html">Les packs</a><a href="essai.html">Essai gratuit</a><a href="contact.html#rappel">Démonstration</a><a href="cgv.html">CGV</a></div><div class="menu-panel__col"><h2>Ressources</h2><a href="ressources.html#articles">Articles</a><a href="faq.html">Questions fréquentes</a><a href="mrz.html">Lire la bande MRZ</a><a href="alternatives.html">Alternatives</a></div>
+  </div>
+  <div class="wrap menu-panel__foot"><a href="contact.html">Contact</a><a href="/app/">Connexion</a><a href="mentions-legales.html">Mentions légales</a><a class="btn btn--light" href="essai.html">Essai gratuit</a></div>
+</div>
+<main id="contenu" tabindex="-1">
+<header class="page-head">
+  <div class="wrap">
+    <div class="page-head__in">
+      <nav class="crumbs" aria-label="Fil d’Ariane"><a href="index.html">Accueil</a><span aria-hidden="true">/</span><span aria-current="page">Sécurité et RGPD</span></nav>
+      <p class="label">Sécurité et RGPD</p>
+      <h1 class="h1">Le document <em>ne fait que passer</em>.</h1>
+      <p class="lead">Une agence confie à ScanID les passeports de ses clients. Voici, sans promesse excessive, ce qu’il advient de chaque document, et qui fait quoi au sens du RGPD.</p>
+      <div class="page-head__actions"><a class="btn btn--main" href="essai.html">Essayer avec 20 documents offerts <span class="ar" aria-hidden="true">→</span></a><a class="btn btn--line" href="#roles">Qui fait quoi</a></div>
+    </div>
+    <p class="mrz-line" aria-hidden="true">P&lt;FRASCANID&lt;&lt;SECURITE&lt;&lt;RGPD&lt;&lt;UE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+  </div>
+</header>
+
+<!-- ============ Le trajet ============ -->
+<section class="section dark" id="trajet" aria-labelledby="t-trajet">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">Le trajet d’un passeport</p>
+      <h2 class="h2" id="t-trajet">Du poste de l’agence <em>au tableau</em>.</h2>
+      <p class="lead">Le document est lu en mémoire, puis détruit. Seule la ligne de données reste, chiffrée, dans l’espace de votre agence.</p>
+    </div>
+    <div data-rise>
+      <div class="flow" id="flow">
+        <div class="flow__track">
+          <section class="flow__st" aria-labelledby="fl1"><header><span>01 · Départ</span><b id="fl1">Votre fichier</b></header><div class="flow__slot" data-slot="0"></div><p>Il quitte votre ordinateur par une connexion chiffrée.</p></section>
+          <section class="flow__st" aria-labelledby="fl2"><header><span>02 · Lecture</span><b id="fl2">En mémoire, région UE</b></header><div class="flow__slot" data-slot="1"><i class="flow__mem" aria-hidden="true"></i><span class="flow__gone" id="flow-gone" aria-hidden="true">Document détruit</span></div><p>La lecture optique se fait en mémoire, sans stockage, chez Google Cloud en région Union européenne.</p></section>
+          <section class="flow__st" aria-labelledby="fl3"><header><span>03 · Arrivée</span><b id="fl3">Votre tableau</b></header><div class="flow__slot" data-slot="2"><div class="flow__stack" id="flow-stack" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div><p>Seules les données extraites sont conservées, chiffrées, dans votre espace hébergé par IONOS dans l’Union européenne.</p></section>
+        </div>
+        <div class="flow__card" id="flow-card" aria-hidden="true"></div>
+        <i class="flow__beam" id="flow-beam" aria-hidden="true"></i>
+        <div class="flow__row" id="flow-row" aria-hidden="true"><b>SPECIMEN</b><span>CAMILLE</span><span>F</span><span>22/09/2033</span><span>PP</span></div>
+        <canvas class="flow__cv" id="flow-cv" aria-hidden="true"></canvas>
+      </div>
+      <p class="flow__cap"><span>Documents conservés : <b>aucun</b></span><span>Données conservées : <b>la ligne du tableau, chiffrée</b></span><span>Revente, réutilisation, entraînement d’IA : <b>jamais</b></span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Engagements ============ -->
+<section class="section" aria-labelledby="t-engage">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">Nos engagements</p>
+      <h2 class="h2" id="t-engage">Six engagements, <em>écrits noir sur blanc</em>.</h2>
+      <p class="lead">Chacun figure dans notre <a class="link link--l" href="politique-confidentialite.html">politique de confidentialité</a>.</p>
+    </div>
+    <div class="engage" data-rise>
+      <div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="s" d="M8 21H5.5A1.5 1.5 0 0 1 4 19.5v-15A1.5 1.5 0 0 1 5.5 3h8.5l4 4v5"/><path class="s" d="M14 3v4h4"/><path class="l" d="M2 12h14"/><circle class="f" cx="18" cy="15.2" r="1.05"/><circle class="f" cx="14.6" cy="17.6" r=".95"/><circle class="f" cx="19.4" cy="19" r=".8"/><circle class="f" cx="11.2" cy="20.4" r=".85"/><circle class="f" cx="16.4" cy="21.2" r=".6"/></svg><h3>Jamais stocké</h3><p>Le passeport est lu en mémoire, le temps de l’extraction, puis détruit. Seule la ligne de données reste, dans l’espace de votre agence.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect class="s" x="2.5" y="5" width="19" height="14" rx="3"/><text class="t" x="12" y="14.2" text-anchor="middle" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:7.4px">UE</text><path class="l" d="M7.6 16.4h8.8"/></svg><h3>Dans l’Union européenne</h3><p>Lecture optique chez Google Cloud, en région Union européenne. Résultats hébergés par IONOS, dans l’Union européenne.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect class="s" x="4.5" y="10.5" width="15" height="10.5" rx="1.8"/><path class="s" d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/><path class="l" d="M12 14.4v2.8"/></svg><h3>Chiffré</h3><p>Échanges chiffrés, fichiers de résultats chiffrés au repos.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="s" d="M3.5 11.6V5.2a1.7 1.7 0 0 1 1.7-1.7h6.4l8.9 8.9a1.7 1.7 0 0 1 0 2.4l-6 6a1.7 1.7 0 0 1-2.4 0z"/><circle class="s" cx="8.2" cy="8.2" r="1.5"/><path class="b" d="M3 21 21 3"/></svg><h3>Aucune revente</h3><p>Vos données et celles de vos voyageurs ne sont ni vendues, ni louées, ni utilisées pour entraîner une intelligence artificielle.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect class="s" x="3" y="3.5" width="7.8" height="7.5" rx="1.3"/><rect class="s" x="13.2" y="3.5" width="7.8" height="7.5" rx="1.3"/><rect class="s" x="3" y="13" width="7.8" height="7.5" rx="1.3"/><rect class="l" x="13.2" y="13" width="7.8" height="7.5" rx="1.3"/></svg><h3>Un espace par agence</h3><p>Chaque agence dispose de son propre espace, cloisonné. Seules les personnes habilitées accèdent aux données traitées.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="s" d="M6 3h8l4 4v14H6z"/><path class="s" d="M14 3v4h4"/><path class="s" d="M8.5 10.5h7M8.5 13h5"/><path class="l" d="M8.5 17.6c1.1-1.5 2-1.5 2.4 0s1.5 1.3 2.4-.2 1.7-.9 2.2.3"/></svg><h3>Un accord de sous-traitance</h3><p>ScanID agit comme sous-traitant au sens de l’article 28 du RGPD. Un accord de sous-traitance (DPA) est fourni à chaque client.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Qui fait quoi ============ -->
+<section class="section tint" id="roles" aria-labelledby="t-roles">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">Qui fait quoi</p>
+      <h2 class="h2" id="t-roles">Le RGPD, <em>en clair</em>.</h2>
+      <p class="lead">Qui est responsable, qui est sous-traitant, et quels prestataires voient quoi. Un trait plein quand des données de passeport circulent, un pointillé quand il n’y en a aucune. Cliquez sur un acteur.</p>
+    </div>
+    <div class="roles" data-rise>
+      <div class="roles__map" id="roles-map">
+        <svg class="roles__lines" id="roles-lines" aria-hidden="true"></svg>
+        <button class="node soft" type="button" data-n="voy" aria-pressed="false" style="grid-column:1;grid-row:1"><b>Vos voyageurs</b><span>Personnes concernées</span></button>
+        <button class="node" type="button" data-n="agence" aria-pressed="false" style="grid-column:2;grid-row:1"><b>Votre agence</b><span>Responsable de traitement</span></button>
+        <button class="node key" type="button" data-n="scanid" aria-pressed="true" style="grid-column:3;grid-row:1"><b>ScanID</b><span>Sous-traitant · art. 28</span></button>
+        <button class="node" type="button" data-n="google" aria-pressed="false" style="grid-column:4;grid-row:1"><b>Google Cloud</b><span>Lecture · région UE</span></button>
+        <button class="node" type="button" data-n="ionos" aria-pressed="false" style="grid-column:4;grid-row:2"><b>IONOS</b><span>Hébergement · UE</span></button>
+        <button class="node soft" type="button" data-n="stripe" aria-pressed="false" style="grid-column:3;grid-row:2"><b>Stripe</b><span>Paiement</span></button>
+        <button class="node soft" type="button" data-n="forms" aria-pressed="false" style="grid-column:2;grid-row:2"><b>Formspree</b><span>Formulaires du site</span></button>
+        <p class="roles__legend"><span><i></i>Données de passeport</span><span><i class="no"></i>Aucune donnée de passeport</span></p>
+      </div>
+      <aside class="roles__side" id="roles-side" aria-live="polite">
+        <p class="label">Sous-traitant, article 28 du RGPD</p><p class="h4">ScanID</p>
+        <ul><li>Traite les documents pour votre compte, sur vos seules instructions.</li><li>Ne conserve jamais les pièces d’identité : lues en mémoire, puis détruites.</li><li>Aucune revente, aucun usage caché, aucun entraînement d’IA.</li></ul>
+      </aside>
+    </div>
+    <p class="small roles-note" data-rise>Besoin de l’accord de sous-traitance avant de vous engager ? Écrivez-nous à <a class="link link--l" href="mailto:contact@scanid.fr?subject=Accord%20de%20sous-traitance">contact@scanid.fr</a>.</p>
+  </div>
+</section>
+
+<!-- ============ Votre part, notre part ============ -->
+<section class="section" aria-labelledby="t-parts">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">Une responsabilité partagée</p>
+      <h2 class="h2" id="t-parts">Votre part, <em>notre part</em>.</h2>
+      <p class="lead">ScanID est conçu pour vous aider à rester en conformité ; la conformité elle-même se partage entre votre agence et nous.</p>
+    </div>
+    <div class="parts" data-rise>
+      <div>
+        <p class="role">Votre agence · responsable de traitement</p>
+        <h3>Vous décidez</h3>
+        <ul>
+          <li>Vous décidez pourquoi et comment les données de vos voyageurs sont utilisées.</li>
+          <li>Vous disposez d’une base légale pour les traiter, par exemple l’exécution du contrat de voyage.</li>
+          <li>Vous informez vos voyageurs et répondez à leurs demandes ; ScanID vous assiste.</li>
+          <li>Vous supprimez vos fichiers de résultats quand vous n’en avez plus besoin.</li>
+        </ul>
+      </div>
+      <div class="us">
+        <p class="role">ScanID · sous-traitant</p>
+        <h3>Nous exécutons</h3>
+        <ul>
+          <li>Nous traitons les documents sur vos seules instructions, pour vous fournir le service.</li>
+          <li>Nous ne conservons jamais les pièces d’identité.</li>
+          <li>Nous chiffrons les échanges et les résultats conservés.</li>
+          <li>Nous vous fournissons un accord de sous-traitance et vous assistons pour les demandes de vos voyageurs.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="small" style="margin-top:1.2rem" data-rise>En cas de doute sur votre propre conformité, rapprochez-vous de votre conseil juridique. Pour faire le point : <a class="link link--l" href="checklist.html">la checklist RGPD des agences <span class="ar" aria-hidden="true">→</span></a></p>
+  </div>
+</section>
+
+<!-- ============ À lire ============ -->
+<section class="section tint" aria-labelledby="t-lire">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">À lire aussi</p>
+      <h2 class="h3" id="t-lire">Pour aller plus loin sur les données de vos voyageurs.</h2>
+    </div>
+    <div class="reads" data-rise>
+      <a href="rgpd-fuite-donnees.html"><span class="k">Article · RGPD</span><b>Ce que risque une agence en cas de fuite de données</b><span class="ar" aria-hidden="true">→</span></a>
+      <a href="transfert-donnees-securise.html"><span class="k">Article · Pratique</span><b>Transférer les données d’identité de vos voyageurs en sécurité</b><span class="ar" aria-hidden="true">→</span></a>
+      <a href="rgpd-conserver-copies-passeport.html"><span class="k">Article · RGPD</span><b>Faut-il garder les copies de passeports de vos clients ?</b><span class="ar" aria-hidden="true">→</span></a>
+      <a href="checklist.html"><span class="k">À télécharger</span><b>La checklist RGPD pour agences de voyages</b><span class="ar" aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Dernier appel ============ -->
+<section class="section dark cta-band" aria-labelledby="t-cta">
+  <div class="cta-band__guil" aria-hidden="true"><canvas data-rosette="band" data-size="1000"></canvas></div>
+  <div class="wrap">
+    <div class="cta-band__in" data-rise>
+      <p class="label">Une question</p>
+      <h2 class="h2" id="t-cta">Une question sur la sécurité ? <em>Posez-la-nous</em>.</h2>
+      <p class="lead">Nous préférons vous répondre clairement plutôt que multiplier les promesses. Réponse sous un jour ouvré.</p>
+      <div class="cta-band__actions"><a class="btn btn--main" href="contact.html">Nous écrire <span class="ar" aria-hidden="true">→</span></a><a class="btn btn--line" href="essai.html">Essayer avec 20 documents offerts</a></div>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="site-footer" role="contentinfo">
+  <div class="wrap">
+    <div class="site-footer__top">
+      <div class="site-footer__brand">
+        <span class="lk " aria-hidden="true"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></span>
+        <p class="site-footer__sig">Lire · Extraire · Exporter</p>
+        <p>Les passeports et cartes d’identité de vos voyageurs, rendus en tableau Excel. Pour les agences de voyages.</p>
+        <div class="site-footer__contact"><a href="mailto:contact@scanid.fr">contact@scanid.fr</a><a href="tel:+33695811866">+33 6 95 81 18 66</a><span>Du lundi au vendredi, 9 h à 18 h</span></div>
+      </div>
+      <div class="site-footer__col"><h2>Produit</h2><a href="presentation.html">Présentation</a><a href="tarifs.html">Tarifs</a><a href="essai.html">Essai gratuit</a><a href="guide.html">Guide d’utilisation</a><a href="/app/">Connexion</a></div><div class="site-footer__col"><h2>Sécurité</h2><a href="securite.html">Sécurité et RGPD</a><a href="checklist.html">Checklist RGPD</a><a href="politique-confidentialite.html">Politique de confidentialité</a></div><div class="site-footer__col"><h2>Ressources</h2><a href="ressources.html#articles">Articles</a><a href="guide-photo.html">Guide photo</a><a href="mrz.html">Lire la bande MRZ</a><a href="faq.html">Questions fréquentes</a><a href="alternatives.html">Alternatives</a></div><div class="site-footer__col"><h2>Société</h2><a href="contact.html">Contact</a><a href="contact.html#rappel">Démonstration</a><a href="mentions-legales.html">Mentions légales</a><a href="cgv.html">CGV</a></div>
+    </div>
+    <p class="mrz-line" aria-hidden="true">P&lt;SCANID&lt;&lt;LIRE&lt;EXTRAIRE&lt;EXPORTER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+SCANID&lt;SASU&lt;&lt;PARIS&lt;&lt;RCS&lt;107858557&lt;&lt;FRA&lt;&lt;&lt;&lt;&lt;&lt;</p>
+    <div class="site-footer__bottom"><span>© 2026 ScanID SASU · 169 avenue de Choisy, 75013 Paris · RCS Paris 107 858 557</span><span>Aucun cookie de mesure d’audience.</span></div>
+  </div>
+</footer>
+<div class="phone-bar" aria-hidden="true"><a class="btn btn--main" href="essai.html" tabindex="-1">Essai gratuit</a><a class="btn btn--line" href="tarifs.html" tabindex="-1">Tarifs</a></div>
+<script src="assets/js/lib.js?v=202609302115" defer></script><script src="assets/js/core.js?v=202609302115" defer></script><script src="assets/js/securite.js?v=202609302115" defer></script>
+</body>
+</html>

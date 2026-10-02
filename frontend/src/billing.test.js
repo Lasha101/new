@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PACKS, packSummary, formatEuros, formatCount, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 test('the four packs and their HT prices match the Stripe sheet', () => {
     assert.deepEqual(Object.keys(PACKS), ['100', '1000', '3000', '5000']);
@@ -19,6 +19,14 @@ test('French money and counts', () => {
     assert.equal(formatEuros(189_000), '1 890,00 €');
     assert.equal(formatEuros(13_805), '138,05 €');
     assert.equal(formatCount(5000), '5 000');
+});
+
+test('« Mes achats »: a pack by its size, « à la carte » by the documents bought', () => {
+    assert.equal(UNIT_PACK, 0);                              // backend billing.UNIT_PACK
+    assert.equal(purchaseLabel({ pack: 1000, credits: 1000 }), 'Pack 1 000');
+    assert.equal(purchaseLabel({ pack: 100, credits: 100 }), 'Pack 100');
+    assert.equal(purchaseLabel({ pack: 0, credits: 1250 }), 'À la carte · 1 250 documents');
+    assert.equal(purchaseLabel({ pack: 0, credits: 1 }), 'À la carte · 1 document');
 });
 
 test('SIRET: 14 digits and a valid Luhn key, spaces allowed when typing', () => {

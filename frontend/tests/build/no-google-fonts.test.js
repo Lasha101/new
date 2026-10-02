@@ -8,7 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
-import { join, dirname, extname } from 'node:path';
+import { join, dirname, extname, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const FRONTEND = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -114,20 +114,45 @@ test('neither entry document has a Google Fonts link or preconnect', () => {
 
 test('the public site ships the self-hosted faces it now links', () => {
     ensureBuild();
-    // The pages link /fonts/site.css. If the stylesheet or its files went
-    // missing the pages would fall back to a system typeface in silence — the
-    // exact failure this whole change removed.
-    const css = readFileSync(join(DIST, 'fonts', 'site.css'), 'utf8');
-    assert.match(css, /@font-face/, 'fonts/site.css carries no @font-face rule');
-    for (const family of ['Space Grotesk', 'Inter']) {
-        assert.ok(css.includes(`font-family: '${family}'`), `${family} is missing from fonts/site.css`);
+    // Read off the pages, not hard-coded: the v4/v5 pages linked /fonts/site.css
+    // (built by assemble-site.mjs from @fontsource), the 2026-09-30 site links
+    // assets/css/site.css, which carries its own faces. Whatever a page links,
+    // the stylesheet must be in the build and so must every font file it points
+    // at — otherwise the pages fall back to a system typeface in silence, the
+    // exact failure self-hosting removed.
+    const shipped = new Map(distFiles());
+    const isRemote = ref => /^[a-z][a-z0-9+.-]*:|^\/\//i.test(ref);
+    const resolve = (from, ref) => {
+        const path = ref.split(/[?#]/)[0];
+        return posix.normalize(path.startsWith('/') ? path.slice(1) : posix.join(posix.dirname(from), path));
+    };
+    const problems = [];
+    const sheets = new Set();
+    for (const [page, buffer] of shipped) {
+        if (!page.endsWith('.html') || page.startsWith('app/')) continue;
+        for (const [tag] of buffer.toString('utf8').matchAll(/<link\b[^>]*>/g)) {
+            if (!/\brel="stylesheet"/.test(tag)) continue;
+            const href = (tag.match(/\bhref="([^"]+)"/) || [])[1] || '';
+            if (!href || isRemote(href)) { problems.push(`${page}: stylesheet not served from this origin: ${href}`); continue; }
+            const sheet = resolve(page, href);
+            if (shipped.has(sheet)) sheets.add(sheet);
+            else problems.push(`${page}: links ${href}, which is not in the build`);
+        }
     }
-    // Every file the stylesheet points at must actually be there.
-    const referenced = [...css.matchAll(/url\(\.\/([^)]+)\)/g)].map(m => m[1]);
-    assert.ok(referenced.length > 0, 'fonts/site.css references no font file');
-    const shipped = new Set(readdirSync(join(DIST, 'fonts')));
-    const missing = referenced.filter(name => !shipped.has(name));
-    assert.deepEqual(missing, [], `fonts/site.css points at files that were not copied:\n${missing.join('\n')}`);
+    assert.ok(sheets.size > 0, 'no page of the site links a stylesheet');
+
+    let faces = 0;
+    for (const sheet of sheets) {
+        const css = shipped.get(sheet).toString('utf8');
+        faces += (css.match(/@font-face/g) || []).length;
+        for (const [, ref] of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+            if (!/\.(woff2?|ttf|otf)(?:[?#].*)?$/i.test(ref)) continue;   // images, data: URIs
+            if (isRemote(ref)) problems.push(`${sheet}: font not served from this origin: ${ref}`);
+            else if (!shipped.has(resolve(sheet, ref))) problems.push(`${sheet}: points at ${ref}, which is not in the build`);
+        }
+    }
+    assert.ok(faces > 0, `the stylesheets the site links carry no @font-face rule: ${[...sheets].join(', ')}`);
+    assert.deepEqual(problems, [], problems.join('\n'));
 });
 
 test('no page of the public site carries an inline script', () => {

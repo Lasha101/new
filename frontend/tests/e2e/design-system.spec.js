@@ -199,9 +199,10 @@ test.describe('Onglet du navigateur', () => {
         await expect(page).toHaveTitle('ScanID — Espace client');
         await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
 
-        // The same bytes as the public site's icons (scanid-site-v5-deploy/).
+        // The same bytes as the public site's icons (its source of truth,
+        // scripts/assemble-site.mjs SITE: the 2026-09-30 site).
         const { readFileSync } = await import('node:fs');
-        const siteFile = name => readFileSync(new URL(`../../scanid-site-v5-deploy/${name}`, import.meta.url));
+        const siteFile = name => readFileSync(new URL(`../../ScanID-nouveau-site-2026-09-30/nouveau-site/${name}`, import.meta.url));
         for (const [selector, name] of [['link[rel="icon"]', 'favicon.svg'], ['link[rel="apple-touch-icon"]', 'apple-touch-icon.png']]) {
             const href = await page.locator(selector).getAttribute('href');
             const response = await request.get(new URL(href, page.url()).toString());

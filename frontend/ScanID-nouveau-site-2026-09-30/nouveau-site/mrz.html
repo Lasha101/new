@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lire la bande MRZ d’un passeport · Le décodeur ScanID</title>
+<meta name="description" content="Que veulent dire les deux lignes en bas du passeport ? Le décodeur de bande MRZ explique chaque caractère du passeport spécimen, clés de contrôle comprises, et les formats des cartes d’identité.">
+<link rel="canonical" href="https://scanid.fr/mrz.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#0B1522">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="ScanID">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Les deux lignes en bas du passeport, décodées · ScanID">
+<meta property="og:description" content="Que veulent dire les deux lignes en bas du passeport ? Le décodeur de bande MRZ explique chaque caractère du passeport spécimen, clés de contrôle comprises, et les formats des cartes d’identité.">
+<meta property="og:url" content="https://scanid.fr/mrz.html">
+<meta property="og:image" content="https://scanid.fr/og/mrz.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://scanid.fr/og/mrz.jpg">
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/mona-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css?v=202609302115">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Que veulent dire les deux lignes en bas du passeport ?","description":"La bande MRZ d’un passeport décodée caractère par caractère, clés de contrôle comprises.","datePublished":"2026-09-30","inLanguage":"fr","author":{"@type":"Organization","name":"ScanID","url":"https://scanid.fr/"},"publisher":{"@id":"https://scanid.fr/#organization"},"mainEntityOfPage":"https://scanid.fr/mrz.html","image":"https://scanid.fr/og/mrz.png"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://scanid.fr/"},{"@type":"ListItem","position":2,"name":"Ressources","item":"https://scanid.fr/ressources.html"},{"@type":"ListItem","position":3,"name":"Lire la bande MRZ","item":"https://scanid.fr/mrz.html"}]}</script>
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+<header class="site-bar">
+  <div class="wrap site-bar__in">
+    <a class="lk " href="index.html" aria-label="ScanID, accueil"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <div class="site-nav__main"><a href="presentation.html">Produit</a><a href="securite.html">Sécurité</a><a href="tarifs.html">Tarifs</a><a href="ressources.html" aria-current="page">Ressources</a></div>
+      <a class="site-nav__login" href="/app/">Connexion</a>
+      <a class="btn btn--main" href="essai.html">Essai gratuit</a>
+      <button class="menu-btn" type="button" data-menu-open aria-expanded="false" aria-controls="menu-panel"><i aria-hidden="true"></i><span class="t">Menu</span><span class="sr">Ouvrir le grand menu</span></button>
+    </nav>
+  </div>
+</header>
+<div class="menu-panel" id="menu-panel" role="dialog" aria-modal="true" aria-label="Grand menu" hidden>
+  <div class="menu-panel__guil" aria-hidden="true"><canvas></canvas></div>
+  <div class="wrap menu-panel__head"><a class="lk " href="index.html" aria-label="ScanID, accueil"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></a><button class="menu-btn" type="button" data-menu-close><span>Fermer</span></button></div>
+  <div class="wrap menu-panel__cols">
+    <div class="menu-panel__col"><h2>Produit</h2><a href="presentation.html">Présentation</a><a href="presentation.html#fichier">Le fichier obtenu</a><a href="guide.html">Guide d’utilisation</a><a href="guide-photo.html">Guide photo</a></div><div class="menu-panel__col"><h2>Sécurité</h2><a href="securite.html">Sécurité et RGPD</a><a href="securite.html#roles">Qui fait quoi</a><a href="checklist.html">Checklist RGPD</a><a href="politique-confidentialite.html">Confidentialité</a></div><div class="menu-panel__col"><h2>Tarifs</h2><a href="tarifs.html">Les packs</a><a href="essai.html">Essai gratuit</a><a href="contact.html#rappel">Démonstration</a><a href="cgv.html">CGV</a></div><div class="menu-panel__col"><h2>Ressources</h2><a href="ressources.html#articles">Articles</a><a href="faq.html">Questions fréquentes</a><a href="mrz.html" aria-current="page">Lire la bande MRZ</a><a href="alternatives.html">Alternatives</a></div>
+  </div>
+  <div class="wrap menu-panel__foot"><a href="contact.html">Contact</a><a href="/app/">Connexion</a><a href="mentions-legales.html">Mentions légales</a><a class="btn btn--light" href="essai.html">Essai gratuit</a></div>
+</div>
+<main id="contenu" tabindex="-1">
+<header class="page-head">
+  <div class="wrap">
+    <div class="page-head__in">
+      <nav class="crumbs" aria-label="Fil d’Ariane"><a href="index.html">Accueil</a><span aria-hidden="true">/</span><a href="ressources.html">Ressources</a><span aria-hidden="true">/</span><span aria-current="page">Lire la bande MRZ</span></nav>
+      <p class="label">Lire la bande MRZ</p>
+      <h1 class="h1">Les deux lignes en bas du passeport, <em>décodées</em>.</h1>
+      <p class="lead">La bande MRZ, pour <i lang="en">machine readable zone</i>, résume la page d’identité en 88 caractères que les machines savent lire. Survolez-les : chaque zone s’explique, clés de contrôle comprises.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ============ Le décodeur ============ -->
+<section class="section section--flush" aria-labelledby="t-decodeur">
+  <div class="wrap">
+    <h2 class="sr" id="t-decodeur">Le décodeur</h2>
+    <div class="mrzd" data-rise>
+      <div class="mrzd__scroll"><div class="mrzd__lines" id="mrzd-lines" aria-hidden="true"></div></div>
+      <div class="row" style="justify-content:space-between">
+        <p class="mrzd__legend"><span><i></i>Clé de contrôle</span><span>Passeport spécimen, données fictives</span></p>
+        <div class="row"><button class="ctl" type="button" id="mrzd-prev">← Zone précédente</button><button class="ctl" type="button" id="mrzd-next">Zone suivante →</button></div>
+      </div>
+      <div class="mrzd__info" aria-live="polite">
+        <div><p class="mrzd__hint" id="mrzd-where"></p><p class="h4" id="mrzd-t"></p><p id="mrzd-p"></p></div>
+        <pre class="mrzd__calc" id="mrzd-calc"></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Comprendre ============ -->
+<section class="section" aria-labelledby="t-comprendre">
+  <div class="wrap wrap--narrow">
+    <div class="prose">
+      <h2 id="t-comprendre" style="margin-top:0">À quoi sert la bande MRZ ?</h2>
+      <p>Les deux lignes du bas de la page d’identité reprennent, dans un format fixé par l’Organisation de l’aviation civile internationale (document 9303), les informations essentielles du passeport : type de document, pays émetteur, nom, prénoms, numéro, nationalité, date de naissance, sexe et date d’expiration.</p>
+      <p>Tout y est écrit dans une police conçue pour la lecture optique, sans accents ni espaces : les séparations deviennent des chevrons (<code>&lt;</code>). C’est ce que lisent les bornes des aéroports, les compagnies aériennes pour leurs données passagers, et ScanID pour remplir votre tableau.</p>
+      <h2>Comment se calcule une clé de contrôle ?</h2>
+      <p>Le numéro, la date de naissance, la date d’expiration et les données facultatives sont chacun suivis d’un chiffre de contrôle. Chaque caractère reçoit une valeur (un chiffre garde sa valeur, A vaut 10, B vaut 11, jusqu’à Z qui vaut 35, et le chevron vaut 0), puis est multiplié par 7, 3, 1, 7, 3, 1… On additionne, et le dernier chiffre de la somme donne la clé.</p>
+      <p>Pour le numéro du spécimen, <b>23AF41907</b> : 2×7 + 3×3 + 10×1 + 15×7 + 4×3 + 1×1 + 9×7 + 0×3 + 7×1 = 221. La clé vaut donc <b>1</b>, et c’est bien le chiffre imprimé juste après le numéro. Une seule lettre mal lue, et la clé ne correspond plus : l’erreur se voit aussitôt.</p>
+      <p class="callout">C’est pour cela que ScanID lit la bande MRZ en plus de la zone visible : les clés de contrôle permettent de repérer une lecture douteuse, que le score de confiance signale ensuite dans votre fichier.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Les formats ============ -->
+<section class="section tint" aria-labelledby="t-formats">
+  <div class="wrap">
+    <div class="sec-head" data-rise>
+      <p class="label">Selon le document</p>
+      <h2 class="h2" id="t-formats">Trois formats <em>à connaître</em>.</h2>
+    </div>
+    <div class="fmt" data-rise>
+      <div><p class="k">Passeport</p><h3>Deux lignes de 44 caractères</h3><p>Le format décodé ci-dessus, au bas de la page d’identité.</p><code>P&lt;FRASPECIMEN&lt;&lt;CAMILLE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+23AF419071FRA8605146F3309221&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;04</code></div>
+      <div><p class="k">Carte d’identité depuis 2021</p><h3>Trois lignes de 30 caractères</h3><p>Au verso de la carte au format carte bancaire. Mêmes informations, réparties autrement, avec les mêmes clés de contrôle.</p></div>
+      <div><p class="k">Ancienne carte d’identité</p><h3>Deux lignes de 36 caractères</h3><p>Un format propre à la France, que l’on rencontre encore sur les cartes en circulation.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Pour les agences ============ -->
+<section class="section" aria-labelledby="t-agences">
+  <div class="wrap wrap--narrow">
+    <div class="prose">
+      <h2 id="t-agences" style="margin-top:0">Pourquoi la MRZ compte pour une agence</h2>
+      <p>Les compagnies aériennes transmettent aux autorités les données passagers issues de ces lignes. Un nom ou un numéro recopié avec une faute peut bloquer un enregistrement, voire un embarquement : nous l’avons détaillé dans <a href="erreurs-saisie-passeport.html">les erreurs de saisie sur un passeport</a> et <a href="apis-agences-voyages.html">APIS et données passagers</a>.</p>
+      <p>ScanID lit la zone visible et la bande MRZ des passeports et cartes d’identité françaises, et vous rend un tableau Excel ou CSV, une ligne par document, sans rien recopier.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section dark cta-band" aria-labelledby="t-cta">
+  <div class="cta-band__guil" aria-hidden="true"><canvas data-rosette="band" data-size="1000"></canvas></div>
+  <div class="wrap">
+    <div class="cta-band__in" data-rise>
+      <p class="label">L’essai</p>
+      <h2 class="h2" id="t-cta">Laissez ScanID <em>lire à votre place</em>.</h2>
+      <p class="lead">Vingt documents offerts, sans engagement, sans carte bancaire.</p>
+      <div class="cta-band__actions"><a class="btn btn--main" href="essai.html">Essayer avec 20 documents offerts <span class="ar" aria-hidden="true">→</span></a><a class="btn btn--line" href="presentation.html">Voir ScanID au travail</a></div>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="site-footer" role="contentinfo">
+  <div class="wrap">
+    <div class="site-footer__top">
+      <div class="site-footer__brand">
+        <span class="lk " aria-hidden="true"><span class="lk__w">scan<span class="id">id<i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span></span></span>
+        <p class="site-footer__sig">Lire · Extraire · Exporter</p>
+        <p>Les passeports et cartes d’identité de vos voyageurs, rendus en tableau Excel. Pour les agences de voyages.</p>
+        <div class="site-footer__contact"><a href="mailto:contact@scanid.fr">contact@scanid.fr</a><a href="tel:+33695811866">+33 6 95 81 18 66</a><span>Du lundi au vendredi, 9 h à 18 h</span></div>
+      </div>
+      <div class="site-footer__col"><h2>Produit</h2><a href="presentation.html">Présentation</a><a href="tarifs.html">Tarifs</a><a href="essai.html">Essai gratuit</a><a href="guide.html">Guide d’utilisation</a><a href="/app/">Connexion</a></div><div class="site-footer__col"><h2>Sécurité</h2><a href="securite.html">Sécurité et RGPD</a><a href="checklist.html">Checklist RGPD</a><a href="politique-confidentialite.html">Politique de confidentialité</a></div><div class="site-footer__col"><h2>Ressources</h2><a href="ressources.html#articles">Articles</a><a href="guide-photo.html">Guide photo</a><a href="mrz.html">Lire la bande MRZ</a><a href="faq.html">Questions fréquentes</a><a href="alternatives.html">Alternatives</a></div><div class="site-footer__col"><h2>Société</h2><a href="contact.html">Contact</a><a href="contact.html#rappel">Démonstration</a><a href="mentions-legales.html">Mentions légales</a><a href="cgv.html">CGV</a></div>
+    </div>
+    <p class="mrz-line" aria-hidden="true">P&lt;SCANID&lt;&lt;LIRE&lt;EXTRAIRE&lt;EXPORTER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+SCANID&lt;SASU&lt;&lt;PARIS&lt;&lt;RCS&lt;107858557&lt;&lt;FRA&lt;&lt;&lt;&lt;&lt;&lt;</p>
+    <div class="site-footer__bottom"><span>© 2026 ScanID SASU · 169 avenue de Choisy, 75013 Paris · RCS Paris 107 858 557</span><span>Aucun cookie de mesure d’audience.</span></div>
+  </div>
+</footer>
+<div class="phone-bar" aria-hidden="true"><a class="btn btn--main" href="essai.html" tabindex="-1">Essai gratuit</a><a class="btn btn--line" href="tarifs.html" tabindex="-1">Tarifs</a></div>
+<script src="assets/js/lib.js?v=202609302115" defer></script><script src="assets/js/core.js?v=202609302115" defer></script><script src="assets/js/mrz.js?v=202609302115" defer></script>
+</body>
+</html>

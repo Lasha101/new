@@ -14,15 +14,24 @@ Three rules make crediting safe:
 - a Checkout Session credits at most once: purchases.stripe_session_id is
   UNIQUE and the credit is in the same transaction, so a replay, or two
   deliveries racing each other, add nothing.
+
+« À la carte » (2026-09-30) is the one exception to « identified by the
+amount »: its link sells N documents at 1,50 € HT, and N × 1,50 € can equal a
+pack's price (66 documents = 99 € = Pack 100). Its sessions are recognised by
+their Payment Link instead, before any amount is looked at, and credited with
+the quantity bought — see _credit_unit_session.
 """
 import calendar
 import hashlib
 import hmac
+import json
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
-from urllib.parse import urlencode
+from typing import Any, Dict, List, Optional
+from urllib.parse import quote, urlencode
 
 from sqlalchemy import func, update as sa_update
 from sqlalchemy.exc import IntegrityError
@@ -33,6 +42,12 @@ import crud
 import models
 
 PAID_EVENTS = ("checkout.session.completed", "checkout.session.async_payment_succeeded")
+
+# An « à la carte » purchase has no pack: it is stored as pack 0, with the
+# number of documents bought in `credits`.
+UNIT_PACK = 0
+STRIPE_API_BASE = "https://api.stripe.com"
+STRIPE_API_TIMEOUT_SECONDS = 10
 
 
 def is_known_pack(pack: Any) -> bool:
@@ -121,6 +136,62 @@ class CreditOutcome:
     user: Optional[Dict[str, Any]] = None
     pack: Optional[int] = None
     expires_at: Optional[datetime] = None
+    credits: Optional[int] = None    # « à la carte »: the documents bought
+
+
+class StripeApiError(Exception):
+    """The line items of a session could not be read — worded for Alex."""
+
+
+def is_unit_session(session: Dict[str, Any]) -> bool:
+    """Paid through the « à la carte » Payment Link."""
+    link_id = config.stripe_unit_payment_link_id()
+    return bool(link_id) and session.get("payment_link") == link_id
+
+
+def fetch_line_items(session_id: str) -> List[Dict[str, Any]]:
+    """GET /v1/checkout/sessions/{id}/line_items. A webhook payload never
+    carries the line items, so the quantity bought has to be asked for."""
+    key = config.stripe_api_key()
+    if not key:
+        raise StripeApiError("clé API Stripe non configurée (STRIPE_API_KEY)")
+    url = f"{STRIPE_API_BASE}/v1/checkout/sessions/{quote(str(session_id), safe='')}/line_items?limit=100"
+    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.urlopen(request, timeout=STRIPE_API_TIMEOUT_SECONDS) as response:
+            body = json.load(response)
+    except urllib.error.HTTPError as exc:
+        raise StripeApiError(f"l'API Stripe a répondu {exc.code} à la lecture des articles") from None
+    except (OSError, ValueError):
+        raise StripeApiError("API Stripe injoignable, ou sa réponse est illisible") from None
+    items = body.get("data") if isinstance(body, dict) else None
+    if not isinstance(items, list):
+        raise StripeApiError("la réponse de l'API Stripe ne contient pas les articles")
+    return items
+
+
+def unit_quantity(items: List[Dict[str, Any]]) -> Optional[int]:
+    """The documents bought: the quantity of the link's one line item."""
+    if len(items) != 1 or not isinstance(items[0], dict):
+        return None
+    quantity = items[0].get("quantity")
+    if not isinstance(quantity, int) or isinstance(quantity, bool) or quantity < 1:
+        return None
+    return quantity
+
+
+def unit_buyer(db: Session, session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The account an « à la carte » payment is for. The link is a plain link
+    on the site, so there is usually no client_reference_id: the e-mail typed
+    at checkout names the account — exactly one, whatever the letter case."""
+    user_id = session.get("client_reference_id")
+    if user_id:
+        return crud.get_user(db, str(user_id))
+    email = ((session.get("customer_details") or {}).get("email") or session.get("customer_email") or "").strip()
+    if not email:
+        return None
+    rows = db.query(models.User).filter(func.lower(models.User.email) == email.lower()).limit(2).all()
+    return crud._row_to_dict(rows[0]) if len(rows) == 1 else None
 
 
 def already_processed(db: Session, session_id: str) -> bool:
@@ -137,6 +208,8 @@ def credit_checkout_session(db: Session, session: Dict[str, Any]) -> CreditOutco
         return CreditOutcome("not_paid")
     if already_processed(db, session_id):
         return CreditOutcome("duplicate")
+    if is_unit_session(session):
+        return _credit_unit_session(db, session)
 
     pack = identify_pack(session)
     if pack is None:
@@ -180,3 +253,44 @@ def credit_checkout_session(db: Session, session: Dict[str, Any]) -> CreditOutco
         db.rollback()
         return CreditOutcome("duplicate")
     return CreditOutcome("credited", user=crud.get_user(db, user["id"]), pack=pack, expires_at=expires_at)
+
+
+def _credit_unit_session(db: Session, session: Dict[str, Any]) -> CreditOutcome:
+    """« À la carte »: the quantity of the session's line item, credited once.
+    Whatever cannot be established for certain — the account, the quantity —
+    is reported to Alex rather than guessed."""
+    if str(session.get("currency") or "").lower() != "eur":
+        return CreditOutcome("unmatched", reason="à la carte : paiement dans une autre devise que l'euro")
+    user = unit_buyer(db, session)
+    if user is None:
+        return CreditOutcome("unmatched", reason="à la carte : aucun compte ScanID unique pour ce client (client_reference_id ou e-mail)")
+    if user.get("status") == "rejected":
+        return CreditOutcome("unmatched", reason="à la carte : le compte de ce client a été refusé")
+    try:
+        quantity = unit_quantity(fetch_line_items(session["id"]))
+    except StripeApiError as exc:
+        return CreditOutcome("unmatched", reason=f"à la carte : {exc}")
+    if quantity is None:
+        return CreditOutcome("unmatched", reason="à la carte : la session ne porte pas un seul article avec sa quantité")
+
+    now = datetime.now(timezone.utc)
+    expires_at = add_months(now, config.CREDIT_VALIDITY_MONTHS)
+    try:
+        db.add(models.Purchase(
+            user_id=user["id"], pack=UNIT_PACK, credits=quantity,
+            amount_ht_cents=quantity * config.UNIT_PRICE_HT_CENTS, created_at=now,
+            status="paid", paid_at=now, expires_at=expires_at, stripe_session_id=session["id"],
+            amount_paid_cents=session.get("amount_total"), currency="eur",
+        ))
+        db.flush()
+        db.execute(
+            sa_update(models.User)
+            .where(models.User.id == user["id"])
+            .values(page_credits=func.coalesce(models.User.page_credits, 0) + quantity)
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return CreditOutcome("duplicate")
+    return CreditOutcome("credited", user=crud.get_user(db, user["id"]), pack=UNIT_PACK,
+                         expires_at=expires_at, credits=quantity)

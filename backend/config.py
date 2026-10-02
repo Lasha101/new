@@ -216,6 +216,23 @@ def stripe_webhook_secret() -> str:
 STRIPE_WEBHOOK_TOLERANCE_SECONDS = _env_int("STRIPE_WEBHOOK_TOLERANCE_SECONDS", 300)
 SIGNUP_RATE_LIMIT = os.getenv("SIGNUP_RATE_LIMIT", "5/minute")
 
+# « À la carte » (the site's tarifs.html, deployment notes of 2026-09-30): one
+# Payment Link with an adjustable quantity, 1 unit = 1 document at 1,50 € HT.
+# Its sessions are recognised by the link's id (plink_…, on the link's page in
+# the Stripe dashboard) and credited with the quantity bought. A webhook payload
+# never carries that quantity: it is read from the session's line items with
+# STRIPE_API_KEY — a restricted key with « Checkout Sessions: Read » is enough.
+# Until both are set, such a payment is reported to Alex, never credited.
+UNIT_PRICE_HT_CENTS = 150
+
+
+def stripe_unit_payment_link_id() -> str:
+    return os.getenv("STRIPE_UNIT_PAYMENT_LINK_ID", "").strip()
+
+
+def stripe_api_key() -> str:
+    return os.getenv("STRIPE_API_KEY", "").strip()
+
 
 # --- Session lifetime ----------------------------------------------------
 # A session ends after this long WITHOUT USER ACTIVITY: the app renews it

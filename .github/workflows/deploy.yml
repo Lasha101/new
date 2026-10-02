@@ -73,7 +73,9 @@ jobs:
           rsync -az --delete \
             --exclude '.env' --exclude '__pycache__' \
             backend/ "$VPS_USER@$VPS_HOST:/opt/travelapp/backend/"
-          rsync -az --delete \
+          # Files 644 and folders 755 whatever the runner's umask (the site's
+          # deployment notes, 2026-09-30): nginx only ever needs to read them.
+          rsync -az --delete --chmod=D755,F644 \
             frontend/dist/ "$VPS_USER@$VPS_HOST:/opt/travelapp/frontend-dist/"
           # ops/ BEFORE deploy/: deploy/nginx-travelapp.conf now `include`s
           # /opt/travelapp/ops/nginx-security-headers.conf, and nginx -t below
@@ -220,12 +222,13 @@ jobs:
             echo "$app_body" | grep -q "/app/assets/index-" \
               || probe_failed "https://scanid.fr/app/ is not the application shell"
 
-            # The self-hosted typefaces must be served from this origin. If this
-            # 404s the pages fall back to a system font with no visible error.
-            font_code=$(curl -s -o /dev/null -w "%{http_code}" \
-              --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/fonts/site.css)
-            [ "$font_code" = "200" ] \
-              || probe_failed "https://scanid.fr/fonts/site.css returned $font_code, expected 200 (the pages would render in a system typeface)"
+            # The stylesheet every page links, which carries the self-hosted
+            # typefaces, must be served from this origin. If this 404s the pages
+            # render unstyled, in a system font, with no visible error.
+            style_code=$(curl -s -o /dev/null -w "%{http_code}" \
+              --resolve scanid.fr:443:127.0.0.1 https://scanid.fr/assets/css/site.css)
+            [ "$style_code" = "200" ] \
+              || probe_failed "https://scanid.fr/assets/css/site.css returned $style_code, expected 200 (the pages would render unstyled, in a system typeface)"
 
             # An unknown path must be a real 404, served from the 404.html the
             # site ships. If 404.html ever went missing from the build,
