@@ -40,7 +40,11 @@ test.describe('Demandes d’essai', () => {
         await expect(cards).toHaveCount(1);
         expect(api.trialRequests[0].status).toBe('validated');
 
-        page.once('dialog', dialog => dialog.accept());
+        // Alex, second check (2026-10-02): « e-mail » in the confirmation too.
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Refuser la demande de Paul Refus ? Aucun e-mail ne sera envoyé.');
+            dialog.accept();
+        });
         await cards.first().getByRole('button', { name: 'Refuser' }).click();
         await expect(page.locator('.sid-alert--ok')).toContainText('Demande de Paul Refus refusée.');
         await expect(page.locator('.sid-trials .sid-empty')).toHaveText("Aucune demande d'essai en attente.");

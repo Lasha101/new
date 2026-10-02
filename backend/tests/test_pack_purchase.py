@@ -99,7 +99,7 @@ def test_each_pack_has_its_own_link_and_a_test_mode_link_can_replace_it(client, 
 
 
 @pytest.mark.parametrize("changes, status, fragment", [
-    ({"pack": 250}, 400, "Ce pack n'existe pas"),
+    ({"pack": 250}, 400, "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/tarifs.html."),
     ({"company": " "}, 400, "la société"),
     ({"billing_postal_code": ""}, 400, "le code postal"),
     ({"siret": ""}, 400, "14 chiffres"),

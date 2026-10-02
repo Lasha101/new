@@ -6,28 +6,31 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§G) exactly where it stopped, under the same
+> instruction to **resume the current task (§H) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
 > 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`; the site's
 >    source of truth is read-only — since task F it is
 >    `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/`, §F.3.1; work in stages; update this
 >    file after every stage; outside the repository: read **only when needed for the demand**,
->    write only with permission). The user's rule (§F.1, repeated for §G): a demand of the current
->    prompt wins over a restriction of this file.
-> 2. Read **§G** (the current task, 2026-10-02 — Alex's « after go-live » list) first: **§G.0.0 lists
->    every prompt of the session that produced §F's shipping and §G, with what is done and what is
->    left**; §G.0 says which stage is next, §G.4 lists the stages. §B.0.3 still holds the environment and the
->    commands (test suites, e2e, lint, build), all valid for §G; §F.5 holds the real-stack harness.
-> 3. Check the working tree matches §G.0 (`git status --short`) and compare.
-> 4. Continue at the **first stage of §G.4 not marked DONE**. After each stage, mark it `DONE` in
->    §G.4, append its record below §G.4, and update §G.0. **If every stage is DONE**: run §G.0's
->    quick baseline, then wait for the user — when they ship, guide §G's ship steps **one command
->    per message** and tick them in §G.0.
+>    write only with permission; never connect to the VPS without the user's go-ahead). The user's
+>    rule (§F.1, repeated for §G and §H): a demand of the current prompt wins over a restriction of
+>    this file.
+> 2. Read **§H** (the current task, 2026-10-02 evening — Alex's « second check ») first: **§H.0.0 lists
+>    every prompt of the session, with what is done and what is left**; §H.0 says which stage is
+>    next, §H.4 lists the stages. §B.0.3 still holds the environment and the commands (test suites,
+>    e2e, lint, build — use **absolute paths**: parallel shell calls share one working directory);
+>    §F.5 holds the real-stack harness.
+> 3. Check the working tree matches §H.0 (`git status --short`) and compare.
+> 4. Continue at the **first stage of §H.4 not marked DONE**. After each stage, mark it `DONE` in
+>    §H.4, append its record below §H.4, and update §H.0. **If every stage is DONE**: run §H.0's
+>    quick baseline, then wait for the user — when they ship, guide §H.5's steps **one command
+>    per message** and tick them in §H.0.
 > 5. Keep answering the user in their conversation language; keep the UI in French.
-> 6. **Task F is pushed (`e9d527d`) and live, except the nginx reload** (§F.0 ship step 4: the cache
->    headers and the two 301s wait for `sudo nginx -t && sudo systemctl reload nginx` on the VPS).
->    Task G changes the vhost again: one reload after G ships covers both.
+> 6. **Task G is committed `109993f`, pushed and live (backend + app) — except the nginx reload**, which
+>    also still holds task F's (§F.0 step 4: cache headers + the two 301s) and is all of Alex's
+>    « second check » section 5. One `sudo nginx -t && sudo systemctl reload nginx` on the VPS covers
+>    F, G and H (§H.5). §G.5's server steps A–C (the list for Alex, `trial`, `signup`) continue in §H.5.
 > 7. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
 >    open: the user's checks, §D.7.3 steps 5–7. Guide them **one command per message** when the
 >    user returns to them. (Alex's « after go-live » note confirms « Sexe » live in the list and the
@@ -35,11 +38,12 @@ application tasks that followed it.
 >
 > §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
 > `68dde4a`), §E (committed `bf7dc3c`, pushed) and §1–§9 (the v5 site task, live) are records only.
+> §F (`e9d527d`) and §G (`109993f`) are shipped except the nginx reload.
 
-Last updated: 2026-10-02 (task G — Alex's « after go-live » list — **done and verified locally, not committed**; the
-user ships it per §G.5. Task F pushed as `e9d527d` and live, nginx reload pending (done by §G.5 step 3). Every prompt of
-this session and what is done: §G.0.0. Task E committed `bf7dc3c` and pushed. Task D pushed as `cfbcd58` and live; the
-user's checks §D.7.3 steps 5–7 still open)
+Last updated: 2026-10-02 (task H — Alex's « second check » — **done and verified locally, not committed**; the user
+ships it per §H.5, whose nginx reload also finishes F and G. Task G committed `109993f`, pushed and live except the
+nginx reload; task F likewise (`e9d527d`). Task E committed `bf7dc3c` and pushed. Task D
+pushed as `cfbcd58` and live; the user's checks §D.7.3 steps 5–7 still open)
 
 ---
 
@@ -98,7 +102,290 @@ they applied to the previous one (v4).
 
 ---
 
-## G. CURRENT TASK (2026-10-02) — ALEX'S « AFTER GO-LIVE » LIST
+## H. CURRENT TASK (2026-10-02, evening) — ALEX'S « SECOND CHECK » LIST
+
+### H.0.0 THIS SESSION (2026-10-02, the session after task G's) — EVERY PROMPT, WHAT IS DONE, WHAT IS LEFT
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « CRUCIAL Read SCANID-HANDOVER.md to see restrictions and permissions for you! CRUCIAL execute the prompts from pdf file attached to this current prompt! If the prompts violates any restriction from SCANID-HANDOVER.md respect current prompt from attached pdf! After each stage is is implemented you update SCANID-HANOVER.md correspondingly! » + Alex's PDF « Lasha-Second-Check-2026-10-02.pdf » | **DONE locally (H0–H5).** Section 4: « Aucun e-mail ne sera envoyé. »; unknown pack → « scanid.fr/tarifs.html » (page + server message); export headers proven == the table's on real CSV / XLSX (already live since 18:44). Section 3.2 answered from the six rendered templates (yes). Section 3.1: 5 credits; the list needs the VPS. Sections 2 and 5: server-only — runbook §H.5 (SMTP login test, then restart; one nginx reload). Verified: backend 365, unit 89, e2e 442 / 1 skipped, build + guard 5/5 | **The user:** ship (§H.5 steps 1–5: commit + push, workflows, the nginx reload, laptop checks); server steps B (`trial`), A (the list for Alex); forward the answers (§H.5). Nothing committed (§0.3) |
+| 2 | « verify if there is outside something that must be in .gitignore! » | **DONE — nothing to add, `.gitignore` unchanged.** `git status --untracked-files=all` = only the 7 modified files; `git add --dry-run .` = 7. Everything else on disk is already ignored: the two identity PDFs (by name), `backend/.env`, `frontend/.env.local`, `newvenv/`, `node_modules/`, `dist/`, `test-results/` (this session's Playwright runs), caches, `bench_*`, `tests/fixtures/files/`, `tests/.browser-libs/`, `site.html` / `site1.html`. Tracked side: no tracked file matches an ignore rule (`git ls-files -ci --exclude-standard` empty); no secret pattern in tracked content (Stripe / Google / AWS / GitHub / Slack keys, private keys); `backend/.env.example` = placeholders only; no tracked file > 500 KB; tracked images = app icons + the site's specimen passport / og images / checklist PDF. The empty `static/` at the root (and `backend/static/`): created by the backend's `/static` mount in the directory it starts from — nothing ever writes there (uploads spool to the system temp dir), and git does not track empty folders. This session's own files (scratchpad, LibreOffice profile) are outside the repository. Aside, not a `.gitignore` matter, not changed: `REGISTER_RATE_LIMIT` (`config.py`, `.env.example`) is unused since the register route was removed | — |
+| 3 | « can i use git add .? Provide short git commit message! » | **DONE.** Yes — re-checked just before answering: `git status --short` = the 7 files of §H.0, no untracked file, `git add --dry-run .` = 7 (this file included, with this row). Message given: « App: « e-mail » in the trial refusal confirmation, unknown pack links to tarifs.html » (also §H.5 step 1) | **The user:** `git add .` → commit → `git push origin master`; then §H.5 steps 2–5 |
+
+### H.0 State in one line (update after every stage)
+
+**H0–H5 DONE — task H is complete locally and verified. NEXT: the user ships it — §H.5 steps 1–5 (commit + push, the
+two workflows, the nginx reload on the VPS — which also finishes tasks F and G and is all of Alex's section 5 —, the
+laptop checks), then the server steps B (`trial` via SMTP) and A (the list for Alex). Do not re-implement anything.**
+Nothing committed (§0.3).
+
+**Ship progress** (tick as the user reports each §H.5 step; one command per message when guiding):
+- [ ] 1 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
+- [ ] 2 « CI » green · « Deploy » green
+- [ ] 3 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED (ticks §F.0 step 4 and §G.0 step 3)
+- [ ] 4 laptop checks of §H.5 step 4 (= §G.5 step 4 + §F.6 step 5 + task H's)
+- [ ] 5 SHIPPED → §F.0, §G.0 and §H.0 say SHIPPED (hashes, date); memory notes updated
+- [ ] B `trial` true (SMTP login OK → restart → `/api/config`) · [ ] Alex's trial run · [ ] A the list sent to Alex ·
+  [ ] C `signup` true (later, with Alex)
+
+**Expected `git status --short` (nothing staged) — 7 modified:** ` M` `SCANID-HANDOVER.md`, `backend/main.py`,
+`backend/tests/test_pack_purchase.py`, `frontend/src/App.jsx`, `frontend/tests/e2e/{signup,trials}.spec.js`,
+`frontend/tests/mock/api.js`. Any other difference: report it, do not « fix » it.
+**Quick baseline for a resumed session:** `cd /home/lasha/Public/new/backend && /home/lasha/Public/new/newvenv/bin/python -m pytest -q`
+→ **365 passed**; `cd /home/lasha/Public/new/frontend && npm run test:unit` → **89 passed** (both reproduced at the start of
+task H, = §G.0). Git at the start of task H: `master` = `origin/master` = `109993f`, tree clean.
+
+### H.1 The demand, verbatim (user, 2026-10-02)
+
+> CRUCIAL Read SCANID-HANDOVER.md to see restrictions and permissions for you!
+> CRUCIAL execute the prompts from pdf file attached to this current prompt!
+> If the prompts violates any restriction from SCANID-HANDOVER.md respect current prompt from attached pdf!
+> After each stage is is implemented you update SCANID-HANOVER.md correspondingly!
+
+The PDF was attached to the message (it is **not** in the repository): « Lasha-Second-Check-2026-10-02.pdf », Alex's
+note, 1 page, headed « SCANID · FOR LASHA = for you – Claude Code! », « After go-live — second check: what remains »,
+checked live on 02/10/2026 at 20:40 Paris time « after your deployment of 18:44 » (= `109993f`, committed 20:44 +04:00),
+no account used, nothing submitted. In substance:
+1. **Confirmed — nothing to do.** « Créer un compte » gone, `/api/users/register` → 404; « scans » → « documents » on
+   `/app/inscription` and in « Demandes d'essai », field labels included; « Tarifs » → `/tarifs.html`, table headers in
+   sentence case; the 63 website files still byte-identical, no console error, no CSP violation.
+2. **One switch — trial.** `GET /api/config` still `{"signup": false, "trial": false}`. **« trial → true, please »** —
+   requested « now » in the previous note; Alex's end-to-end trial test works; « If you are keeping it false for a
+   reason, tell Alex. » **« signup stays false for now: correct »** — it waits for the Stripe webhook, which Alex creates
+   first, and for one test purchase.
+3. **Two answers for Alex.** (1) Accounts created through the old « Créer un compte » form between go-live and its
+   removal: the list (date, e-mail, credits), or « none ». How many credits did such an account receive? (2) E-mail
+   templates (welcome, trial, purchase, password reset): do they say « documents » and « e-mail » everywhere? « We
+   cannot see them from outside. »
+4. **Small details.**
+   | Where | Now | Change to |
+   | --- | --- | --- |
+   | Admin: confirmation shown when refusing a trial request | « … Aucun email ne sera envoyé. » | « … Aucun e-mail ne sera envoyé. » |
+   | `/app/inscription`, unknown pack (« Ce pack n'existe pas. ») | Link « scanid.fr/#tarifs », to `https://scanid.fr/#tarifs` | Link « scanid.fr/tarifs.html », to `https://scanid.fr/tarifs.html` |
+
+   **Export file (XLSX, CSV):** the same sentence-case headers as the table, if not already done — Alex's export made
+   before this deployment still had « Date de Naissance », « Date d'Expiration », « Score de Confiance »; he could not
+   re-check without an account.
+5. **Optional — server (unchanged from the previous note).** Compression: CSS and JS still uncompressed (measured with
+   gzip: home page 162 KB → 40 KB, app 304 KB → 92 KB; `gzip_types text/css application/javascript application/json
+   image/svg+xml text/xml;`). www: `https://www.scanid.fr/…` still 200 → 301 to the same path on `https://scanid.fr`.
+   Removed pages: 301 `/temoignages.html` → `/presentation.html` and `/iftm/` → `/essai.html` (today 404).
+
+Constraints and permissions: §0. The user's rule (as for §F and §G): a demand of the PDF wins over a restriction of this
+file.
+
+### H.2 Findings before touching anything
+
+1. **Git:** `master` = `origin/master` = **`109993f`** (task G, « Changes made after go-live demanded from Alex », committed
+   2026-10-02 20:44 +04:00 = 18:44 Paris — exactly the 28 paths of §G.0); tree clean. Baselines: backend **365**, unit
+   **89**.
+2. **Live (public requests, 2026-10-02 evening):** task G's backend and app ARE live — `POST /api/users/register` → 404;
+   app bundle `index-CXHlP1c2.js` (the hash of G7's local build), 0 × « Créer un compte » / `users/register` / « HT le
+   scan ». **nginx is NOT reloaded:** `site.css` → 113 379 bytes with `Accept-Encoding: gzip` and no `Content-Encoding`;
+   `https://www.scanid.fr/tarifs.html` → 200; no `Cache-Control` on `/tarifs.html` or `/assets/…`; `/temoignages.html`
+   and `/iftm/` → 404. ⇒ **Alex's section 5 is exactly the pending reload** (§F.0 step 4 + §G.5 step 3): the vhost that
+   « Deploy » synced already holds gzip and the www 301 (G6) and the two 301s (F3). No code. `/api/config` →
+   `{"signup":false,"trial":false}`.
+3. **Section 2 — `trial`** is derived, not stored: `trial = mailer.is_configured()` = `SMTP_HOST` set (§C.2.4). It is
+   false because the server's `.env` has no SMTP variables yet (§G.5 step B not done). It cannot be set from the
+   repository and must not be forced: without mail the trial flow breaks (no notification to contact@, no welcome
+   e-mail, no password link). It needs the IONOS mailbox password of contact@scanid.fr on the server — typed there,
+   never in a chat or in the repository.
+4. **Section 3.1 — the list** needs the production database and journal on the VPS (§G.5 A): `users` has no creation
+   date and its ids are random `uuid4`; the removed route logged nothing but uvicorn's access line `"POST /users/register
+   HTTP/1.1" 200`, which `log_redaction` leaves intact. This file forbids connecting to the VPS without the user's
+   go-ahead (§D.7), and the commands need `sudo`. « How many credits »: **5** (`SIGNUP_PAGE_CREDITS`, removed in
+   `109993f`; already in §G.5).
+5. **Section 3.2 — the templates:** `backend/emails.py` has six (password reset, trial notification to Alex, trial
+   welcome, pack purchase, « à la carte » purchase, payment anomaly); `main.py` sends only these. Since `109993f` (live
+   since 18:44): « documents » and « e-mail » everywhere, pinned by `tests/test_email_wording.py` (every template rendered:
+   no `\bscans?\b`, no `\b[Ee]mails?\b`). The only « scan » left are verbs: welcome step 1 « Photographiez ou scannez vos
+   documents » (Alex's « Email A ») and the signature's « Scanner · Vérifier · Sécuriser ». The reset e-mail names no
+   credits.
+6. **Section 4, row 1:** `frontend/src/App.jsx:1087` ``window.confirm(`Refuser la demande de ${request.nom} ? Aucun email
+   ne sera envoyé.`)`` — missed in G3; the only visible « email » left in `App.jsx` (the other match is a code comment).
+   Not pinned: `trials.spec.js` accepts the dialog without reading it.
+7. **Section 4, row 2:** `App.jsx:827` « Choisissez votre pack sur la page des tarifs : `<a href="https://scanid.fr/#tarifs">
+   scanid.fr/#tarifs</a>`. » Its server twin `main.py:763` `UNKNOWN_PACK` (« Ce pack n'existe pas. Choisissez un pack sur
+   https://scanid.fr/#tarifs. » — `/signup` and `/orders` → 400, shown on the same page by its error line if the server
+   refuses a pack) and the mock's copies (`tests/mock/api.js:312, 329`). G.3.4 had kept both and reported them (§G.5
+   « Not changed — Alex's call »); Alex now asks for the change. Pinned: `signup.spec.js:72` (the link);
+   `test_pack_purchase.py:102` matches only « Ce pack n'existe pas ».
+8. **Section 4 — export:** `main.py` `EXPORT_HEADERS` == the table's `columnTranslations` since `109993f` (« Date de
+   naissance », « Date d'expiration », « Score de confiance »); Alex's export predates 18:44. Pinned by `test_export.py`.
+   Nothing to change — to be proven with real files.
+
+### H.3 Decisions
+
+1. **Row 1:** « Aucun email » → « Aucun e-mail »; `trials.spec.js` reads the dialog and asserts its exact text.
+2. **Row 2:** the page's link → text « scanid.fr/tarifs.html », href `https://scanid.fr/tarifs.html`; the server's
+   `UNKNOWN_PACK` and the mock's copies → « … sur https://scanid.fr/tarifs.html. » (the same « Ce pack n'existe pas » on
+   the same page: one target). Tests: `signup.spec.js` (link); `test_pack_purchase.py` (fragment = the whole message).
+3. **Export:** no code; proven with a real CSV and XLSX produced by the backend (H3).
+4. **Sections 2, 3.1 and 5 are server-only:** a runbook for the user (§H.5), one command per message when guided; no
+   connection to the VPS from here without the user's go-ahead; no secret in a chat.
+5. **Not changed (not in this note):** the server error messages that still write « email » (listed in §G.5 « Not
+   changed — Alex's call »), « Crédits pages », the straight apostrophe — restated in the answers for Alex.
+
+### H.4 Stages
+
+| Stage | Content | Status |
+| --- | --- | --- |
+| H0 | Survey: PDF, git, live state, the code of every row, baselines (backend 365, unit 89) | **DONE** |
+| H1 | Demand, findings, decisions, plan here | **DONE** |
+| H2 | Section 4, rows 1–2: « e-mail » in the refusal confirmation; unknown pack → `tarifs.html` (app, server message, mock, tests) | **DONE** |
+| H3 | Section 4 export + section 3.2: real CSV / XLSX headers from the backend; every e-mail template rendered and read | **DONE** |
+| H4 | Verification: backend, unit, eslint, build + guard + bundle strings, e2e (touched specs, then full) | **DONE** |
+| H5 | Record + how to ship + the server runbook (nginx reload = section 5; `trial` = SMTP; the list = 3.1) + answers for Alex | **DONE** (§H.5) |
+
+### Stage H2 — section 4, rows 1–2 — DONE
+
+- `frontend/src/App.jsx` `TrialRequestsPage.decide`: the confirmation is now « Refuser la demande de {nom} ? Aucun e-mail ne
+  sera envoyé. » `PackSignupPage` (unknown pack): « Choisissez votre pack sur la page des tarifs : `<a
+  href="https://scanid.fr/tarifs.html">scanid.fr/tarifs.html</a>`. »
+- `backend/main.py` `UNKNOWN_PACK` (`/signup`, `/orders`): « Ce pack n'existe pas. Choisissez un pack sur
+  https://scanid.fr/tarifs.html. »; `frontend/tests/mock/api.js`: its two copies follow. No `#tarifs` left in `src/`,
+  `tests/`, `backend/`.
+- Tests written first and run against the old code — **red for the right reasons**: `trials.spec.js` (the dialog's exact
+  text, read in the `once('dialog')` handler as `features.spec.js` does) → « Received: … Aucun email ne sera envoyé. »;
+  `signup.spec.js` (link « scanid.fr/tarifs.html » → `https://scanid.fr/tarifs.html`) → not found;
+  `test_pack_purchase.py` (fragment = the whole message) → 1 failed. After the fix: `test_pack_purchase.py` **26
+  passed**; `trials` + `signup` desktop + mobile-375 **16 passed**.
+- eslint: `App.jsx` **11** problems (= `HEAD`'s 11); the three touched test files clean.
+- NB for the harness: run test commands **sequentially, with absolute paths** — two parallel calls with `cd` share one
+  working directory (a parallel `npx playwright` resolved to a stray global copy: « Project "desktop" not found »).
+
+### Stage H3 — the export headers and the e-mail templates, proven — DONE
+
+No code. Evidence from a throw-away pytest file in the session scratchpad (`h3/test_h3_evidence.py`, run from `backend/`
+with `pytest -p tests.conftest <file> -s -q -p no:cacheprovider` — the repository's fixtures, nothing written in the
+repository; `git status` unchanged afterwards):
+- **Export (PDF section 4):** the real downloads of `GET /export/data?format=csv` and `?format=xlsx` (fixture
+  `user_with_documents`) both start with exactly the table's headers: « Nom de famille, Prénom, Sexe, Date de naissance,
+  Date d'expiration, Nationalité, Numéro de document, Type, Destination, Score de confiance » (CSV with its UTF-8 BOM;
+  XLSX sheet « Passeports »). LibreOffice (`soffice --headless --convert-to csv`) reads the XLSX header row identically,
+  4 data rows (the other user's document excluded). These headers came with `109993f`, live since 18:44 — Alex's export
+  with « Date de Naissance » predates that deployment. Nothing to change.
+- **Templates (PDF question 3.2):** all six rendered with `APP_PUBLIC_URL=https://scanid.fr/app/` (`h3/templates.txt`)
+  and read in full:
+  | Template | Subject | Wording |
+  | --- | --- | --- |
+  | trial notification (to contact@) | « Demande d'essai — {société} » | « (20 documents offerts) », « E-mail : … » |
+  | trial welcome (at « Valider ») | « Votre espace ScanID est ouvert — 20 documents offerts » | « Vous disposez de 20 documents offerts », « Répondez simplement à cet e-mail » |
+  | pack purchase | « Vos 1 000 documents ScanID sont disponibles » | « Vos 1 000 documents ont été ajoutés » |
+  | « à la carte » purchase | « Vos 37 documents ScanID sont disponibles » / « Votre document ScanID est disponible » | « 37 documents ont été ajoutés » / « 1 document a été ajouté » |
+  | password reset | « Réinitialisation de votre mot de passe ScanID » | « ignorez simplement cet e-mail » (names no credits) |
+  | payment anomaly (to contact@) | « Paiement Stripe à rattacher manuellement » | « E-mail du client : … » |
+
+  No « scan(s) » noun, no « email » anywhere (also pinned by `tests/test_email_wording.py`). The only « scan » forms are
+  verbs: welcome step 1 « Photographiez ou scannez vos documents » (Alex's « Email A ») and the signature tagline
+  « Scanner · Vérifier · Sécuriser ». A trial requester gets no e-mail when submitting (only the notification to
+  contact@); the welcome comes at « Valider ».
+
+### Stage H4 — verification — DONE
+
+| Check | Result |
+| --- | --- |
+| `cd backend && …/newvenv/bin/python -m pytest -q` | **365 passed** (count unchanged: one parametrized case now pins the whole message) |
+| `cd frontend && npm run test:unit` | **89 passed** |
+| eslint | `App.jsx` **11** (= `HEAD`); `signup.spec.js`, `trials.spec.js`, `tests/mock/api.js` clean |
+| Full e2e, all projects (`./node_modules/.bin/playwright test`) | **442 passed, 1 skipped** (3.8 min) = the count at the end of task G |
+| `VITE_API_URL=/api npm run build` + guard | 64 files, 0 pages rewritten; guard **5/5**; `dist/` root == the folder's 63 files byte for byte + `sw.js`; bundle **`index-DvNksTlx.js`**: 1 × « Aucun e-mail ne sera envoyé », 2 × `scanid.fr/tarifs.html` (the unknown-pack link: href + text); 0 × « Aucun email », `#tarifs`, « Créer un compte », `users/register`, « HT le scan », `localhost`; 1 × `"/api"` |
+| Real stack (§F.5 harness) | **not rebuilt — on purpose:** the change is two strings in the app and one server constant; no route, vhost, header or flow changed. The mock e2e reads the rendered dialog and link on desktop + mobile, and the backend test reads the server's answer |
+| After | ports 5173 / 4173 / 8001 free; `git status --short` == §H.0 (7 entries), nothing staged |
+
+### H.5 How to ship task H — the nginx reload, the server steps, the answers for Alex (stage H5)
+
+**What ships** (nothing committed, §0.3): the 7 entries of §H.0 — `git add --dry-run .` = **7 paths** (checked). No new
+dependency, no migration, no `.env` change, **no vhost change** (the vhost on the server is already G's, synced at 18:44).
+
+**The user ships it — one command per message when guided:**
+1. **Laptop:** `git status --short` (= §H.0) → `git add --dry-run . | wc -l` (7) → `git add .` →
+   `git commit -m "App: « e-mail » in the trial refusal confirmation, unknown pack links to tarifs.html"`
+   → `git push origin master`.
+2. **GitHub:** « CI » green, « Deploy » green (« NOTE: nginx not reloaded … » is expected — deploy account). The deploy
+   restarts the backend (new `UNKNOWN_PACK`) and ships the bundle `index-DvNksTlx.js`.
+3. **VPS — reload nginx** (independent of 1–2, may come first): `ssh lasha@87.106.22.235` → `sudo nginx -t && sudo
+   systemctl reload nginx` → `bash /opt/travelapp/ops/verify-front-end.sh` → « ALL CHECKS PASSED ». This one reload
+   activates task F (cache headers, `/temoignages.html` and `/iftm/` 301s) and task G (gzip, `www` → 301) = **all of
+   Alex's section 5**. `nginx -t` is the safety gate: if it fails, nothing is reloaded and the site keeps running.
+4. **Laptop checks** (public requests — the assistant may run them): the list of §G.5 step 4 (register 404; `www` → 301
+   `https://scanid.fr/tarifs.html`; `site.css` → `content-encoding: gzip`, `max-age=31536000`, `Vary: Accept-Encoding`;
+   `tarifs.html` → `no-cache`; the two 301s; `/api/config`), plus task H:
+   ```bash
+   B=$(curl -s https://scanid.fr/app/ | grep -o '/app/assets/index-[^"]*\.js'); echo "$B"                       # /app/assets/index-DvNksTlx.js
+   curl -s "https://scanid.fr$B" | grep -o -e 'Aucun e-mail ne sera envoyé' -e 'scanid.fr/tarifs.html' | sort | uniq -c   # 1 and 2
+   curl -s "https://scanid.fr$B" | grep -c -e 'Aucun email' -e 'scanid.fr/#tarifs'                               # 0
+   ```
+5. Mark §F.0, §G.0 and §H.0 **SHIPPED** (hashes, date); update the memory notes.
+
+**Server steps — the user's (outside the repository; a secret never goes through a chat):**
+- **B. `trial` → true (PDF section 2, « now »)** — mail on the server:
+  1. `sudo nano /opt/travelapp/backend/.env` — add three lines (port 587 + STARTTLS, the sender « ScanID
+     <contact@scanid.fr> » and the admin address contact@scanid.fr are defaults — no line needed); put the password
+     between single quotes if it contains `#`, a space, a quote or `$`:
+     ```
+     SMTP_HOST=smtp.ionos.fr
+     SMTP_USERNAME=contact@scanid.fr
+     SMTP_PASSWORD='<the mailbox password, typed on the server>'
+     ```
+  2. Test the login **before** the restart — sends nothing, never prints the password, reads the file with the same
+     parser as the backend (checked locally: a password with `@`, space, `$`, `#` parses; a dead server → clean
+     `ConnectionRefusedError`):
+     `sudo /opt/travelapp/venv/bin/python -c "from dotenv import dotenv_values as d; import smtplib, ssl; v = d('/opt/travelapp/backend/.env'); s = smtplib.SMTP(v['SMTP_HOST'], int(v.get('SMTP_PORT') or 587), timeout=20); s.starttls(context=ssl.create_default_context()); s.login(v['SMTP_USERNAME'], v['SMTP_PASSWORD']); print('SMTP login OK'); s.quit()"`
+     → « SMTP login OK ». `SMTPAuthenticationError` = wrong password (or SMTP not allowed on the mailbox): fix it
+     before restarting — with SMTP_HOST set, `trial` turns true at the restart whatever the password.
+  3. `sudo systemctl restart travelapp.service` → `curl -s https://scanid.fr/api/config` → `{"signup":false,"trial":true}`.
+  4. Alex's run (§C.1): essai.html with his test address → notification « Demande d'essai — … » at contact@scanid.fr
+     and the request in « Demandes d'essai » → Valider → « Votre espace ScanID est ouvert — 20 documents offerts » →
+     password link (48 h) → login « Crédits : 20 » → delete the test account. An e-mail missing:
+     `sudo journalctl -u travelapp.service --since "30 min ago" --no-pager | grep -i "email not sent"`.
+  The domain is ready for it (public DNS, 2026-10-02): MX `mx00/mx01.ionos.fr`, SPF `v=spf1
+  include:_spf-eu.ionos.com ~all`, IONOS DKIM `s1-ionos` / `s2-ionos._domainkey`, DMARC `p=none`.
+- **A. The list for Alex (PDF question 3.1)** — read-only, on the VPS (as §G.5 A):
+  1. how far back the journal goes (go-live was 2026-09-08): `sudo journalctl -u travelapp.service --no-pager -o
+     short-iso | head -1`; and that it records requests at all: `sudo journalctl -u travelapp.service --no-pager | grep
+     -c 'HTTP/1.1"'` (> 0);
+  2. the dates — one line per account created by that form: `sudo journalctl -u travelapp.service --no-pager -o
+     short-iso | grep '"POST /users/register HTTP/1.1" 200'` — nothing, with a journal reaching back to go-live, means
+     **« none »**;
+  3. the e-mails and credits — candidates = role `user`, no trial request, no purchase (also lists accounts made by
+     hand in Administration): `sudo -u postgres psql -d travelapp -c "SELECT u.email, u.user_name, u.page_credits AS
+     credits, u.uploaded_pages_count AS documents, u.status, (SELECT min(j.created_at) FROM ocr_jobs j WHERE j.user_id =
+     u.id) AS first_upload FROM users u WHERE u.role = 'user' AND NOT EXISTS (SELECT 1 FROM trial_requests t WHERE
+     t.user_id = u.id) AND NOT EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = u.id) ORDER BY u.email;"`;
+  4. only if the journal starts after go-live — nginx keeps ~14 days: `sudo zgrep -h 'POST /api/users/register'
+     /var/log/nginx/access.log* | grep '" 200 '`.
+  Each account got 5 credits at creation (`credits` now = 5 minus what it used). Nothing is changed — Alex decides.
+- **C. `signup` → true** — unchanged (§G.5 C); Alex: « stays false for now: correct ».
+
+**Answers for Alex** (the user forwards them; in English, like his note):
+1. **Trial (section 2).** Not kept false on purpose: `trial` turns itself on as soon as the server can send e-mail, and
+   the outgoing mail of contact@scanid.fr (IONOS SMTP) is not configured on the server yet. It cannot be forced on before
+   that — the trial flow sends your notification and the welcome e-mail with the password link. Lasha enters the
+   mailbox password on the server (never by e-mail or chat) and restarts; `/api/config` then says `"trial": true` and
+   your test run can start. The domain's DNS is ready (SPF, DKIM, DMARC at IONOS).
+2. **Question 3.1.** Such an account received **5 credits**, usable at once, with a freely chosen user name. The list
+   (date, e-mail, credits) — or « none » — comes from the server's logs and database: Lasha sends it (step A).
+3. **Question 3.2.** Yes — all six e-mails, live since 18:44: welcome « Votre espace ScanID est ouvert — 20 documents
+   offerts »; your trial notification « (20 documents offerts) », « E-mail : »; pack purchase « Vos 1 000 documents
+   ScanID sont disponibles »; à la carte « Vos 37 documents… » / « Votre document… »; password reset « ignorez simplement
+   cet e-mail »; payment anomaly « E-mail du client ». The only « scan » left is a verb: « Photographiez ou scannez vos
+   documents » (welcome, step 1) and the signature « Scanner · Vérifier · Sécuriser ».
+4. **Section 4.** Both rows done as written; the server's own « Ce pack n'existe pas » message points to tarifs.html
+   too. Live at the next deployment. **Export:** already done at 18:44 — the CSV and XLSX headers are exactly the
+   table's (checked on real files): « Date de naissance », « Date d'expiration », « Score de confiance ».
+5. **Section 5.** All three (gzip, www → scanid.fr, the two 301s) are in the server configuration since 18:44 and take
+   effect with one nginx reload, which Lasha does by hand (the deployment account may not reload nginx).
+6. **Still « email » — your call** (server messages, unchanged): the forgot-password answer « Si un compte correspond à
+   cet identifiant, un email contenant un lien de réinitialisation vient de lui être envoyé. »; « L'adresse email n'est
+   pas valide. »; « Un compte existe déjà avec cette adresse email. Connectez-vous pour acheter ce pack. »; « Un compte
+   ou une demande existe déjà pour cette adresse email. »; admin only: « L'envoi d'emails n'est pas configuré : le
+   compte n'a pas été activé. », « Email déjà enregistré ». Also « Crédits pages » (admin users table).
+
+---
+
+## G. TASK G (2026-10-02) — ALEX'S « AFTER GO-LIVE » LIST — COMMITTED `109993f`, PUSHED, LIVE; NGINX RELOAD PENDING
 
 ### G.0.0 THIS SESSION (2026-10-02, the session after task F's) — EVERY PROMPT, WHAT IS DONE, WHAT IS LEFT
 
@@ -119,18 +406,20 @@ is still open, and who does it.
 
 ### G.0 State in one line (update after every stage)
 
-**G0–G8 DONE — task G is complete locally and verified. NEXT: the user ships it — §G.5 steps 1–5 (commit + push, the
-two workflows, the nginx reload on the VPS — which also finishes task F —, the laptop checks), then the server steps A–C
-(the list for Alex, `trial` via SMTP, `signup` via secret + `PUBLIC_SIGNUP=0` + test purchase). Do not re-implement
-anything.** Nothing committed (§0.3).
+**G0–G8 DONE; committed `109993f` by the user and pushed; « Deploy » ran (18:44 Paris) — backend and app live. Still
+open: the nginx reload (step 3) and what follows it, and the server steps A–C — all carried into §H.5 (task H, Alex's
+« second check », which confirms G live). Do not re-implement anything.**
 
 **Ship progress** (tick as the user reports each §G.5 step; one command per message when guiding):
-- [ ] 1 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
-- [ ] 2 « CI » green · « Deploy » green
-- [ ] 3 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED (also ticks §F.0 step 4)
-- [ ] 4 laptop checks of §G.5 step 4 (+ §F.6 step 5)
+- [x] 1 committed **`109993f`** (« Changes made after go-live demanded from Alex », the 28 paths below) and pushed by the
+  user, 2026-10-02 20:44 +04:00 — `git ls-remote origin refs/heads/master` = `109993f…` = local `HEAD` (checked in task H)
+- [x] 2 « Deploy » ran (18:44 Paris): `POST /api/users/register` → 404, live bundle `index-CXHlP1c2.js` = G7's build;
+  Alex's second check §1 confirms. (« CI » run page not visible from here — `gh` not installed.)
+- [ ] 3 nginx **NOT reloaded** — checked 2026-10-02 evening: no gzip on CSS, `www` → 200, no cache headers,
+  `/temoignages.html` / `/iftm/` → 404 → **§H.5 step 3**
+- [ ] 4 laptop checks of §G.5 step 4 (+ §F.6 step 5) — after the reload (§H.5)
 - [ ] 5 SHIPPED → §G.0 and §F.0 say SHIPPED (hash, date); memory notes updated
-- [ ] A list for Alex · [ ] B `trial` true · [ ] C `signup` true (server steps, §G.5)
+- [ ] A list for Alex · [ ] B `trial` true · [ ] C `signup` true (server steps — continued in §H.5)
 
 **Expected `git status --short` (nothing staged) — 27 modified, 1 untracked:** ` M` `.github/workflows/ci.yml`,
 `README.md`, `SCANID-HANDOVER.md`, `backend/{.env.example,config.py,emails.py,main.py,schemas.py}`,
@@ -463,7 +752,7 @@ still applies. « Execute what is in the pdf » covers section 5 too.
 ### F.0 State in one line (update after every stage)
 
 **F0–F6 DONE; shipped as `e9d527d` (pushed 2026-10-02, live). Only open: §F.6 step 4, the nginx reload on the VPS
-(cache headers + the two 301s), then the laptop checks of step 5 — after task G ships, one reload covers both (§G).**
+(cache headers + the two 301s), then the laptop checks of step 5 — one reload covers F, G and H: §H.5 step 3.**
 « À la carte » is switched on later, with Alex (§F.6 a–e).
 
 **Ship progress** (tick as the user reports each §F.6 step; one command per message when guiding):
@@ -477,7 +766,8 @@ still applies. « Execute what is in the pdf » covers section 5 too.
   `index-PW3lKQZ5.js`). The run pages themselves are not visible from here (`gh` not installed).
 - [ ] 4 **nginx NOT reloaded yet** — checked live 2026-10-02: no `Cache-Control` on `/tarifs.html` or `/assets/…`,
   `/temoignages.html` and `/iftm/` answer **404** (Alex: « Removed pages … today: 404 »). The user runs
-  `sudo nginx -t && sudo systemctl reload nginx` on the VPS — after task G ships, one reload covers F and G (§G).
+  `sudo nginx -t && sudo systemctl reload nginx` on the VPS — one reload covers F, G and H (**§H.5 step 3**). Re-checked
+  2026-10-02 evening, after G's deploy: still not reloaded (Alex's « second check » section 5).
 - [ ] 5 laptop checks of §F.6 step 5 — after the reload
 - [x] 6 Alex's ten-minute check — done by Alex (« after go-live » note §1: pages, forms → contact@scanid.fr, trial end to
   end, Stripe links, login page, « Sexe », `/api/docs` 404); his remaining points are task G

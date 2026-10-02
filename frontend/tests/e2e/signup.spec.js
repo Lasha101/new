@@ -69,7 +69,7 @@ test.describe('Inscription avant paiement', () => {
     test('un pack inconnu n’affiche pas de formulaire', async ({ page }) => {
         await page.goto(`${APP_BASE}inscription?pack=250`);
         await expect(page.getByRole('heading', { name: "Ce pack n'existe pas." })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'scanid.fr/#tarifs' })).toHaveAttribute('href', 'https://scanid.fr/#tarifs');
+        await expect(page.getByRole('link', { name: 'scanid.fr/tarifs.html' })).toHaveAttribute('href', 'https://scanid.fr/tarifs.html');
         await expect(page.getByRole('button', { name: 'Créer mon compte et payer' })).toHaveCount(0);
     });
 

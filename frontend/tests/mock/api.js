@@ -309,7 +309,7 @@ export async function installMockApi(context, options = {}) {
         if (path === '/signup' && method === 'POST') {
             const body = JSON.parse(request.postData() || '{}');
             if (!PAYMENT_LINKS[body.pack]) {
-                return json(route, 400, { detail: "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/#tarifs." });
+                return json(route, 400, { detail: "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/tarifs.html." });
             }
             if (String(body.email || '').toLowerCase() === state.user.email) {
                 return json(route, 400, { detail: 'Un compte existe déjà avec cette adresse email. Connectez-vous pour acheter ce pack.' });
@@ -326,7 +326,7 @@ export async function installMockApi(context, options = {}) {
         if (path === '/orders' && method === 'POST') {
             const { pack } = JSON.parse(request.postData() || '{}');
             if (!PAYMENT_LINKS[pack]) {
-                return json(route, 400, { detail: "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/#tarifs." });
+                return json(route, 400, { detail: "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/tarifs.html." });
             }
             return json(route, 200, { checkout_url: checkoutUrl(pack, state.user.email, state.user.id), purchase_id: 'pu-order' });
         }

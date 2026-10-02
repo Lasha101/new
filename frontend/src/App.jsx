@@ -824,7 +824,7 @@ function PackSignupPage({ user, onLogin, onBackToApp }) {
         return (
             <div className="sid-signup"><div className="sid-card">
                 <h2>Ce pack n'existe pas.</h2>
-                <p>Choisissez votre pack sur la page des tarifs : <a href="https://scanid.fr/#tarifs">scanid.fr/#tarifs</a>.</p>
+                <p>Choisissez votre pack sur la page des tarifs : <a href="https://scanid.fr/tarifs.html">scanid.fr/tarifs.html</a>.</p>
             </div></div>
         );
     }
@@ -1084,7 +1084,7 @@ function TrialRequestsPage() {
     useEffect(() => { load(); }, [load]);
 
     const decide = async (request, action) => {
-        if (action === 'reject' && !window.confirm(`Refuser la demande de ${request.nom} ? Aucun email ne sera envoyé.`)) return;
+        if (action === 'reject' && !window.confirm(`Refuser la demande de ${request.nom} ? Aucun e-mail ne sera envoyé.`)) return;
         setBusyId(request.id); setMessage(''); setError('');
         try {
             const response = await fetch(`${API_URL}/admin/trial-requests/${request.id}/${action}`, { credentials: 'include', method: 'POST' });

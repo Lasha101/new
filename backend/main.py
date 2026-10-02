@@ -760,7 +760,7 @@ def reset_password(request: Request, payload: schemas.ResetPasswordRequest, db: 
 
 
 # --- Buying a pack: account first, then Stripe (Spec v3) ---
-UNKNOWN_PACK = "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/#tarifs."
+UNKNOWN_PACK = "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/tarifs.html."
 
 
 @app.post("/signup", response_model=schemas.CheckoutOut)
