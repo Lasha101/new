@@ -6,30 +6,33 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§C) exactly where it stopped, under the same
+> instruction to **resume the current task (§D) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
 > 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`;
 >    `frontend/site/` and `frontend/scanid-site-v5-deploy/` read-only; work in stages; update
 >    this file after every stage; outside the repository: read when needed, write only with
 >    permission).
-> 2. Read **§C** (the current task, 2026-09-30) first. Then, for the task before it,
->    **§B.0 RESUME POINT** — the exact position (stage and sub-step), the environment, the
->    commands, and the specification of every remaining step. Then §B.1–§B.3 (demand, findings,
->    decisions — decisions are settled, do not re-open them) and the stage records below §B.4.
-> 3. Check the working tree matches §B.0 (`git status --short`), run the quick baseline
->    (`backend: pytest -q`, `frontend: npm run test:unit`) and compare with §B.0.
-> 4. Continue at the **first unchecked sub-step** of §B.0. After each sub-step, tick it in §B.0;
->    after each stage, set it `DONE` in §B.4 and append its record (same format as B2–B7).
+> 2. Read **§D** (the current task, 2026-10-02 — new column « Sexe ») first: §D.0 says which stage
+>    is next, §D.4 lists the stages. §C (2026-09-30, committed `68dde4a`) is a record. Then, for
+>    the task before it, §B.0.3 still holds the environment and the commands (test suites,
+>    e2e, lint, build, the real-stack harness recipe), all valid for §D.
+> 3. Check the working tree matches §D.0 (`git status --short`), run the quick baseline
+>    (`backend: pytest -q`, `frontend: npm run test:unit`) and compare with §D.0.
+> 4. Continue at the **first stage of §D.4 not marked DONE**. After each stage, mark it `DONE` in
+>    §D.4, append its record below §D.4, and update §D.0.
 > 5. Keep answering the user in their conversation language; keep the UI in French.
-> 6. **If §B.0.2 says task B is complete** (it does since 2026-09-14): do not re-implement anything — verify, report the
->    state and the user-side steps of §B.6, and wait for the user's next demand under the same §0.
+> 6. **Task D is implemented; its deploy is in progress (since 2026-10-02):** do not re-implement
+>    anything — follow §D.0 "A new session…": find the position with §D.7.5, ask the user what only
+>    they can see, guide the first unticked step of §D.7.3, tick §D.7.4. Once §D.0 says **SHIPPED**,
+>    §D is a record: wait for the user's next demand under the same §0.
 >
-> §A (task A — committed `a2b235d`, pushed) and §1–§9 (the v5 site task, live) are records only.
-> §B is a record too since its commit (see §C.0).
+> §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
+> `68dde4a`) and §1–§9 (the v5 site task, live) are records only.
 
-Last updated: 2026-09-30 (task C — login-page footer + the two `/api/config` switches — **C1 DONE
-locally, uncommitted; C2 needs the user/Alex, see §C.2**)
+Last updated: 2026-10-02 (task D — new column « Sexe » — code complete and verified; **the user is
+deploying it: resume at §D.7**, position checks §D.7.5, progress §D.7.4 — steps 1–3 done, next step 4
+(push), one command per message)
 
 ---
 
@@ -82,7 +85,498 @@ they applied to the previous one (v4).
 
 ---
 
-## C. CURRENT TASK (2026-09-30) — LOGIN-PAGE FOOTER, AND THE TWO `/api/config` SWITCHES
+## D. CURRENT TASK (2026-10-02) — NEW COLUMN « SEXE »
+
+### D.0 State in one line (update after every stage)
+
+**CODE DONE AND VERIFIED (D0–D6). NOW: THE USER IS PUSHING AND DEPLOYING IT — RESUME AT §D.7
+(deploy runbook).** Do not re-implement anything. The user runs every deploy step; the assistant never
+`git add` / `commit` / `push` (§0.3) and never connects to the VPS without explicit permission.
+
+**Deploy position (2026-10-02): steps 1–3 ticked (all 7 tables owned by `travelapp` → step 3 not needed);
+next = step 4 (commit + push, on the laptop).** At the
+user's request (« CRUCIAL one instruction at a time! ») the deploy is guided **one command per message**:
+give exactly one command, wait for the user to paste its output, check it, tick §D.7.4, then give the next.
+
+**A new session opened with "Read SCANID-HANDOVER.md" does exactly this:**
+1. Find where the deploy stands **on its own**, read-only: the four checks of §D.7.5 (local commit,
+   pushed or not, backend up, new frontend live). Compare with the "before" column there.
+2. If nothing is committed yet: `git status --short` must list exactly the 21 files below (any other
+   difference: report it, do not "fix" it), and the quick baseline must hold —
+   `cd backend && ../newvenv/bin/python -m pytest -q` → **328 passed**;
+   `cd frontend && npm run test:unit` → **88 passed**.
+3. Ask the user only what cannot be seen from the laptop (the owner check of step 2, the journal of
+   step 6, the acceptance of step 7), tick §D.7.4, and guide the **first unticked step of §D.7.3**.
+   Update §D.7.4 and this paragraph after every step the user reports.
+4. When step 7 is ticked: mark task D **SHIPPED** here (commit hash, date), turn §D into a record, point
+   the resume protocol at the top to "wait for the next demand", update the memory note.
+
+Known facts to tell the user when relevant: old documents keep an empty Sexe (scans are not stored); the
+Vision-quota observation (§D.6, last paragraph). The 2026-10-02 scratchpad was found **empty** when the
+session restarted (~12:00, 2026-10-02): the real identity data used in the tests no longer exists —
+nothing to delete.
+
+Git at start of task D: `master` = `origin/master` = `68dde4a`, working tree clean. Baseline reproduced
+before any change: backend **295 passed**, frontend unit **87 passed**. At the end: backend **328**, unit
+**88**, e2e **439 passed / 1 skipped**, eslint = baseline, build + guard ok. Expected `git status --short`
+(all uncommitted, §0.3) — 18 modified, 3 new:
+` M` SCANID-HANDOVER.md, backend/{main,models,ocr_service,schema_migrations,schemas}.py,
+backend/tests/{conftest,test_account_foundation,test_existing_api,test_export,test_ocr_split_cni}.py,
+frontend/src/{App.jsx,resultsHelpers.js,resultsHelpers.test.js},
+frontend/tests/e2e/{design-system,features}.spec.js, frontend/tests/mock/{api,data}.js;
+`??` backend/tests/{test_ocr_sex,test_sex_column}.py, frontend/tests/e2e/sex-column.spec.js.
+
+### D.1 The demand, verbatim (user, 2026-10-02)
+
+> CRUCIAL for this session you have the same constraints and permissions as they are in
+> SCANID-HANDOVER.md, all current functionality must be preserevd except what i will demand to
+> change, make only necessary changes, outside of this directory you can run commands and see output
+> if it is necessary to respond to my prompt's demand, if you need to install or uninstall or delete
+> or edit something you should ask me the permission, without it only run the commands to verify and
+> test the things, but no dlelting, editing, installing or uninstalling something!
+>
+> New column « Sexe »
+> - Show the holder's sex in the « Mes documents » table and add it to the XLSX and CSV exports,
+>   right after « Prénom », with the header « Sexe » and the same rules as the other columns
+>   (uppercase, centered).
+> - Values F or M, read from the machine-readable zone: passport, line 2, character 21; new ID card,
+>   line 2, character 8; older ID card, line 2, character 35. Leave the cell empty when it cannot be
+>   read — never guess.
+>
+> Finally test added column to db, UI, csv and xlsx if there is new column "Sexe"!
+
+Twice during the task (verbatim): « CRUCIAL when you finish current stage update SCANID-HANDOVER.md in
+such way that if i tell you in new coversation read SCANID-HANDOVER.md you can constinue = resume current
+work without needing any other instruction! » and « Update the SCANID-HANDOVER.md in such way that in the
+new conversation you could resume=continue current work with only this command: Read SCANID-HANDOVER.md! »
+— hence the resume steps in §D.0 and the rebuildable harness in §D.5. **Standing rule for every future
+task:** keep a §X.0 with the exact resume point, update it after every stage (and before any long step),
+and point the resume protocol at the top of this file to the current task.
+
+Constraints and permissions: §0, unchanged.
+
+### D.2 Findings before touching anything
+
+1. **The three positions are already isolated by the existing MRZ regexes** (`backend/ocr_service.py`);
+   only one character has to be captured, no new matching logic:
+   - passport, line 2 (TD3, 44 characters): the `[MFX<]` between the birth-date check digit
+     (character 20) and the expiry date in `_parse_passport`'s line-2 regex; and `([MFX])` in
+     `PASSPORT_PARTIAL_LINE2_RE` — a scan cropped on the left loses the start of the line, not
+     character 21, and that path already verifies both dates' check digits;
+   - new CNI, line 2 (TD1, 30 characters): `TD1_LINE2_RE` group 3;
+   - old CNI, line 2 (36 characters): `TD2_LINE2_RE` and `TD2_LINE2_RELAXED_RE` group 6.
+   No ICAO check digit covers the sex character itself, in any of the three formats.
+2. A new-format CNI read from its **front only** (`_parse_cni_new_visual`) has no MRZ on the page →
+   Sexe stays empty (the printed « Sexe F » is not the MRZ).
+3. **No DB column exists.** `create_all` never adds a column to an existing table, so production needs
+   the additive startup migration of task B (`schema_migrations.ADDED_COLUMNS`); its `ALTER TABLE`
+   needs the owner of `passports`.
+4. Scans are never stored (`test_no_document_persistence.py`) → documents extracted before this change
+   cannot be re-read; their Sexe stays empty.
+5. UI: `.sid-table th` / `td` (`scanid-app.css`) are `text-transform: uppercase; text-align: center`
+   for every column, and the mobile cards uppercase their values → a new column inherits both rules.
+   The table and the cards both render `PASSPORT_COLUMN_ORDER` (`resultsHelpers.js`).
+6. `passportFields` (App.jsx) drives the « Modifier » / « + Manuel » form, where every field but the
+   destination is `required` → `sex` must **not** go there (saving a document with an empty Sexe would
+   be blocked). « Modifier » sends back `{...item}` (the stored sex survives); « Modifier Destination »
+   sends an explicit field list and `crud.update_passport` uses `exclude_unset=True` (survives too).
+7. Exports: `EXPORT_COLUMNS` / `EXPORT_HEADERS` (main.py) drive CSV, XLSX and the Aperçu;
+   `_export_cell_value` uppercases, `_format_export_worksheet` centers every cell and sizes the
+   AutoFilter from `max_column`. Pytest keeps `EXPORT_COLUMNS` == `PASSPORT_COLUMN_ORDER` and the
+   headers == `columnTranslations`.
+8. Tests pinning the 9 columns: backend `test_export.py` (headers, indexes, `A1:I`, hidden `J`, `H2`),
+   `test_existing_api.py` (`PASSPORT_KEYS`), `test_account_foundation.py` (its migration test assumes
+   every `ADDED_COLUMNS` entry is on `users`), `test_ocr_split_cni.py` (`EXPECTED_IDENTITY` compared
+   with `==`; its synthetic line 2 carries `F` at character 35); frontend `resultsHelpers.test.js`,
+   `tests/mock/api.js` (mirror of `EXPORT_COLUMNS`), `tests/e2e/design-system.spec.js`
+   (`BASELINE_EXPORT_HEADERS`).
+9. Real-document baseline: `backend/bench_result_{dubrovnik,italie}_check.json` (2026-09-07, gitignored;
+   the OCR code has not changed since `8d19b38`, 2026-09-06): DUBROVNIK 29 pages, 27 ok; ITALIE 71
+   pages, 61 ok, 6 versos merged.
+
+### D.3 Decisions
+
+1. Field `sex` (English, like the other columns): DB `passports.sex VARCHAR NULL`; API
+   `sex: "F" | "M" | null` on `PassportBase` (create, update, response). Header « Sexe ».
+2. Only `F` and `M` are kept; `X`, `<` or anything else → empty. Never taken from the visual zone or
+   inferred from a first name.
+3. Order everywhere (table, cards, Aperçu, CSV, XLSX): Nom de famille, Prénom, **Sexe**, Date de
+   Naissance, …
+4. Not demanded, therefore not done: a Sexe field in the « Modifier » / « + Manuel » form (a manual
+   document has an empty Sexe); a backfill of existing rows (impossible, finding 4).
+
+### D.4 Stages
+
+| Stage | Content | Status |
+| --- | --- | --- |
+| D0 | Survey + baseline | **DONE** |
+| D1 | Write the demand, findings and plan here | **DONE** |
+| D2 | OCR: read the sex from the MRZ (3 formats) + synthetic tests | **DONE** |
+| D3 | DB column + migration + API + exports (CSV, XLSX, Aperçu) + tests | **DONE** |
+| D4 | Frontend table + cards, mock backend, unit + e2e tests | **DONE** |
+| D5 | Verification: all suites, lint, build; real OCR on both PDFs vs the D.2.9 baseline; real stack (PostgreSQL with the pre-change schema → migration → upload in the UI → table → CSV + XLSX) | **DONE** (record: §D.5) |
+| D6 | Record + how to ship | **DONE** (§D.6) |
+
+### Stage D2 — OCR — DONE
+
+- `backend/ocr_service.py`: new `_mrz_sex(character)` → `'F'` / `'M'` / `None`. The passport line-2
+  regex captures its `[MFX<]` (expiry moves from group 4 to 5); `PASSPORT_PARTIAL_LINE2_RE` group 3
+  (cropped scans); `TD1_LINE2_RE` group 3; `TD2_LINE2_RE` and `TD2_LINE2_RELAXED_RE` group 6 — each
+  taken from the same match as the birth date. Every parser returns `sex` (`_parse_cni_new_visual`:
+  always `None`, no MRZ); the old-CNI recto carrier (`OldCniFrontMissingExpiry.partial_data`)
+  includes it, so a recto/verso merge keeps the recto's sex. No other field, regex or message changed.
+- **New** `backend/tests/test_ocr_sex.py` (22): per format, F/M kept and X/`<` → empty at exactly
+  character 21 / 8 / 35 (the fixtures assert their line length and position); visual zone « Sexe F »
+  never used (passport with `<`, new-CNI front without MRZ → extracted, Sexe empty); cropped passport;
+  tolerant old-CNI line; recto/verso merge; full page cascade with Vision faked. Against the original
+  `ocr_service.py` (scratch copy) **19 of 22 fail** — the 3 that pass are the fixture checks.
+- `backend/tests/test_ocr_split_cni.py`: `EXPECTED_IDENTITY` gains `"sex": "F"` (its synthetic line 2
+  has `F` at character 35) — the 3 tests comparing with `==` failed without it, as expected.
+- OCR suites: **57 passed** (35 existing + 22 new).
+
+### Stage D3 — DB, API, exports — DONE
+
+- `backend/models.py`: `Passport.sex = Column(String, nullable=True)`.
+- `backend/schema_migrations.py`: `("passports", "sex", "VARCHAR")` in `ADDED_COLUMNS` + its manual SQL
+  in the docstring: `ALTER TABLE passports ADD COLUMN IF NOT EXISTS sex VARCHAR;`.
+- `backend/schemas.py`: `PassportBase.sex: Optional[Literal["F", "M"]] = None` — POST/PUT refuse
+  anything else (422); a body without `sex` leaves it empty (create) or untouched (update).
+- `backend/main.py`: `EXPORT_COLUMNS` gets `"sex"` after `"first_name"`, `EXPORT_HEADERS["sex"] =
+  "Sexe"`. Nothing else: uppercase, centering, AutoFilter, widths, CSV rules and the Aperçu all follow
+  from these two lists.
+- Moved here from D4 because the backend parity tests read them: `frontend/src/resultsHelpers.js`
+  `PASSPORT_COLUMN_ORDER` gets `'sex'` after `'first_name'`; `frontend/src/App.jsx`
+  `columnTranslations.sex = 'Sexe'`.
+- Tests: fixture `user_with_documents` (conftest) gets F / M / F / empty (the new CNI) / F;
+  `test_export.py` follows the 10 columns (headers, indexes, `A1:J`, hidden `K…XFD`, letters) and
+  asserts the Sexe values in CSV (`""` when unknown), XLSX (empty cell) and the Aperçu, and the order
+  `[:3] == last_name, first_name, sex`; `test_existing_api.py` `PASSPORT_KEYS` + `sex`;
+  `test_account_foundation.py` migration test filters `ADDED_COLUMNS` on `users`. **New**
+  `tests/test_sex_column.py` (11): migration of the exact pre-change `passports` table with a row
+  (column added, nullable, row intact with empty Sexe, idempotent), manual SQL listed, API returns
+  F / null, manual creation empty, `X` `<` `f` `FEMME` `""` → 422, « Modifier » and « Modifier
+  Destination » both keep the sex, an OCR job stores F / M / NULL.
+- Mutation check (scratch copy, one file back to `HEAD` at a time): models → 12 failed + 24 errors,
+  schemas → 14 failed, schema_migrations → 2 failed, main → 19 failed.
+- Backend suite: **328 passed** (295 + 22 + 11).
+
+### Stage D4 — Frontend — DONE
+
+- Production code: only the two lines already done in D3 (`PASSPORT_COLUMN_ORDER`, `columnTranslations`).
+  The table and the mobile cards render that list, so both gain « Sexe » after « Prénom »; no CSS change
+  (finding 5); `passportFields` untouched (finding 6); sorting works on it like any text column (empty
+  cells last).
+- `src/resultsHelpers.test.js`: order test (10 columns, Sexe right after Prénom) + new test « Sexe
+  shows F / M, empty when not read » → unit **88 passed**.
+- Mock backend: `tests/mock/api.js` `EXPORT_COLUMNS` / `EXPORT_HEADERS` mirror + `sex: null` on manual
+  creation; `tests/mock/data.js` `sex` on every row (p-1 F, p-2 M, p-3 F, p-4 none, p-5 M, extracted F).
+- Specs pinning the old column set: `design-system.spec.js` `BASELINE_EXPORT_HEADERS` + « Sexe »;
+  `features.spec.js` mobile sort checkboxes 9 → 10.
+- **New** `tests/e2e/sex-column.spec.js` (7 tests): header « SEXE » (innerText) after « Prénom », header
+  and cells uppercase + centered with the same computed rules as Prénom; values F / M / empty; sort asc
+  F F M M ∅, desc M M F F ∅; « Modifier » sends the sex back (F stays F) and saves a document without
+  sex (`sex: null`, no required field); cards: « Sexe » after « Prénom », uppercase, same rules as the
+  Prénom value; Aperçu and both downloads: « Sexe » after « Prénom » with the values. desktop +
+  mobile-small + mobile-375: **21 passed**. Mutation (HEAD column order back in place, file restored
+  byte-identical): **5 of 7 fail** — the 2 that pass are the Aperçu/download tests, which follow the
+  export columns, not the table's.
+- eslint: `src/App.jsx` 12 problems (the baseline), every other touched file clean.
+
+### D.5 Stage D5 — verification: sub-steps and the harness — DONE
+
+- [x] Suites after D4: backend **328**; unit **88**; `npx playwright test` (all projects) **439 passed, 1 skipped**
+      (418/1 + the 21 new); eslint = baseline (App.jsx 12, every other touched file clean);
+      `VITE_API_URL=/api npm run build` ok, build guard **5/5**, the bundle contains « Sexe ».
+- [x] Real OCR, `DUBROVNIK.pdf` (`ocr_sex_run.py` + `ocr_sex_check.py`): 29 pages, **27 ok / 2 errors =
+      baseline**. Sexe: passports 6 F + 11 M, old CNI 1 F + 3 M, new CNI (MRZ) 3 F, 3 new-CNI fronts
+      without MRZ → empty. Oracles: literal position **13 agree, 0 disagree** (14 n/a: OCR line not of
+      exact length), printed « Sexe » **4 agree, 0 disagree**. Every name, number, date, nationality
+      identical to the 2026-09-07 baseline; `confidence_score` differs on 10 pages by 0.0001–0.019 →
+      Vision drift suspected (the score reads names/number/nationality only; the diff does not touch
+      it) — proven or refuted by the A/B replay below.
+- [x] Real OCR, ITALIE PDF, first run: pages 20, 36, 46, 60, 70 failed with Vision « Resource has been
+      exhausted (e.g. check quota) » right after the DUBROVNIK run (external quota); the other errors
+      (13, 14, 40, 41) and the 6 recto/verso merges = baseline.
+- [x] ITALIE rerun ~10 min later, with `RECORD_DIR`: **still one quota failure** (page 68; a single
+      71-page PDF now exhausts the per-minute Vision quota — it did not on 2026-09-07; reported to the
+      user, out of scope). 60 ok + 4 known errors + page 68 (read in run 1: new CNI, M, position
+      oracle agrees) = the 61 of the baseline; 6 versos. Sexe: passports 16 F + 20 M, old CNI 7 F + 5 M,
+      new CNI (MRZ) 4 F + 5 M, 3 fronts without MRZ → empty. Oracles: position **49 agree, 0 disagree**,
+      printed « Sexe » **12 agree, 0 disagree**; run 1 also 0 disagree. Names, numbers, dates,
+      nationality identical to the baseline; confidence differs on 22 pages (same pattern as DUBROVNIK).
+- [x] A/B replay ITALIE (78 recorded responses, 0 misses): `HEAD` vs new code **71/71 pages identical
+      apart from `sex`**, confidence included; replay of the new code == the live run on 71/71 pages
+      (sex and confidence included) → the confidence deltas against 2026-09-07 are Vision's, not the
+      change's.
+- [x] Real stack: PostgreSQL 16 with the **pre-change** schema + 1 old document → new backend: the
+      startup migration added `passports.sex` (`character varying`, nullable, 11th column), old row
+      intact with Sexe NULL → UI upload of `DUBROVNIK.pdf`, real OCR, job « Terminé » in 16 s, credits
+      100 → 73 (27 documents, task A rule) → `verify_all.py` **26/26 PASS** (multiset of (number, Sexe)
+      pairs — DUBROVNIK holds 2 documents scanned front + back, 28 rows / 26 numbers): DB 10 F / 14 M /
+      4 empty (the old row + 3 new-CNI fronts without MRZ) = UI table = Aperçu = cards (375 px) = XLSX
+      (real empty cell, centered incl. header, AutoFilter `A1:J29`, 10 columns) = CSV (BOM, `;`);
+      header rendered « SEXE », header and cells uppercase + centered with the same computed rules as
+      Prénom. Screenshots looked at (scratchpad only, real data). `replay_ab.py` on the 35 responses the
+      backend recorded: **29/29 pages identical apart from `sex`**, and the replay equals what the live
+      backend stored (number, sex, confidence) on all 27 rows.
+- [x] Stopped backend, proxy, PostgreSQL (exit 143 = the SIGTERM); ports 8011 / 8080 / 55433 free.
+      `git add --dry-run .` lists exactly the 21 files of §D.0 and nothing is staged.
+
+**Harness** — it lives in the session scratchpad, which a new session does NOT have: rebuild it from this.
+1. `ocr_sex_run.py <label> <pdf> <out.json>` — run from `backend/` with `PYTHONPATH=.`. Imports `database`
+   (writes the Vision credentials of `.env`) and `ocr_service`; wraps `vision_client.annotate_image` and
+   `ocr_service._extract_document_data_from_image_bytes` (thread-local) to attach each page's raw OCR text
+   as `_raw_text` (also into `OldCniFrontMissingExpiry.partial_data`); with `RECORD_DIR` set, saves every
+   Vision response (`type(r).serialize(r)`) as `<RECORD_DIR>/<sha256 of the image bytes>.pb`. Then
+   `extract_data_page_by_page(file_path=…, content_type='application/pdf')` → JSON. Real identity data:
+   scratchpad only.
+2. `ocr_sex_check.py <baseline.json> <run.json>` — against `backend/bench_result_{dubrovnik,italie}_check.json`
+   page by page: same status (data / error / verso), same error text, every field but `sex` / `_raw_text`
+   identical. Per document: format, sex, literal-position oracle (MRZ-cleaned OCR lines of exact length
+   44 / 30 / 36 → index 20 / 7 / 34), printed-« Sexe » oracle
+   (`\bSEXE\b(?:\s*/\s*SEX\b)?\s*[:.]?\s*([MF])\b` on the accent-stripped upper text). Prints no name.
+3. `replay_ab.py <pdf> <RECORD_DIR> <out.json>` — from `backend/`, `PYTHONPATH=.`: a fake Vision client
+   answers each image from `<sha256>.pb` (`vision.AnnotateImageResponse.deserialize`); runs the PDF through
+   the current `ocr_service` and through `git show HEAD:backend/ocr_service.py` loaded as a second module;
+   compares page by page.
+4. Real stack (`stack/`): `start_pg.sh` (`PATH=/usr/lib/postgresql/16/bin:$PATH`; `initdb -U scanid_admin
+   --auth=trust`; `pg_ctl` port **55433** with `-c unix_socket_directories='' -c listen_addresses=127.0.0.1`
+   — the scratchpad path exceeds the 107-byte socket limit; `CREATE DATABASE travelapp`).
+   `old_models.py` = `git show HEAD:backend/models.py`. `seed_old_schema.py` (from backend/, `DATABASE_URL`
+   set): `create_all` with the old models (asserts no `sex`), user `agence@example.com` / `Sexe-Test!!2026`
+   (id `u-agence`, 100 credits, `auth.get_password_hash`), passport `p-ancien` (`99ZZ99999`). Backend:
+   `run_backend.py` (recorder as in 1, then `uvicorn.run('main:app', host='127.0.0.1', port=8011)`), from
+   backend/ with `PYTHONPATH=.` and `DATABASE_URL=postgresql+psycopg2://scanid_admin@127.0.0.1:55433/travelapp
+   ENVIRONMENT=development ADMIN_PASSWORD='Girafe!!12Nuage-Admin' SECRET_KEY=local-e2e-secret-not-production
+   SESSION_COOKIE_SECURE=0 LOGIN_RATE_LIMIT=30/minute` (Vision credentials from `backend/.env`).
+   `proxy.cjs 8080 <repo>/frontend/dist 8011` (site at /, SPA fallback for /app/*, /api/* → backend with the
+   prefix stripped, upstream destroyed when the client closes — SSE) over a `VITE_API_URL=/api npm run build`.
+   `flow.cjs <outDir> <pdf>` (chromium from `frontend/node_modules/@playwright/test`): login, table before
+   the upload, upload + « Lancer l'analyse », wait `.sid-chip--done`, table after + styles, screenshot,
+   Aperçu, « Télécharger Excel » / « Télécharger CSV », cards at 375 px → `ui.json`. `verify_all.py <outDir>`
+   (from backend/, `DATABASE_URL` set): DB column (`character varying`, nullable) and values ↔ UI table ↔
+   Aperçu ↔ cards ↔ XLSX (openpyxl: position, values, centered, AutoFilter `A1:J{n}`) ↔ CSV.
+5. Stopping: `pgrep -f run_backend.py`, `pgrep -f proxy.cjs`, then `kill <pid>` (never `pkill -f` with a
+   pattern your own command line contains); `pg_ctl -D <stack>/pgdata -m fast -w stop`.
+6. Every live pass bills Vision on the Google project production uses (~30 calls for DUBROVNIK, ~80 for
+   ITALIE): space them a few minutes apart, never loop them.
+7. The scratchpad of the session of 2026-10-02 —
+   `/tmp/claude-1000/-home-lasha-Public-new/cc0f6758-978a-44cb-b962-44a9b33d01c0/scratchpad` — held
+   real identity data (run JSONs, recorded Vision responses, screenshots, exports) and the harness
+   scripts. When the session restarted (~12:00, 2026-10-02) it was found **empty** (recreated): that
+   data no longer exists, nothing to delete; rebuild the scripts from the descriptions above if needed.
+
+### D.6 How to ship task D (stage D6)
+
+> The exact step-by-step, with the progress checklist, is the runbook **§D.7** below. This section is
+> the background it relies on.
+
+**Files** — nothing is committed (§0.3). The 21 files of §D.0 (18 modified, 3 new); `git add --dry-run .`
+lists exactly those. No new dependency (Python or npm).
+
+**Before the deploy — database (once, on the VPS).** The startup migration runs
+`ALTER TABLE passports ADD COLUMN sex VARCHAR`, which only the **owner** of `passports` (or a superuser)
+may run; the app connects as `travelapp`, a role without any attribute (PROGRESS.md §2.4). Read-only
+check: `sudo -u postgres psql -l` (database name), then
+`sudo -u postgres psql -d <db> -c "SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'public';"`.
+If `passports` belongs to `travelapp` — very likely: task B's `ALTER TABLE users` worked in production
+and both tables were created by the same `create_all` — nothing to do. Otherwise, before the push:
+`sudo -u postgres psql -d <db> -c "ALTER TABLE passports ADD COLUMN IF NOT EXISTS sex VARCHAR;"`
+(additive, instant, idempotent; the app then skips its own step; `travelapp`'s table privileges cover
+the new column, no GRANT needed).
+**Verified locally (2026-10-02, scratch PostgreSQL: tables owned by another role, app role without
+attributes, `ADMIN_PASSWORD` set as in production):** without the column, the new backend does **not
+start at all** — « must be owner of table passports », then startup tries to re-create the admin
+(« Email déjà enregistré ») and uvicorn exits with code 3: the whole API, login included, is down and the
+deploy's health check (`/destinations/` → 401) fails. After the ALTER as the owner: startup complete,
+admin login ok, `sex` written and read back as `travelapp`. If it happens anyway: run that ALTER as the
+owner, then `sudo systemctl restart travelapp.service`.
+
+**Deploy** = the user's commit + push to `master` (GitHub Actions `deploy.yml`, unchanged). No `.env`
+change, no nginx change, no service change. Backups: nothing to do (`pg_dump` carries the column).
+
+**What users will see.** New extractions: Sexe F / M from the MRZ; empty for a new-format CNI read from
+its front only (no MRZ) and when the MRZ says `X` / `<`. **Documents extracted before the deploy keep an
+empty Sexe** — their scans are not stored, so they cannot be re-read; re-importing the scan fills it.
+The XLSX / CSV now have 10 columns: anything that reads them by column letter shifts by one after
+« Prénom » (C = Sexe). « Modifier » / « + Manuel » show no Sexe field (not demanded) — a manual document
+has an empty Sexe; an edit keeps the stored one.
+
+**Acceptance on https://scanid.fr after the deploy:** import a passport and a CNI (back with MRZ) →
+« Sexe » right after « Prénom », F / M, uppercase, centered; an older row → empty; « Télécharger Excel »
+and « Télécharger CSV » → « Sexe » after « Prénom », same values, open in Excel.
+
+**Seen during the tests, not acted on (out of scope):** the Google Vision quota of the project is now
+exhausted by a single 71-page PDF (« Resource has been exhausted (e.g. check quota) » on 5 pages, then on
+1 page after a 10-minute pause; none on 2026-09-07). Such a page fails with « L'API Google Vision a
+renvoyé une erreur : … » — not charged (task A), but missing. Worth a look at the Vision quotas in the
+Google Cloud console.
+
+### D.7 DEPLOY RUNBOOK — SHIPPING « SEXE » TO https://scanid.fr — RESUME HERE
+
+> Decided by the user on 2026-10-02: « I want to push the changes on github and deploy! ». **The user
+> runs every step below.** The assistant guides, checks what can be checked from the laptop (§D.7.5),
+> and ticks §D.7.4 as the user reports — it never `git add` / `commit` / `push` (§0.3) and never
+> connects to the VPS without the user's explicit permission.
+
+#### D.7.1 What is being shipped
+
+The 21 files of §D.0: the « Sexe » column — F or M read from the MRZ (passport line 2 character 21,
+new CNI line 2 character 8, old CNI line 2 character 35), empty when it cannot be read — right after
+« Prénom » in « Mes documents » (table, phone cards, Aperçu) and in the XLSX / CSV downloads; the new
+database column `passports.sex`. No new dependency, no `.env` change, no nginx change, no service change.
+
+#### D.7.2 The problem to know before deploying — the database column
+
+- Production's `passports` table has no `sex` column. The new backend adds it **itself** at its first
+  start (`backend/schema_migrations.py`: `ALTER TABLE passports ADD COLUMN sex VARCHAR`) and logs
+  « Schéma mis à jour : colonnes ajoutées passports.sex ».
+- PostgreSQL lets only the table's **owner** (or a superuser) run `ALTER TABLE`; reading and writing
+  rows is not enough. The app logs in as **`travelapp`**, a role with no attributes (PROGRESS.md
+  §2.4). So the automatic step works only if `travelapp` owns `passports`.
+- If it does not, the new backend **does not start at all** — verified locally on 2026-10-02 with a
+  production-like setup (tables owned by another role, app role without attributes, `ADMIN_PASSWORD`
+  set): « must be owner of table passports », then startup tries to re-create the admin
+  (« Email déjà enregistré ») and uvicorn exits with code 3. Result: API down — nobody can log in, no
+  documents, no exports; the deploy's health check fails (`000` instead of `401`). The public site and
+  the app shell still load.
+- Prevention: step 2 (a 10-second read-only check) and, **only if needed**, step 3 (add the column by
+  hand as the superuser **before** the push). Verified locally the same day:
+  - after the column is added by the owner, the new backend starts, the admin logs in, and `travelapp`
+    writes and reads `sex` with its existing table privileges (no GRANT needed);
+  - the **current production code** (`68dde4a`) runs normally with the hand-added column (starts,
+    creates, lists, edits, exports its usual 9 columns; the column stays empty) — so step 3 is safe
+    while the old version still runs, and a rollback (step 9) is safe with the column in place.
+- Very likely fine anyway: task B added 9 columns to `users` the same way and is live (logins work), and
+  `users` and `passports` were created together by the app's first `create_all`, as the same role.
+
+#### D.7.3 Step by step (the user runs every step)
+
+**Step 1 — laptop, pre-flight** (repository root `/home/lasha/Public/new`):
+```bash
+git status --short                                   # exactly the 21 files of §D.0
+cd backend && ../newvenv/bin/python -m pytest -q     # 328 passed
+cd ../frontend && npm run test:unit                  # 88 passed
+cd ..
+```
+
+**Step 2 — VPS, who owns the tables (read-only, changes nothing):**
+```bash
+ssh lasha@87.106.22.235       # the sudo account (or root@87.106.22.235 as in PROGRESS.md §5)
+sudo -u postgres psql -l      # lists the databases: find the app's one, most likely « travelapp »
+sudo -u postgres psql -d travelapp -c "SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;"
+```
+`sudo -u postgres` = run as the PostgreSQL superuser account, which logs in locally without a password
+(peer); `-d travelapp` = the app's database (use the name `psql -l` shows); the SELECT prints the owner of
+every table. Expected: `passports | travelapp` and `users | travelapp` → **step 3 not needed**. A line
+« could not change directory to "/home/lasha": Permission denied » is harmless (postgres cannot enter
+lasha's home folder; the query still runs).
+
+**Step 3 — VPS, ONLY if `passports` is not owned by `travelapp`:**
+```bash
+sudo -u postgres psql -d travelapp -c "ALTER TABLE passports ADD COLUMN IF NOT EXISTS sex VARCHAR;"
+sudo -u postgres psql -d travelapp -c "\d passports"      # last row: sex | character varying
+```
+Adds one empty, optional column: existing rows untouched, instant, harmless to run twice, safe while the
+current version runs.
+
+**Step 4 — laptop, commit and push (the push deploys):**
+```bash
+git add --dry-run .           # must list exactly the 21 files of §D.0, nothing else
+git add .
+git commit -m "Add the « Sexe » column (read from the MRZ) to Mes documents and the CSV/XLSX exports"
+git push origin master
+```
+
+**Step 5 — GitHub, watch both workflows:** https://github.com/Lasha101/new/actions
+- « CI » — backend tests, boot on a fresh PostgreSQL 16, frontend build and unit tests → green.
+- « Deploy » — frontend build, rsync to `/opt/travelapp`, `pip install`, `systemctl restart
+  travelapp.service`, health checks → green, last line « Deployed; the site answers /, the app answers
+  /app/, and the API proxies. ». A « NOTE: nginx not reloaded … » line is normal (the deploy account may
+  only restart `travelapp.service`; task D changes no nginx file).
+- « ERROR: backend health check returned 000 » (or `502`) → **step 8**.
+
+**Step 6 — VPS, the column and the startup log:**
+```bash
+sudo journalctl -u travelapp.service --since "30 min ago" --no-pager | grep -E "Schéma mis à jour|Database startup check failed|must be owner|startup failed"
+sudo -u postgres psql -d travelapp -c "SELECT sex, count(*) FROM passports GROUP BY sex;"
+```
+Expected: « Schéma mis à jour : colonnes ajoutées passports.sex » (absent if step 3 added the column by
+hand — fine), **no** « Database startup check failed »; every existing row has an empty `sex` (normal:
+old scans are not stored, so they cannot be re-read).
+
+**Step 7 — acceptance on https://scanid.fr/app/** (a normal customer account; each import costs one
+credit per document and uses Google Vision):
+1. Open the app: it reloads itself once onto the new version (service worker); if « SEXE » is not
+   there, reload the page once.
+2. « Mes documents »: column « SEXE » right after « PRÉNOM », centered; existing rows empty.
+3. Import a passport and a CNI back (with its MRZ) → F or M; the front of a new CNI alone → empty.
+4. « Télécharger Excel » → column C « Sexe » after « Prénom », centered, F / M / empty, filter
+   dropdowns; « Télécharger CSV » → same column and values; both open in Excel.
+5. Phone: each card shows « Sexe » after « Prénom ».
+6. « Modifier » a document and save → its Sexe is unchanged.
+
+**Step 8 — ONLY if the API is down after the push** (health check `000` / `502`, login fails):
+```bash
+sudo journalctl -u travelapp.service -n 60 --no-pager     # look for « must be owner of table passports »
+sudo -u postgres psql -d travelapp -c "ALTER TABLE passports ADD COLUMN IF NOT EXISTS sex VARCHAR;"
+sudo systemctl restart travelapp.service
+sleep 3; curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/destinations/   # 401 = back up
+```
+Then (optional) « Re-run jobs » on the failed « Deploy » run so its checks go green, and continue at
+step 6. If the journal shows another error, copy it to the assistant before doing anything else.
+
+**Step 9 — rollback, only if something else is wrong and cannot be fixed quickly:**
+```bash
+git revert --no-edit HEAD && git push origin master       # redeploys the code of 68dde4a
+```
+The previous code works with the `sex` column present (verified) — leave the column in place.
+
+#### D.7.4 Progress — ticked by the assistant as the user reports each step
+
+- [x] 1 Pre-flight on the laptop — `git status` = the 21 files, backend 328, unit 88 — **done 2026-10-02**
+      (run by the assistant on resume: §D.7.5 A–D = the "before" column; 21 files; backend 328 passed; unit
+      88 passed)
+- [x] 2 Owner of `passports`: **`travelapp`** · owner of `users`: **`travelapp`** · database name:
+      **`travelapp`** (the only app database on the server, itself owned by `travelapp`). All 7 public tables
+      — auth_tokens, ocr_jobs, passports, purchases, trial_requests, users, voyages — are owned by `travelapp`
+      (2026-10-02, the user's output)
+- [x] 3 Column added by hand: **not needed** — `travelapp` owns `passports`, so the startup migration adds it
+- [ ] 4 Commit ______ pushed to `master`
+- [ ] 5 « CI » green · « Deploy » green
+- [ ] 6 Column present, no startup error, existing rows empty
+- [ ] 7 Acceptance on https://scanid.fr (items 1–6)
+- [ ] 8 Recovery: not needed / done
+- [ ] Shipped → §D.0 marked SHIPPED (hash, date); §D becomes a record; memory note updated
+
+#### D.7.5 How a new session finds the position on its own (read-only, from the laptop)
+
+```bash
+cd /home/lasha/Public/new
+git log -1 --oneline && git status --short                     # A: local commit and tree
+git ls-remote origin refs/heads/master; git rev-parse HEAD      # B: pushed?
+curl -s -o /dev/null -w '%{http_code}\n' https://scanid.fr/api/destinations/            # C: backend up?
+JS=$(curl -s https://scanid.fr/app/ | grep -o '/app/assets/index-[^"]*\.js' | head -1)  # D: new
+echo "$JS"; curl -s "https://scanid.fr$JS" | grep -o 'Sexe' | wc -l                      #    frontend?
+```
+
+| Check | Before the deploy (measured 2026-10-02) | After a good deploy |
+| --- | --- | --- |
+| A — local | `68dde4a`; the 21 files modified | the task-D commit; clean tree |
+| B — pushed | remote `master` = `68dde4a…` = local `HEAD` | remote `master` = local `HEAD` = the task-D commit |
+| C — backend | `401` | `401` (`502` / `000` → step 8) |
+| D — frontend | `/app/assets/index-C_VTLlgs.js`, `0` × « Sexe » (task C's footer present) | another file name, ≥ 1 × « Sexe » |
+
+What the laptop cannot see — the owner (step 2), the journal (step 6), the acceptance (step 7) — is asked
+of the user. Then tick §D.7.4 and guide the first unticked step. The checks above are plain GETs on the
+public site and read-only git commands; nothing is sent to the VPS from here.
+
+---
+
+## C. TASK C (2026-09-30) — LOGIN-PAGE FOOTER, AND THE TWO `/api/config` SWITCHES — RECORD ONLY
+
+> Committed as `68dde4a` (« Fix the login page footer and identifier label »). The C2 steps (§C.5)
+> are still the user's and Alex's.
 
 ### C.0 State in one line
 

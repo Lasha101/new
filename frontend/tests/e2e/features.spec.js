@@ -440,8 +440,8 @@ test.describe('Ce que les cartes permettent sur mobile', () => {
         await login(page);
         await expect(page.locator(SELECTORS.cardList)).toBeVisible();
 
-        // Nine sort checkboxes exist in the DOM, one per column; none is visible.
-        await expect(page.locator('.sort-checkbox')).toHaveCount(9);
+        // Ten sort checkboxes exist in the DOM, one per column; none is visible.
+        await expect(page.locator('.sort-checkbox')).toHaveCount(10);
         await expect(page.locator('.sort-checkbox:visible')).toHaveCount(0);
         await expect(selectAll(page)).toBeHidden();
     });

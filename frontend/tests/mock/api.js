@@ -33,10 +33,10 @@ const documentType = number =>
     (PASSPORT_NUMBER_RE.test(String(number ?? '').trim().toUpperCase()) ? 'PP' : 'PI');
 
 // EXPORT_COLUMNS / EXPORT_HEADERS in backend/main.py.
-const EXPORT_COLUMNS = ['last_name', 'first_name', 'birth_date', 'expiration_date', 'nationality',
+const EXPORT_COLUMNS = ['last_name', 'first_name', 'sex', 'birth_date', 'expiration_date', 'nationality',
     'passport_number', 'document_type', 'destination', 'confidence_score'];
 const EXPORT_HEADERS = {
-    last_name: 'Nom de famille', first_name: 'Prénom', birth_date: 'Date de Naissance',
+    last_name: 'Nom de famille', first_name: 'Prénom', sex: 'Sexe', birth_date: 'Date de Naissance',
     expiration_date: "Date d'Expiration", nationality: 'Nationalité',
     passport_number: 'Numéro de document', document_type: 'Type',
     destination: 'Destination', confidence_score: 'Score de Confiance',
@@ -489,7 +489,7 @@ export async function installMockApi(context, options = {}) {
                 owner_id: state.user.id,
                 first_name: '', last_name: '', birth_date: null, expiration_date: null,
                 nationality: '', passport_number: '', destination: null,
-                confidence_score: null, voyages: [],
+                confidence_score: null, sex: null, voyages: [],
                 ...body,
             };
             state.passports = [created, ...state.passports];

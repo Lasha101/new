@@ -40,7 +40,7 @@ def test_migration_adds_the_new_columns_to_an_existing_users_table():
 
     added = schema_migrations.add_missing_columns(engine)
 
-    assert set(added) == {f"users.{c}" for _, c, _ in schema_migrations.ADDED_COLUMNS}
+    assert set(added) == {f"users.{c}" for t, c, _ in schema_migrations.ADDED_COLUMNS if t == "users"}
     columns = {c["name"] for c in inspect(engine).get_columns("users")}
     assert columns >= {c.name for c in models.User.__table__.columns}
     with engine.connect() as connection:

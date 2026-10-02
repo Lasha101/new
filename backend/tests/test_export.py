@@ -1,7 +1,7 @@
 """Spec tests of the results-screen downloads (CSV and XLSX):
 document type PP/PI, filter-aware export, no internal ids, French headers in
-the on-screen column order (Type between the document number and the
-destination), DD/MM/YYYY dates, uppercase values, CSV UTF-8 BOM, XLSX
+the on-screen column order (Sexe right after Prénom, Type between the document
+number and the destination), DD/MM/YYYY dates, uppercase values, CSV UTF-8 BOM, XLSX
 centering, auto-fitted widths and AutoFilter dropdowns on every column."""
 import codecs
 import csv
@@ -17,10 +17,10 @@ from tests.helpers import make_user, make_passport, auth_headers
 import os
 
 # Column order of the downloaded files = order of the on-screen table.
-FRENCH_HEADERS = ["Nom de famille", "Prénom", "Date de Naissance", "Date d'Expiration", "Nationalité",
+FRENCH_HEADERS = ["Nom de famille", "Prénom", "Sexe", "Date de Naissance", "Date d'Expiration", "Nationalité",
                   "Numéro de document", "Type", "Destination", "Score de Confiance"]
 # Named column indexes, so the assertions read like the table.
-NOM, PRENOM, NAISSANCE, EXPIRATION, NATIONALITE, NUMERO, TYPE, DESTINATION, SCORE = range(9)
+NOM, PRENOM, SEXE, NAISSANCE, EXPIRATION, NATIONALITE, NUMERO, TYPE, DESTINATION, SCORE = range(10)
 INTERNAL_COLUMNS = {"id", "owner_id", "ID", "OWNER_ID", "Identifiant", "Propriétaire"}
 
 
@@ -129,6 +129,8 @@ def test_csv_export_all_rows_french_headers_uppercase_no_ids(client, user_with_d
     assert by_number["X4RTBPFW4"][TYPE] == "PI"
     # accents survive the round trip and are uppercased; surname first, then given names
     assert by_number["12AB34567"][NOM:PRENOM + 1] == ["DUPONT-LÉVY", "ÉLODIE"]
+    # Sexe right after Prénom: F / M, empty when it could not be read
+    assert [by_number[n][SEXE] for n in ("12AB34567", "98ZY12345", '="123456789012"', "X4RTBPFW4")] == ["F", "M", "F", ""]
     assert by_number["12AB34567"][NATIONALITE] == "FRANÇAISE"
     assert by_number["12AB34567"][DESTINATION] == "DUBROVNIK ÉTÉ"
     # dates are written jour/mois/année with '/'
@@ -227,6 +229,8 @@ def test_xlsx_export_headers_type_column_uppercase_no_ids(client, user_with_docu
     assert by_number["123456789012"][TYPE] == "PI"
     assert by_number["X4RTBPFW4"][TYPE] == "PI"
     assert by_number["12AB34567"][NOM:PRENOM + 1] == ["DUPONT-LÉVY", "ÉLODIE"]
+    assert [by_number[n][SEXE] for n in ("12AB34567", "98ZY12345", "123456789012")] == ["F", "M", "F"]
+    assert by_number["X4RTBPFW4"][SEXE] is None                 # unread sex: an empty cell
     assert by_number["12AB34567"][NATIONALITE] == "FRANÇAISE"
     # dates stay real Excel dates (sortable, filterable), the confidence score a real number
     assert isinstance(by_number["12AB34567"][NAISSANCE], (date, datetime))
@@ -268,20 +272,20 @@ def test_xlsx_has_autofilter_dropdowns_on_every_column(client, user_with_documen
     header row and every data row, so each column header gets the dropdown
     (sort / filter) as soon as the file is opened."""
     ws = read_xlsx(client.get("/export/data", headers=user_with_documents["headers"]))
-    assert ws.auto_filter.ref == f"A1:I{ws.max_row}"
+    assert ws.auto_filter.ref == f"A1:J{ws.max_row}"
     assert ws.max_row == 5                                       # header + 4 documents
-    assert ws.max_column == len(FRENCH_HEADERS) == 9
+    assert ws.max_column == len(FRENCH_HEADERS) == 10
     # the selection export is built by the same code path
     docs = user_with_documents["docs"]
     selection = client.post("/export/data/selection", json={"passport_ids": [docs["pp1"]["id"], docs["pi_new"]["id"]]},
                             headers=user_with_documents["headers"])
     ws_selection = read_xlsx(selection)
-    assert ws_selection.auto_filter.ref == "A1:I3"
+    assert ws_selection.auto_filter.ref == "A1:J3"
     # the raw XML really contains the autoFilter element (what Excel reads)
     import zipfile
     with zipfile.ZipFile(io.BytesIO(selection.content)) as archive:
         sheet_xml = archive.read("xl/worksheets/sheet1.xml").decode("utf-8")
-    assert '<autoFilter ref="A1:I3"' in sheet_xml
+    assert '<autoFilter ref="A1:J3"' in sheet_xml
 
 
 def test_xlsx_every_cell_is_centered(client, user_with_documents):
@@ -298,15 +302,15 @@ def test_xlsx_column_widths_fit_longest_value(client, user_with_documents):
     widths = {letter: dim.width for letter, dim in ws.column_dimensions.items() if not dim.hidden}
     # Independent oracle: the longest displayed text of every column of the fixture.
     longest_expected = {
-        "A": len("Nom de famille"), "B": len("ÉLODIE"), "C": len("Date de Naissance"), "D": len("Date d'Expiration"),
-        "E": len("Nationalité"), "F": len("Numéro de Passeport"), "G": len("Type"),
-        "H": len("Destination"), "I": len("Score de Confiance"),
+        "A": len("Nom de famille"), "B": len("ÉLODIE"), "C": len("Sexe"), "D": len("Date de Naissance"),
+        "E": len("Date d'Expiration"), "F": len("Nationalité"), "G": len("Numéro de Passeport"), "H": len("Type"),
+        "I": len("Destination"), "J": len("Score de Confiance"),
     }
     assert set(widths) == set(longest_expected)
     for letter, longest in longest_expected.items():
         assert widths[letter] > longest + 1, f"column {letter} width {widths[letter]} does not fit {longest} chars"
     # widths are per column: a column with a longer value is wider than a shorter one
-    assert widths["F"] > widths["G"]
+    assert widths["G"] > widths["H"]
     # every column has an explicit (custom) width
     for column_cells in ws.columns:
         assert ws.column_dimensions[column_cells[0].column_letter].width is not None
@@ -314,12 +318,12 @@ def test_xlsx_column_widths_fit_longest_value(client, user_with_documents):
 
 def test_xlsx_unused_grid_columns_hidden(client, user_with_documents):
     """The sheet ends visually at the last data column: every grid column
-    after 'Score de Confiance' is hidden (one J..XFD range)."""
+    after 'Score de Confiance' is hidden (one K..XFD range)."""
     ws = read_xlsx(client.get("/export/data", headers=user_with_documents["headers"]))
-    trailing = ws.column_dimensions["J"]
+    trailing = ws.column_dimensions["K"]
     assert trailing.hidden is True
-    assert (trailing.min, trailing.max) == (10, 16384)          # J .. XFD, Excel's last column
-    for letter in "ABCDEFGHI":                                   # data columns stay visible
+    assert (trailing.min, trailing.max) == (11, 16384)          # K .. XFD, Excel's last column
+    for letter in "ABCDEFGHIJ":                                  # data columns stay visible
         assert not ws.column_dimensions[letter].hidden
 
 
@@ -328,7 +332,7 @@ def test_xlsx_widths_grow_with_long_values(client, db_session):
     long_destination = "Voyage " + "très long " * 8
     make_passport(db_session, user["id"], destination=long_destination)
     ws = read_xlsx(client.get("/export/data", headers=auth_headers("dave")))
-    assert ws.column_dimensions["H"].width > len(long_destination)
+    assert ws.column_dimensions["I"].width > len(long_destination)
 
 
 @pytest.mark.parametrize("document_type, expected_numbers", [
@@ -341,14 +345,14 @@ def test_xlsx_export_respects_type_filter(client, user_with_documents, document_
     assert rows[0] == FRENCH_HEADERS
     assert {row[NUMERO] for row in rows[1:]} == expected_numbers
     assert {row[TYPE] for row in rows[1:]} == {document_type}
-    assert ws.auto_filter.ref == f"A1:I{len(rows)}"
+    assert ws.auto_filter.ref == f"A1:J{len(rows)}"
 
 
 def test_xlsx_formula_injection_guard_kept(client, db_session):
     user = make_user(db_session, "erin")
     make_passport(db_session, user["id"], destination="=HYPERLINK(\"http://evil\")")
     ws = read_xlsx(client.get("/export/data", headers=auth_headers("erin")))
-    cell = ws["H2"]
+    cell = ws["I2"]
     assert cell.data_type != "f"
     assert str(cell.value).startswith("'=")
 
@@ -383,7 +387,7 @@ def test_export_column_order_and_type_codes_match_frontend():
     # Type sits between the document number and the destination, surname comes first
     assert main.EXPORT_COLUMNS.index("document_type") == main.EXPORT_COLUMNS.index("passport_number") + 1
     assert main.EXPORT_COLUMNS.index("destination") == main.EXPORT_COLUMNS.index("document_type") + 1
-    assert main.EXPORT_COLUMNS[:2] == ["last_name", "first_name"]
+    assert main.EXPORT_COLUMNS[:3] == ["last_name", "first_name", "sex"]       # Sexe right after Prénom
 
 
 def test_export_returns_all_rows_beyond_listing_page(client, db_session):
@@ -420,6 +424,7 @@ def test_preview_rows_match_export_columns_and_type_filter(client, user_with_doc
     assert by_number["12AB34567"]["expiration_date"] == "02/01/2030"
     assert by_number["12AB34567"]["document_type"] == "PP"
     assert by_number["X4RTBPFW4"]["destination"] == ""
+    assert (by_number["98ZY12345"]["sex"], by_number["X4RTBPFW4"]["sex"]) == ("M", "")
 
     filtered = client.get("/export/data?preview=true&document_type=PI", headers=user_with_documents["headers"]).json()
     assert {row["passport_number"] for row in filtered} == {"123456789012", "X4RTBPFW4"}

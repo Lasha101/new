@@ -40,6 +40,7 @@ EXPECTED_IDENTITY = {
     "first_name": "CLAIRE", "last_name": "MARTIN",
     "passport_number": "060123456789", "nationality": "Française",
     "birth_date": "1990-02-15",
+    "sex": "F",                     # TD2_L2, character 35
 }
 
 

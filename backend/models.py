@@ -61,6 +61,10 @@ class Passport(Base):
     passport_number = Column(String, nullable=False, index=True)
     destination = Column(String, nullable=True, index=True)
     confidence_score = Column(Float, nullable=True)
+    # Added 02/10/2026 (column « Sexe »): 'F' or 'M' as read from the MRZ, NULL
+    # when it could not be read. An existing database gains the column through
+    # schema_migrations.py.
+    sex = Column(String, nullable=True)
 
 
 class OcrJob(Base):

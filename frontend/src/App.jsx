@@ -296,6 +296,7 @@ const columnTranslations = {
     document_type: 'Type', // PP = passeport, PI = pièce d'identité (derived, see resultsHelpers.js)
     first_name: 'Prénom',
     last_name: 'Nom de famille',
+    sex: 'Sexe', // F / M as read from the MRZ, empty when unreadable
     birth_date: 'Date de Naissance',
     // delivery_date removed
     expiration_date: "Date d'Expiration",

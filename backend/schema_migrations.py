@@ -2,9 +2,10 @@
 """Idempotent, additive schema changes for a database that already exists.
 
 `Base.metadata.create_all` creates missing TABLES but never adds a COLUMN to a
-table that is already there, and the production `users` table predates the
-columns below. Without this, the first query on `users` after the deploy
-would fail with "column users.status does not exist" and nobody could log in.
+table that is already there, and the production `users` and `passports` tables
+predate the columns below. Without this, the first query on `users` after the
+deploy would fail with "column users.status does not exist" and nobody could
+log in (and « Mes documents » would fail the same way on `passports.sex`).
 
 Additive only: a column is added when it is missing, never altered or dropped.
 Every column is nullable or carries a constant default, which PostgreSQL 11+
@@ -21,6 +22,7 @@ The same change as plain SQL, for applying it by hand as the table owner:
     ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_postal_code VARCHAR;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_city VARCHAR;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_country VARCHAR;
+    ALTER TABLE passports ADD COLUMN IF NOT EXISTS sex VARCHAR;
 """
 import logging
 from typing import List
@@ -40,6 +42,7 @@ ADDED_COLUMNS = [
     ("users", "billing_postal_code", "VARCHAR"),
     ("users", "billing_city", "VARCHAR"),
     ("users", "billing_country", "VARCHAR"),
+    ("passports", "sex", "VARCHAR"),
 ]
 
 

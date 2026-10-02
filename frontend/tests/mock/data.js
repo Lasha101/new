@@ -29,23 +29,26 @@ const passport = (id, overrides) => ({
     passport_number: '00XX00000',
     destination: null,
     confidence_score: 0.87,
+    sex: null,
     voyages: [],
     ...overrides,
 });
 
 // PP = the French passport shape (2 digits, 2 letters, 5 digits);
 // PI = anything else (12-digit old CNI, 9-character new CNI).
+// Sexe: F or M as read from the MRZ; p-4 has none (a new CNI read from its
+// front, which carries no MRZ).
 export const MOCK_PASSPORTS = [
     passport('p-1', {
-        first_name: 'Élodie', last_name: 'Dupont-Lévy', passport_number: '12AB34567',
+        first_name: 'Élodie', last_name: 'Dupont-Lévy', passport_number: '12AB34567', sex: 'F',
         destination: 'Dubrovnik été', confidence_score: 0.8734, birth_date: '1990-05-17',
     }),
     passport('p-2', {
-        first_name: 'Jean', last_name: 'Martin', passport_number: '98ZY12345',
+        first_name: 'Jean', last_name: 'Martin', passport_number: '98ZY12345', sex: 'M',
         destination: 'Rome', confidence_score: 0.91, birth_date: '1982-11-03',
     }),
     passport('p-3', {
-        first_name: 'Chloé', last_name: 'Bernard', passport_number: '123456789012',
+        first_name: 'Chloé', last_name: 'Bernard', passport_number: '123456789012', sex: 'F',
         destination: 'Rome', confidence_score: null, birth_date: '1975-02-28',
     }),
     passport('p-4', {
@@ -53,14 +56,14 @@ export const MOCK_PASSPORTS = [
         destination: null, confidence_score: 0.5, birth_date: '2001-07-09',
     }),
     passport('p-5', {
-        first_name: 'Camille', last_name: 'Moreau', passport_number: 'D2H6862M2',
+        first_name: 'Camille', last_name: 'Moreau', passport_number: 'D2H6862M2', sex: 'M',
         destination: 'Dubrovnik été', confidence_score: 0.66, birth_date: '1968-12-24',
     }),
 ];
 
 /** The row an upload produces once its OCR job finishes. */
 export const EXTRACTED_PASSPORT = passport('p-new', {
-    first_name: 'Specimen', last_name: 'Harnais', passport_number: '77QW88888',
+    first_name: 'Specimen', last_name: 'Harnais', passport_number: '77QW88888', sex: 'F',
     destination: null, confidence_score: 0.94, birth_date: '2000-01-01',
     expiration_date: '2030-01-01',
 });

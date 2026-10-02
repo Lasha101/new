@@ -2,7 +2,7 @@
 """Extraction of identity data from scanned documents via Google Vision OCR.
 
 Two French document families are supported, both mapped onto the same schema
-(first_name, last_name, birth_date, expiration_date, nationality,
+(first_name, last_name, sex, birth_date, expiration_date, nationality,
 passport_number, confidence_score):
 
 - French passports: MRZ-first parsing with visual-zone fallbacks. This logic
@@ -99,6 +99,13 @@ def _parse_mrz_date(yymmdd: str, is_birth_date: bool) -> Optional[str]:
     except ValueError:
         logger.warning("Impossible d'analyser une date MRZ (%d caractères).", len(yymmdd or ""))
         return None
+
+
+def _mrz_sex(character: str) -> Optional[str]:
+    """The holder's sex as its MRZ character states it: 'F' or 'M'. Anything
+    else ('X' or '<', i.e. unspecified) gives None — the value is read from
+    the MRZ, never guessed."""
+    return character if character in ("F", "M") else None
 
 
 def _strip_accents(text: str) -> str:
@@ -245,7 +252,7 @@ def _parse_passport(full_text: str) -> Optional[dict]:
     the caller tries the CNI parsers."""
     data = {
         "first_name": "", "last_name": "", "passport_number": "",
-        "nationality": "", "birth_date": "", "expiration_date": ""
+        "nationality": "", "birth_date": "", "expiration_date": "", "sex": None
     }
 
     # MRZ-first parsing
@@ -255,14 +262,17 @@ def _parse_passport(full_text: str) -> Optional[dict]:
         data["last_name"], data["first_name"] = _split_mrz_names(
             mrz_line1_match.group(1) + '<<' + mrz_line1_match.group(2))
 
-    mrz_line2_match = re.search(r'(\d{2}[A-Z]{2}\d{5})\d?(FRA)(\d{2}\d{2}\d{2})\d[MFX<](\d{2}\d{2}\d{2})', mrz_text)
+    # Line 2: document number, FRA, birth date + check digit, sex (character
+    # 21 of the line), expiry date.
+    mrz_line2_match = re.search(r'(\d{2}[A-Z]{2}\d{5})\d?(FRA)(\d{2}\d{2}\d{2})\d([MFX<])(\d{2}\d{2}\d{2})', mrz_text)
     if mrz_line2_match:
         data["nationality"] = "Française"
         data["passport_number"] = mrz_line2_match.group(1)
+        data["sex"] = _mrz_sex(mrz_line2_match.group(4))
         birth = _parse_mrz_date(mrz_line2_match.group(3), is_birth_date=True)
         if birth:
             data["birth_date"] = birth
-        expiration = _parse_mrz_date(mrz_line2_match.group(4), is_birth_date=False)
+        expiration = _parse_mrz_date(mrz_line2_match.group(5), is_birth_date=False)
         if expiration:
             data["expiration_date"] = expiration
     else:
@@ -273,6 +283,8 @@ def _parse_passport(full_text: str) -> Optional[dict]:
         if partial and _mrz_check_digit(partial.group(1)) == partial.group(2) \
                 and _mrz_check_digit(partial.group(4)) == partial.group(5):
             data["nationality"] = "Française"
+            # Character 21 survives a crop of the line's left edge.
+            data["sex"] = _mrz_sex(partial.group(3))
             birth = _parse_mrz_date(partial.group(1), is_birth_date=True)
             if birth:
                 data["birth_date"] = birth
@@ -337,7 +349,8 @@ def _parse_passport(full_text: str) -> Optional[dict]:
 
 # New-format CNI (2021+), TD1 MRZ on the back: 3 lines of 30 characters.
 #   Line 1: IDFRA + document number (9) + check digit + optional data
-#   Line 2: birth date (6) + check + sex + expiry date (6) + check + FRA + ...
+#   Line 2: birth date (6) + check + sex (character 8) + expiry date (6)
+#           + check + FRA + ...
 #   Line 3: SURNAME<<GIVEN<NAMES
 TD1_LINE1_RE = re.compile(r'^IDFRA([A-Z0-9<]{9})(\d)')
 TD1_LINE2_RE = re.compile(r'^(\d{6})(\d)([MFX<])(\d{6})(\d)FRA')
@@ -346,7 +359,7 @@ MRZ_NAME_LINE_RE = re.compile(r'^([A-Z]+(?:<[A-Z]+)*)<<([A-Z][A-Z<]*)$')
 # Old-format CNI, 2-line MRZ of 36 characters on the front:
 #   Line 1: IDFRA + surname (25, '<'-padded) + issuance office (6)
 #   Line 2: card number (12) + check + given names (14, '<'-separated)
-#           + birth date (6) + check + sex + check
+#           + birth date (6) + check + sex (character 35) + check
 TD2_LINE1_RE = re.compile(r'^IDFRA([A-Z<]{15,30})(\d{4,6})$')
 TD2_LINE2_RE = re.compile(r'^(\d{12})(\d)([A-Z<]{5,20}?)(\d{6})(\d)([MFX])(\d?)$')
 
@@ -376,6 +389,7 @@ def _parse_cni_new_mrz(raw_text: str) -> Optional[dict]:
     doc_number = None
     birth_date = None
     expiration_date = None
+    sex = None
     for line in lines:
         m1 = TD1_LINE1_RE.match(line)
         if m1 and doc_number is None:
@@ -385,6 +399,7 @@ def _parse_cni_new_mrz(raw_text: str) -> Optional[dict]:
         m2 = TD1_LINE2_RE.match(line)
         if m2 and birth_date is None:
             birth_date = _parse_mrz_date(m2.group(1), is_birth_date=True)
+            sex = _mrz_sex(m2.group(3))
             expiration_date = _parse_mrz_date(m2.group(4), is_birth_date=False)
 
     if not (doc_number and birth_date and expiration_date):
@@ -401,7 +416,7 @@ def _parse_cni_new_mrz(raw_text: str) -> Optional[dict]:
         return None
 
     return {
-        "first_name": first_name, "last_name": last_name,
+        "first_name": first_name, "last_name": last_name, "sex": sex,
         "passport_number": doc_number, "nationality": "Française",
         "birth_date": birth_date, "expiration_date": expiration_date,
     }
@@ -453,6 +468,7 @@ def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
     card_number = None
     mrz_given_names = None
     birth_date = None
+    sex = None
     for line in lines:
         m1 = TD2_LINE1_RE.match(line)
         if m1 and surname is None:
@@ -462,6 +478,7 @@ def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
             card_number = m2.group(1)
             mrz_given_names = ' '.join(m2.group(3).replace('<', ' ').split())
             birth_date = _parse_mrz_date(m2.group(4), is_birth_date=True)
+            sex = _mrz_sex(m2.group(6))
 
     # Tolerant second pass, only for what the strict pass could not find:
     # candidates rebuilt from MRZ fragments, matched with the relaxed patterns.
@@ -477,6 +494,7 @@ def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
                     card_number = m2.group(1).replace('O', '0')
                     mrz_given_names = ' '.join(m2.group(3).replace('<', ' ').split())
                     birth_date = _parse_mrz_date(m2.group(4).replace('O', '0'), is_birth_date=True)
+                    sex = _mrz_sex(m2.group(6))
 
     if not (surname and card_number and birth_date):
         return None
@@ -487,7 +505,7 @@ def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
     if not expiration_date:
         if first_name:
             raise OldCniFrontMissingExpiry({
-                "first_name": first_name, "last_name": surname,
+                "first_name": first_name, "last_name": surname, "sex": sex,
                 "passport_number": card_number, "nationality": "Française",
                 "birth_date": birth_date,
             })
@@ -497,7 +515,7 @@ def _parse_cni_old_mrz(raw_text: str, full_text: str) -> Optional[dict]:
         return None
 
     return {
-        "first_name": first_name, "last_name": surname,
+        "first_name": first_name, "last_name": surname, "sex": sex,
         "passport_number": card_number, "nationality": "Française",
         "birth_date": birth_date, "expiration_date": expiration_date,
     }
@@ -591,7 +609,8 @@ def _parse_cni_new_visual(full_text: str) -> Optional[dict]:
         )
 
     return {
-        "first_name": first_name, "last_name": last_name,
+        # The sex is only ever read from the MRZ, and this page has none.
+        "first_name": first_name, "last_name": last_name, "sex": None,
         "passport_number": doc_number, "nationality": "Française",
         "birth_date": birth_dt.strftime("%Y-%m-%d"), "expiration_date": expiry_dt.strftime("%Y-%m-%d"),
     }

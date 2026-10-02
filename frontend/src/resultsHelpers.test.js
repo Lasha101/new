@@ -39,17 +39,19 @@ test('PP/PI filter controls which rows are displayed', () => {
     assert.deepEqual(filterByDocumentType([], 'PP'), []);
 });
 
-test('column order: surname, given names, dates, nationality, number, Type, destination, score', () => {
+test('column order: surname, given names, sex, dates, nationality, number, Type, destination, score', () => {
     assert.deepEqual(PASSPORT_COLUMN_ORDER, [
-        'last_name', 'first_name', 'birth_date', 'expiration_date', 'nationality',
+        'last_name', 'first_name', 'sex', 'birth_date', 'expiration_date', 'nationality',
         'passport_number', 'document_type', 'destination', 'confidence_score',
     ]);
+    // Sexe sits right after Prénom
+    assert.equal(PASSPORT_COLUMN_ORDER.indexOf('sex'), PASSPORT_COLUMN_ORDER.indexOf('first_name') + 1);
     // Type sits between the document number and the destination
     assert.equal(PASSPORT_COLUMN_ORDER.indexOf('document_type'), PASSPORT_COLUMN_ORDER.indexOf('passport_number') + 1);
     assert.equal(PASSPORT_COLUMN_ORDER.indexOf('destination'), PASSPORT_COLUMN_ORDER.indexOf('document_type') + 1);
     // Destination is a column of the table too, right after Type
     assert.equal(PASSPORT_COLUMN_ORDER.indexOf('destination'), PASSPORT_COLUMN_ORDER.indexOf('confidence_score') - 1);
-    assert.equal(PASSPORT_COLUMN_ORDER.length, 9);
+    assert.equal(PASSPORT_COLUMN_ORDER.length, 10);
 });
 
 test('dates are displayed as DD/MM/YYYY (jour/mois/année)', () => {
@@ -130,6 +132,13 @@ test('resultCellValue: derived type, percentage, DD/MM/YYYY dates, empty for nul
 
     // A confidence score that is not a number is passed through untouched.
     assert.equal(resultCellValue({ ...row, confidence_score: null }, 'confidence_score', fieldTypes), '');
+});
+
+test('resultCellValue: Sexe shows the stored F / M, and an empty cell when it was not read', () => {
+    assert.equal(resultCellValue({ ...row, sex: 'F' }, 'sex', fieldTypes), 'F');
+    assert.equal(resultCellValue({ ...row, sex: 'M' }, 'sex', fieldTypes), 'M');
+    assert.equal(resultCellValue({ ...row, sex: null }, 'sex', fieldTypes), '');
+    assert.equal(resultCellValue(row, 'sex', fieldTypes), '');          // a row from before the column
 });
 
 test('resultCellValue covers every column of the shared definition', () => {

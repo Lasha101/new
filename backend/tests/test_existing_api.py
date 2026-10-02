@@ -6,7 +6,8 @@ import pytest
 from tests.helpers import make_user, make_passport, auth_headers
 
 PASSPORT_KEYS = {"id", "owner_id", "first_name", "last_name", "birth_date", "expiration_date",
-                 "nationality", "passport_number", "destination", "confidence_score", "voyages"}
+                 "nationality", "passport_number", "destination", "confidence_score", "voyages",
+                 "sex"}                                     # column « Sexe » (02/10/2026)
 
 
 def test_authentication_still_required_and_token_login_works(client, db_session):

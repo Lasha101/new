@@ -111,12 +111,12 @@ def document_type_of(passport_number: Any) -> str:
 # Exported columns, in order, with the French headers of the on-screen results
 # table (columnTranslations in the frontend). The order is the one of the
 # on-screen table (PASSPORT_COLUMN_ORDER in frontend/src/resultsHelpers.js):
-# the derived Type column sits between the document number and the
-# destination. Internal ids are never exported.
-EXPORT_COLUMNS = ["last_name", "first_name", "birth_date", "expiration_date", "nationality",
+# Sexe right after Prénom, the derived Type column between the document number
+# and the destination. Internal ids are never exported.
+EXPORT_COLUMNS = ["last_name", "first_name", "sex", "birth_date", "expiration_date", "nationality",
                   "passport_number", "document_type", "destination", "confidence_score"]
 EXPORT_HEADERS = {
-    "document_type": "Type", "first_name": "Prénom", "last_name": "Nom de famille",
+    "document_type": "Type", "first_name": "Prénom", "last_name": "Nom de famille", "sex": "Sexe",
     "birth_date": "Date de Naissance", "expiration_date": "Date d'Expiration",
     "nationality": "Nationalité", "passport_number": "Numéro de document",
     "destination": "Destination", "confidence_score": "Score de Confiance",

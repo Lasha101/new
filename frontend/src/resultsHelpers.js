@@ -19,10 +19,10 @@ export const DOC_TYPE_FILTER_OPTIONS = [
 
 // Columns of the passports screen, in order, shared by the results table, the
 // export preview and the downloaded CSV/XLSX files (mirrors EXPORT_COLUMNS in
-// backend/main.py): the derived Type column sits between the document number
-// and the destination.
+// backend/main.py): Sexe right after Prénom, the derived Type column between
+// the document number and the destination.
 export const PASSPORT_COLUMN_ORDER = [
-    'last_name', 'first_name', 'birth_date', 'expiration_date', 'nationality',
+    'last_name', 'first_name', 'sex', 'birth_date', 'expiration_date', 'nationality',
     'passport_number', 'document_type', 'destination', 'confidence_score',
 ];
 

@@ -29,6 +29,8 @@ class PassportBase(BaseModel):
     nationality: str
     passport_number: str
     confidence_score: Optional[float] = None
+    # Column « Sexe »: as read from the MRZ; None when it could not be read.
+    sex: Optional[Literal["F", "M"]] = None
 
 
 class PassportCreate(PassportBase):

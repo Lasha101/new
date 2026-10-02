@@ -12,11 +12,12 @@ import { DOC_TYPE_PASSPORT, DOC_TYPE_ID_CARD } from '../../src/resultsHelpers.js
 /**
  * The export columns exactly as they were BEFORE Package A: the French headers
  * of EXPORT_COLUMNS in backend/main.py, in order, with the derived Type column
- * between the document number and the destination. Recorded here so a later
- * change to the results screen cannot silently reorder the downloaded files.
+ * between the document number and the destination — plus « Sexe » right after
+ * « Prénom », added on demand on 02/10/2026. Recorded here so a later change to
+ * the results screen cannot silently reorder the downloaded files.
  */
 const BASELINE_EXPORT_HEADERS = [
-    'Nom de famille', 'Prénom', 'Date de Naissance', "Date d'Expiration", 'Nationalité',
+    'Nom de famille', 'Prénom', 'Sexe', 'Date de Naissance', "Date d'Expiration", 'Nationalité',
     'Numéro de document', 'Type', 'Destination', 'Score de Confiance',
 ];
 

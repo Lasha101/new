@@ -100,19 +100,20 @@ def tolerant_client(db_session):
 @pytest.fixture()
 def user_with_documents(db_session):
     """A regular user owning 2 passports and 2 identity cards (old and new
-    CNI formats), plus another user's passport that must never leak."""
+    CNI formats), plus another user's passport that must never leak. The new
+    CNI has no sex (read from its front, which has no MRZ)."""
     user = make_user(db_session, "alice")
     other = make_user(db_session, "bob")
     docs = {
-        "pp1": make_passport(db_session, user["id"], first_name="Élodie", last_name="Dupont-Lévy",
+        "pp1": make_passport(db_session, user["id"], first_name="Élodie", last_name="Dupont-Lévy", sex="F",
                              passport_number="12AB34567", destination="Dubrovnik été", confidence_score=0.8734),
-        "pp2": make_passport(db_session, user["id"], first_name="Jean", last_name="Martin",
+        "pp2": make_passport(db_session, user["id"], first_name="Jean", last_name="Martin", sex="M",
                              passport_number="98ZY12345", destination="Rome", confidence_score=0.91),
-        "pi_old": make_passport(db_session, user["id"], first_name="Chloé", last_name="Bernard",
+        "pi_old": make_passport(db_session, user["id"], first_name="Chloé", last_name="Bernard", sex="F",
                                 passport_number="123456789012", destination="Rome", confidence_score=None),
         "pi_new": make_passport(db_session, user["id"], first_name="Noé", last_name="Petit",
                                 passport_number="X4RTBPFW4", destination=None, confidence_score=0.5),
-        "other_pp": make_passport(db_session, other["id"], first_name="Zoé", last_name="Autre",
+        "other_pp": make_passport(db_session, other["id"], first_name="Zoé", last_name="Autre", sex="F",
                                   passport_number="11CD22222", destination="Rome", confidence_score=0.7),
     }
     return {"user": user, "other": other, "docs": docs, "headers": auth_headers("alice"),
