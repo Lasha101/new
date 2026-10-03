@@ -266,7 +266,7 @@ test.describe('Atteignabilité', () => {
 
     test("depuis la session ouverte, le contrôle d'import est à deux taps", async ({ page }) => {
         await login(page);
-        // Tap 0 : rien. Le tableau de bord ouvre déjà sur l'onglet Passeports.
+        // Tap 0 : rien. Le tableau de bord ouvre déjà sur l'onglet Mes documents.
         const dropzone = page.locator(SELECTORS.uploadCard);
         await expect(dropzone).toBeAttached();
         await dropzone.scrollIntoViewIfNeeded();

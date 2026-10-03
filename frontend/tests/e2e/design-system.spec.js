@@ -181,7 +181,7 @@ test.describe('Interface en français', () => {
         await login(page);
         await expect(page.locator(SELECTORS.uploadCard)).toBeVisible();
 
-        for (const tab of ['Passeports', 'Mon Compte']) {
+        for (const tab of ['Mes documents', 'Mon compte']) {
             await page.getByRole('button', { name: tab, exact: true }).click();
             await expect(page.locator(SELECTORS.navButtons).filter({ hasText: tab })).toHaveClass(/active/);
 
@@ -223,7 +223,7 @@ test.describe('Barre d’application', () => {
         await expect(topbar.locator(SELECTORS.creditBadge)).toHaveCount(0);
 
         // Directly under the welcome heading, on every tab of the dashboard.
-        for (const tab of ['Passeports', 'Mon Compte']) {
+        for (const tab of ['Mes documents', 'Mon compte']) {
             await page.locator(SELECTORS.navButtons).filter({ hasText: tab }).click();
             const badge = page.locator('.dashboard-nav h3 + .sid-credits');
             await expect(page.locator('.dashboard-nav h3')).toHaveText(`Bienvenue, ${api.user.first_name}!`);

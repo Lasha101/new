@@ -381,6 +381,12 @@ export async function installMockApi(context, options = {}) {
             return json(route, 200, [state.user]);
         }
 
+        // « Gérer les utilisateurs » (main.py read_users): the accounts, for the admin.
+        if (path === '/admin/users' && method === 'GET') {
+            if (state.user.role !== 'admin') return json(route, 403, { detail: "Privilèges d'administrateur requis." });
+            return json(route, 200, [state.user]);
+        }
+
         // --- OCR jobs ---
         if (path === '/passports/upload-and-extract' && method === 'POST') {
             if (state.user.page_credits <= 0) {

@@ -1,4 +1,4 @@
-// « Mon Compte » — billing identity fields and « Mes achats » (action list item 7).
+// « Mon compte » — billing identity fields and « Mes achats » (action list item 7).
 // Server-side validation and storage: backend/tests/test_account_billing.py.
 import { test, expect, LIVE } from './test-base.js';
 import { login, SELECTORS } from '../helpers/index.js';
@@ -12,11 +12,11 @@ const validSiret = () => ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     });
 
 const openAccount = async (page) => {
-    await page.locator(SELECTORS.navButtons).filter({ hasText: 'Mon Compte' }).click();
-    await expect(page.getByRole('heading', { name: 'Modifier Mon Compte' })).toBeVisible();
+    await page.locator(SELECTORS.navButtons).filter({ hasText: 'Mon compte' }).click();
+    await expect(page.getByRole('heading', { name: 'Modifier mon compte' })).toBeVisible();
 };
 
-test.describe('Mon Compte — facturation et achats', () => {
+test.describe('Mon compte — facturation et achats', () => {
     test.skip(LIVE, 'pilote l’état du mock');
 
     test('les champs de facturation sont enregistrés et réaffichés après rechargement', async ({ page, api }) => {

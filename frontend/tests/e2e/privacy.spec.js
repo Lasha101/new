@@ -159,8 +159,8 @@ test.describe('URLs blob', () => {
             { timeout: 15_000 }).toBeGreaterThan(0);
 
         // Changer d'onglet démonte la vue qui détient les blobs.
-        await page.locator(SELECTORS.navButtons).filter({ hasText: 'Mon Compte' }).click();
-        await expect(page.getByRole('heading', { name: 'Modifier Mon Compte' })).toBeVisible();
+        await page.locator(SELECTORS.navButtons).filter({ hasText: 'Mon compte' }).click();
+        await expect(page.getByRole('heading', { name: 'Modifier mon compte' })).toBeVisible();
 
         const { created, revoked } = await objectUrls(page);
         for (const url of created) expect(revoked).toContain(url);

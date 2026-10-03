@@ -30,7 +30,7 @@ original implementation, with these changes:
    `POST /users/register` no longer exists (closed 2026-10-02). An account is
    opened by a trial request validated in « Demandes d'essai »
    (`/trial-requests`), by the pack purchase (`/app/inscription` →
-   `POST /signup`), or by an admin from « Gérer les Utilisateurs ». Admin
+   `POST /signup`), or by an admin from « Gérer les utilisateurs ». Admin
    invitation links were removed entirely (endpoints, admin UI and the
    `/register/<token>` page).
 3. **Starting credits** — a trial account gets **20 credits**

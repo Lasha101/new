@@ -84,7 +84,7 @@ test.describe('Polices auto-hébergées', () => {
             await download;
         }
 
-        for (const name of ['Mon Compte', 'Passeports']) {
+        for (const name of ['Mon compte', 'Mes documents']) {
             await page.getByRole('button', { name, exact: true }).click();
             await expect(page.locator(SELECTORS.navButtons).filter({ hasText: name })).toHaveClass(/active/);
         }

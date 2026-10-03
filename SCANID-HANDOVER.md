@@ -6,7 +6,7 @@ application tasks that followed it.
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
 > The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§H) exactly where it stopped, under the same
+> instruction to **resume the current task (§I) exactly where it stopped, under the same
 > constraints and permissions**. Do this, in order:
 >
 > 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`; the site's
@@ -14,23 +14,28 @@ application tasks that followed it.
 >    `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/`, §F.3.1; work in stages; update this
 >    file after every stage; outside the repository: read **only when needed for the demand**,
 >    write only with permission; never connect to the VPS without the user's go-ahead). The user's
->    rule (§F.1, repeated for §G and §H): a demand of the current prompt wins over a restriction of
->    this file.
-> 2. Read **§H** (the current task, 2026-10-02 evening — Alex's « second check ») first: **§H.0.0 lists
->    every prompt of the session, with what is done and what is left**; §H.0 says which stage is
->    next, §H.4 lists the stages. §B.0.3 still holds the environment and the commands (test suites,
->    e2e, lint, build — use **absolute paths**: parallel shell calls share one working directory);
->    §F.5 holds the real-stack harness.
-> 3. Check the working tree matches §H.0 (`git status --short`) and compare.
-> 4. Continue at the **first stage of §H.4 not marked DONE**. After each stage, mark it `DONE` in
->    §H.4, append its record below §H.4, and update §H.0. **If every stage is DONE**: run §H.0's
->    quick baseline, then wait for the user — when they ship, guide §H.5's steps **one command
->    per message** and tick them in §H.0.
+>    rule (§F.1, repeated for §G, §H and §I): a demand of the current prompt wins over a restriction
+>    of this file.
+> 2. Read **§I** (the current task, 2026-10-03 — Alex's « third check ») first. **§I.0.1 « RESUME HERE »
+>    is the ordered to-do list, with the exact commands — start there.** §I.0.0 lists every prompt of
+>    the session (what is done, what is left); §I.0 holds the state, the checklists and the expected
+>    `git status`; §I.5 holds the ship steps, the server runbook and the answers for Alex. §B.0.3
+>    still holds the environment and the commands (test suites, e2e, lint, build — use **absolute
+>    paths**: parallel shell calls share one working directory); §F.5 holds the real-stack harness.
+> 3. Check the working tree matches §I.0 (`git status --short`) and compare; run §I.0's quick
+>    baseline.
+> 4. **Every code stage of §I.4 is DONE** (I0–I5). Continue at the **first unticked item of §I.0.1 that is not
+>    ⏸ PARKED** (items 2, 3, 4 and 7 need Alex — parked by the user on 2026-10-03, resumed session):
+>    the user runs every server / Git command; guide **one command per message**, wait for the
+>    pasted output, tick the item in §I.0.1 (and the matching box in §I.0), and record anything new
+>    there. If a new demand arrives instead, it becomes a new stage: write it here first (§0.9).
 > 5. Keep answering the user in their conversation language; keep the UI in French.
-> 6. **Task G is committed `109993f`, pushed and live (backend + app) — except the nginx reload**, which
->    also still holds task F's (§F.0 step 4: cache headers + the two 301s) and is all of Alex's
->    « second check » section 5. One `sudo nginx -t && sudo systemctl reload nginx` on the VPS covers
->    F, G and H (§H.5). §G.5's server steps A–C (the list for Alex, `trial`, `signup`) continue in §H.5.
+> 6. **Task H is committed `c027cfa`, pushed and live; task G (`109993f`) and task F (`e9d527d`) too —
+>    all three except the nginx reload** (F: cache headers + the two 301s; G: gzip + `www` → 301 = all
+>    of Alex's « optional — server » section, unchanged in his third check). One `sudo nginx -t && sudo
+>    systemctl reload nginx` on the VPS covers F, G, H and I (§I.5). **Server state on 2026-10-03:
+>    `trial` is ON** (SMTP configured with the user, §I.5 B — its steps 9 and 10 still open); nginx still
+>    NOT reloaded; `signup` false (later, with Alex); the account list for Alex not yet read (§H.5 A).
 > 7. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
 >    open: the user's checks, §D.7.3 steps 5–7. Guide them **one command per message** when the
 >    user returns to them. (Alex's « after go-live » note confirms « Sexe » live in the list and the
@@ -38,12 +43,13 @@ application tasks that followed it.
 >
 > §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
 > `68dde4a`), §E (committed `bf7dc3c`, pushed) and §1–§9 (the v5 site task, live) are records only.
-> §F (`e9d527d`) and §G (`109993f`) are shipped except the nginx reload.
+> §F (`e9d527d`), §G (`109993f`) and §H (`c027cfa`) are shipped except the nginx reload.
 
-Last updated: 2026-10-02 (task H — Alex's « second check » — **done and verified locally, not committed**; the user
-ships it per §H.5, whose nginx reload also finishes F and G. Task G committed `109993f`, pushed and live except the
-nginx reload; task F likewise (`e9d527d`). Task E committed `bf7dc3c` and pushed. Task D
-pushed as `cfbcd58` and live; the user's checks §D.7.3 steps 5–7 still open)
+Last updated: 2026-10-03, evening, resumed session (§I.0.0b: baseline re-checked, §I.0.1 item 2 in progress — message to
+Alex given) (task I — Alex's « third check »: **code done and verified locally, not committed**;
+**`trial` switched ON on the server with the user** (≈ 15:45 UTC); next = §I.0.1 « RESUME HERE ». Task H committed
+`c027cfa`, pushed and live except the nginx reload, which also still finishes F and G. Task E committed `bf7dc3c` and
+pushed. Task D pushed as `cfbcd58` and live; the user's checks §D.7.3 steps 5–7 still open)
 
 ---
 
@@ -102,7 +108,505 @@ they applied to the previous one (v4).
 
 ---
 
-## H. CURRENT TASK (2026-10-02, evening) — ALEX'S « SECOND CHECK » LIST
+## I. CURRENT TASK (2026-10-03) — ALEX'S « THIRD CHECK » LIST
+
+### I.0.1 ▶ RESUME HERE — THE OPEN ITEMS, IN ORDER (state of 2026-10-03, evening)
+
+**Where things stand:**
+- **Code of task I:** done and verified locally (§I.4, I0–I5), **not committed** — the 14 paths of §I.0.
+- **Server:** `trial` is **ON** since 2026-10-03 ≈ 15:45 UTC (17:45 Paris): three SMTP lines appended to
+  `/opt/travelapp/backend/.env`, the login tested before the restart, `travelapp.service` restarted, `/api/config` →
+  `{"signup":false,"trial":true}` (checked on the server and publicly). nginx still **not reloaded**. Nothing else changed
+  on the server.
+- **Alex:** has not received §I.5's answers, nor his test steps, yet.
+
+**📄 Alex's PDF « Lasha-Third-Check-2026-10-02.pdf » — every item, done or NOT DONE** (asked 2026-10-03: « Mark in
+SCANID-HANDOVER.md all prompts what we have not done from attached pdf of this session! »). ✅ done · ⚠️ done here but
+not live / not delivered to Alex · ❌ not done.
+
+| PDF item | What Alex asked | Status | What is missing / who | Item below |
+| --- | --- | --- | --- | --- |
+| 1 | « Confirmed — nothing to do » (the two texts, login form, register 404, 63 files, forms, Stripe links) | ✅ nothing to do | — | — |
+| 2 (a) | « **trial → true**, please » | ✅ **ON since 2026-10-03 ≈ 15:45 UTC** (SMTP on the server, with the user) | ❌ the end-to-end trial test (Alex or the user); ❌ Alex not told yet | 3, 4 |
+| 2 (b) | « signup stays false for now: correct » | ✅ stays false (nothing to do now) | later, with Alex (Stripe webhook + test purchase) | 7b |
+| 3.1 | **The list of accounts** made by the old « Créer un compte » form (date, e-mail, credits), or « none » | ❌ **NOT DONE** | needs the VPS journal + database (`sudo`) — the user (§H.5 A). Known so far: each got **5 credits** | 6 |
+| 3.2 | E-mail templates: « documents » and « e-mail » everywhere? | ⚠️ answered (**yes**, all six re-rendered — the « Stage I3 » record below §I.4) — **not forwarded** | the user forwards §I.5 answer 3 | 4 |
+| 3.3 | Export headers (XLSX, CSV) in sentence case, as in the table? | ⚠️ answered (**yes**, live since 02/10 18:44; proven on real files) — **not forwarded** | the user forwards §I.5 answer 4 | 4 |
+| 4 | **The labels inside the app** (8 rows: « Mon compte », « Modifier mon compte », « Gérer les utilisateurs », « Filtrer par utilisateur / destination », « Modifier la destination », « Exportation des données », « Exporter la sélection en Excel / CSV (n) », tab « Passeports » → « Mes documents ») | ⚠️ **done in code** (+ 4 more under « sentence case everywhere », + « Mon compte » in the purchase e-mails), tested — **NOT LIVE: not committed, not pushed** | the user: commit + push → « Deploy » (§I.5 steps 1–2); then forward §I.5 answer 5 | 5, 4 |
+| 5 (a) | Optional — **compression** (gzip for CSS / JS / JSON / SVG / XML) | ❌ **NOT DONE** (already in the vhost on the server since 02/10; needs the reload) | the user: `sudo nginx -t && sudo systemctl reload nginx` on the VPS (§I.5 step 3) | 5 |
+| 5 (b) | Optional — **`https://www.scanid.fr` → 301 to `https://scanid.fr`**, same path | ❌ **NOT DONE** (same reload) | same | 5 |
+| 5 (c) | Optional — **301 `/temoignages.html` → `/presentation.html`, `/iftm/` → `/essai.html`** | ❌ **NOT DONE** (same reload) | same | 5 |
+
+So, from the PDF: **❌ not done = 3.1 and 5 (a, b, c)**; **⚠️ not live / not delivered = 4 (not pushed) and the answers
+2, 3.2, 3.3 (not forwarded)**; plus the trial test of 2 (a).
+
+**❌ NOT DONE — everything still open from this session** (asked 2026-10-03: « Mark in SCANID-HANDOVER.md all what we
+have not done from this session! »). Done, for contrast: PDF section 4 in code (local), 3.2 and 3.3 answered and proven,
+section 2 `trial` ON.
+
+| # | Not done | From | Why not yet / who | Item below |
+| --- | --- | --- | --- | --- |
+| 1 | Task I's code is **not committed, not pushed → not live** (the labels, « Mon compte » in the e-mails, README, tests) | PDF section 4 | §0.3: the user commits and pushes | 5 |
+| 2 | **nginx not reloaded** → gzip, `www` → 301, the 301s of `/temoignages.html` and `/iftm/` still not active | PDF section 5 (and tasks F, G, H) | needs `sudo` on the VPS — the user | 5 |
+| 3 | **The list of accounts** created by the old « Créer un compte » form (date, e-mail, credits) — or « none » | PDF section 3.1 | needs the VPS journal + database (`sudo`) — the user; Alex only knows « 5 credits each » so far | 6 |
+| 4 | **The answers not forwarded to Alex** (§I.5 « Answers for Alex », answer 1 updated) | PDF sections 2–5 | the user forwards them | 4 |
+| 5 | **The end-to-end trial test** (request → notification → Valider → welcome e-mail → password → « Crédits : 20 ») | PDF section 2 / prompt 4 (B step 9) | Alex or the user; Alex's steps to forward are in §I.5 | 3 |
+| 6 | ~~The server's backup copy `~/env-before-smtp` not deleted~~ — **DONE 2026-10-03 16:32 UTC** | prompt 4 (B step 10) | — | 1 |
+| 7 | **The app's « admin » password not changed** — exposed in the chat (screenshot of the `.env`) | prompt 4 (during step 4) | **Alex**, the admin, in the app (« Mon compte ») — the user tells him why | 2 |
+| 8 | **The separate app mailbox** (e.g. noreply@) so contact@ password changes never break the app's e-mails | prompt 4 (agreed: after B) | needs Alex (mailbox + sender address), then code + tests + deploy | 7a |
+| 9 | **`signup` → true** (Stripe webhook + test purchase) | PDF section 2 (« stays false for now: correct ») | later, with Alex | 7b |
+| 10 | The VPS's « System restart required » + 29 updates | seen at login (prompt 4) | the user's call, at a quiet moment | Also open |
+| 11 | Task D's checks §D.7.3 steps 5–7 | earlier session (task D) | the user | Also open |
+
+**Open items, in the recommended order** (tick here and the matching box of §I.0 as the user reports them):
+
+**⏸ 2026-10-03, resumed session — the user: « we will forget the tasks that requires Alex's engagemment and we will
+continue to resolve tha task that we can do without Alex! »** → items **2, 3, 4 and 7 are PARKED** (not dropped: they
+come back when the user brings Alex in; the message for item 4 was given — §I.0.0b row 2 — sent or not, unknown). The
+work goes on **without Alex**: **5** (ship task I), **6** (reading the list on the VPS needs no Alex — only sending it
+does, with item 4), then **« Also open »** (task D's checks 5–7; the VPS updates + restart, the user's call).
+
+- [x] **1. Delete the server's backup copy** (§I.5 B step 10) — **DONE 2026-10-03 16:32 UTC** (« No such file or directory »). It holds every secret of the server's `.env`, and what it
+  guarded is verified (the diff showed only the four added lines; the service restarted with all its other settings). On
+  the VPS (`ssh lasha@87.106.22.235`): `sudo rm ~/env-before-smtp; ls -l ~/env-before-smtp` → « No such file or
+  directory ».
+- [ ] ⏸ PARKED (needs Alex) **2. Change the app's « admin » password** — exposed in the chat on 2026-10-03 (a screenshot of the `.env`'s
+  `ADMIN_PASSWORD` line; the value is NOT recorded anywhere here). Browser: https://scanid.fr/app/ → log in as `admin` →
+  « Mon compte » → « Nouveau mot de passe » (≥ 12 characters, ≥ 1 uppercase, ≥ 2 digits, ≥ 2 special characters) →
+  « Enregistrer les modifications » → log out, log in with the new one. No server change: `ADMIN_PASSWORD` is read only at
+  startup, to create `admin` when it does not exist (`main.py` lifespan) — the stored password is the one that counts.
+  **Alex is the admin (the user, 2026-10-03) → Alex changes it himself** (best: the new password never travels); tell
+  him why (the old one appeared in a chat). If the user also needs admin access afterwards: his own admin account,
+  created by Alex in « Gérer les utilisateurs » → « + Nouveau » (the form has a `role` field: `admin`), rather than a
+  shared password. (The password change in « Mon compte » goes through `PUT /users/me`, which enforces the policy.)
+  **2026-10-03 (resumed session): the message for Alex given to the user (§I.0.0b row 1); the user: « He will change
+  the admin password » → Alex informed, change NOT confirmed yet.** Tick when Alex confirms (ask the user at item 6).
+  Consequence: the user has no admin access afterwards → item 3 is Alex's.
+- [ ] ⏸ PARKED (needs Alex) **3. The end-to-end trial test** (§I.5 B step 9) — by Alex (« Alex's trial test » in §I.5, to forward) or by the
+  user with a test address. An e-mail missing (spam folder first) → on the VPS: `sudo journalctl -u travelapp.service
+  --since "30 min ago" --no-pager | grep -iE "email (sent|not sent)"` → « Email sent: kind=trial_notification » /
+  « …kind=trial_welcome »; « Email not sent: … error=SMTPAuthenticationError » = the mailbox password changed (§I.5 B,
+  « After B »). **2026-10-03 (resumed session): Alex runs it** — « Valider » needs the admin login, which is Alex's (item
+  2) → his six steps travel in item 4's message; tick when he reports (or run the journal check above if an e-mail is
+  missing).
+- [ ] ⏸ PARKED (needs Alex) **4. Forward to Alex** §I.5 « Answers for Alex » (answer 1 updated: `trial` ON + the password rule) and « Alex's
+  trial test », plus two requests: change the admin password himself (item 2 — the old one appeared in a chat), and, if
+  you both want it, create the app's own mailbox (item 7a: e.g. notifications@scanid.fr, its own password, forwarding
+  to contact@, the password handed over safely — it replaces contact@'s password on the server).
+  **2026-10-03 (resumed session): the whole message given to the user, ready to send** (§I.0.0b row 2): in the user's
+  voice (first person — no « Lasha … him »), answers 1–7 of §I.5 condensed, « Alex's trial test », the optional
+  mailbox request; the admin-password request left out (already sent, item 2); « live with the next deployment — I'll
+  confirm » for sections 4 and 5 (the confirmation goes with item 6's list). Waiting for « sent ».
+- [ ] **5. Ship task I** — ▶ **IN PROGRESS (2026-10-03, resumed session)**: pre-commit check by the assistant —
+  `git status --short` = §I.0 (14 paths, nothing staged), no secret in the handover's diff (only the empty
+  `.env.example` lines quoted), the user's commits are one-line messages without a trailer; **step 1a given:**
+  `cd /home/lasha/Public/new && git add . && git status --short` (expect 13 `M ` + 1 `A `). §I.5 steps 1–5: `git add .` → commit (the message is there) → `git push origin master` →
+  « CI » / « Deploy » green → the nginx reload on the VPS + `verify-front-end.sh` → the laptop checks (the assistant can
+  run them) → mark F, G, H and I SHIPPED + the memory notes.
+- [ ] **6. The list for Alex** (his question 3.1) — §H.5 A, read-only on the VPS (the journal's range, the `"POST
+  /users/register HTTP/1.1" 200` lines, the database query); then send Alex the list, or « none ».
+- [ ] ⏸ PARKED (needs Alex) **7. Later, with Alex:** (a) a mailbox for the app alone (e.g. noreply@scanid.fr), so that a contact@ password
+  change never breaks the app's e-mails — needs Alex's mailbox and the sender address customers will see → code change
+  (`MAIL_FROM` + a `Reply-To` contact@: the mailer supports it, no caller sets it yet), tests, deploy, then swap the three
+  `.env` lines (order agreed with the user: only after B — B is done). Design noted 2026-10-03: a `MAIL_REPLY_TO` setting
+  (unset = today's behaviour) applied in `mailer._build` when the caller gives no `reply_to`; the app sends 5 kinds from
+  `main.py` (password_reset, purchase_confirmation, payment_anomaly, trial_notification — which already sets
+  `reply_to` = the requester —, trial_welcome); the switch then = `SMTP_USERNAME` / `SMTP_PASSWORD` of the new mailbox +
+  `MAIL_FROM='ScanID <noreply@scanid.fr>'` + `MAIL_REPLY_TO=contact@scanid.fr`. **Starts with Alex, not with code** —
+  without the mailbox the code changes nothing; not urgent (only needed when the contact@ password changes). **Suggested
+  to the user (2026-10-03): `notifications@scanid.fr`** (Alex decides; not `noreply@` — the welcome e-mail says « Répondez
+  simplement à cet e-mail »). Alex at IONOS: create it with a password used nowhere else, forward its incoming mail to
+  contact@, hand the password over safely. No DNS change (SPF `include:_spf-eu.ionos.com` and the IONOS DKIM keys cover
+  every mailbox of the domain; From stays on scanid.fr → DMARC-aligned); (b) C, `signup` → true (§G.5 C: the Stripe
+  webhook secret with the `PUBLIC_SIGNUP=0` hold, one test purchase, then drop the hold).
+- **Also open:** task D's checks (§D.7.3 steps 5–7); the VPS shows « System restart required » and 29 updates (seen at
+  login on 2026-10-03) — a reboot restarts the app and nginx (and so would also apply the pending nginx reload); not part
+  of any task: the user's call, at a quiet moment. Since 16:32 UTC the login banner also offers « New release '26.04.1 LTS' » — **do not** run `do-release-upgrade` casually (a major upgrade: Python, PostgreSQL, nginx versions change).
+
+**How to guide (learned this session):**
+- One command per message; the user pastes the output. When the user pastes only the command (nothing below it), ask
+  them to run it in the **server terminal** (prompt `lasha@ubuntu:~$`) and paste what appears below.
+- Secrets never in the chat: a password is typed on the server at a hidden prompt (`read -rsp`), never in a command line
+  (shell history); `.env` content is shown only with values masked (`| sed -E 's/(SMTP_PASSWORD=).+/\1<hidden>/'`).
+- **No interactive editor over SSH** — `sudo nano` froze the session during a long pause (2026-10-03). Edit
+  non-interactively (`… | sudo tee -a`); `ssh -o ServerAliveInterval=30 lasha@87.106.22.235` avoids idle drops. A frozen
+  SSH: Ctrl+Q, else Enter then `~.`, else kill the terminal (VS Code trash icon) and reconnect; then look for a stale
+  `nano` (`pgrep -a nano` → `sudo kill -9 <pid>` — not a plain kill: nano would write an emergency `.env.save`) and its
+  lock file `..env.swp` (`sudo rm -f`).
+- Server facts: `/opt/travelapp/backend/.env` = `deploy:deploy` `-rw-------`, 11 lines (7 + a blank line + the 3 SMTP
+  lines), **no other copy anywhere** (not in Git; `ops/backup.sh` dumps only the database); « Deploy » runs `rsync
+  --delete --exclude '.env'` on `backend/` (never keep a file there); venv `/opt/travelapp/venv`; backend on
+  `127.0.0.1:8001` (`/config`); the server clock is UTC (Paris = UTC+2); `sudo` asks for the user's own password.
+
+### I.0.0 THIS SESSION (2026-10-03, the session after task H's) — EVERY PROMPT, WHAT IS DONE, WHAT IS LEFT
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « Read SCANID-HANDOVER.md to see your restrictions and permissions! CRUCIAL execute the instructions from attached pdf file of this prompt! CRUCIAL after implementing each stage update SCANID-HANDOVER.md! CRUCIAL if executing current instruction violates any restriction from SCANID-HANDOVER.md respect current instruction! » + Alex's PDF « Lasha-Third-Check-2026-10-02.pdf » | **DONE locally (I0–I5).** Section 4: Alex's eight rows + four more labels under « sentence case everywhere » (« Destination (optionnel) », « Document (image ou PDF) » — as on his site's app mock-ups —, « Rechercher (nom, e-mail...) », the sort tooltip); « Mon compte » in the two purchase e-mails; README. Sections 3.2 / 3.3 proven again (six templates rendered; real CSV / XLSX headers == the table's). Sections 2, 3.1 and 5: server-only — runbook §I.5 (= §H.5's, unchanged), answers for Alex in §I.5. Verified: backend 366, unit 89, e2e 448 / 1 skipped, build + guard 5/5, bundle `index-CJFY_9p8.js`, screenshots desktop + 375 px | **The user:** ship (§I.5 steps 1–5: commit + push, workflows, the nginx reload, laptop checks); server steps B (`trial`), A (the list for Alex); forward §I.5's answers to Alex. Nothing committed (§0.3) |
+| 2 | « What you don't made from the prompts of the pdf file? Short answer! » | **DONE.** Answered: not done = section 2 (`trial` → true: SMTP password on the server), section 3.1 (the account list: VPS journal + database, `sudo`), section 5 (the nginx reload, `sudo`) — all server-side, runbook §I.5; section 4 is done but not live until the user commits and pushes | — |
+| 3 | « Explain about "Section 2, trial → true" is it about payment or what? Answer only current question! » | **DONE.** Answered: not payment (that is `signup`, Stripe) — `trial` = the free-trial request flow of essai.html (20 documents offerts), computed as `mailer.is_configured()`; false today → the form falls back to Formspree and Alex opens accounts by hand; needs the SMTP lines in the server `.env` (§I.5 B) | — |
+| 4 | « Let's we will do it! Give me the instructions one at a time! » (and the questions asked during it, below) | **B steps 1–8 DONE — `trial` ON (≈ 15:45 UTC); guided one command per message.** Repository re-checked first (`config.py` names and defaults, `mail_backend()`, `.env.example`'s empty SMTP lines, « Deploy »'s `rsync --delete` on `backend/`) → §I.5 B refined (look with values hidden, backup outside `backend/`, diff before the restart). Steps 1–2 done (logged in 15:11 UTC; `.env` has no mail line); step 3 given — the user asked whether the copy is mandatory: no, but recommended (the `.env` has no other copy: not in Git, not in the nightly backup); then « on my machine? » — no: on the server, `~` = `/home/lasha` there, same owner and mode as the original (`cp -a`); the secrets never leave the server; step 3 done (`deploy:deploy` 600, 2745 bytes); step 4 given. During step 4 the user asked whether « YOUR_PASSWORD » means the `.env`'s `ADMIN_PASSWORD` — **no**: it is the contact@scanid.fr mailbox password. Their screenshot showed the `ADMIN_PASSWORD` line in the chat (value not recorded here) → advised to change the app's « admin » password in « Mon compte » (`main.py` lifespan uses `ADMIN_PASSWORD` only to create « admin » when it does not exist, so the app's stored password is what counts). Then « when Alex changes the contact@ password, will the .env conflict? » — answered: yes, the server's copy goes stale and the e-mails fail silently → rule + check + the separate-mailbox option, recorded under §I.5 B. « Each time I should change it manually? » — yes, with this setup (one line + restart); rare in practice (only when the password is changed); the separate app mailbox removes the manual step (offered, not decided). **Order agreed with the user: finish B now with contact@scanid.fr; the separate app mailbox afterwards** (needs Alex: the IONOS mailbox + the sender address customers see; then the code change, tests, deploy; the switch = the same `.env` lines). **The SSH terminal froze during step 4** → out: Ctrl+Q (XOFF), else Enter `~.`, else close the tab; reconnect. Next, before redoing step 4: was the `.env` saved (diff with the backup)? Any `/opt/travelapp/backend/.env.save` (nano's emergency save on hang-up — may hold the password; delete it — « Deploy »'s `rsync --delete` would also remove it) or a stale `nano` (`pgrep -a nano`)? The user then pasted the three template lines with the literal placeholder `SMTP_PASSWORD='YOUR_PASSWORD'` (no secret) → told: replace it in the file with the real mailbox password, keep the quotes; state check given (password hidden; `grep -c YOUR_PASSWORD`; `.env*` files; `pgrep -a nano`). Result: **the edit was not saved** (no mail line, `.env` still 2745 bytes Sep 8); a stale `nano` (pid 262968, root) still runs with its lock file `..env.swp` (root 644, 1024 bytes — lock metadata, no buffer). Given: `sudo kill -9 262968` (SIGKILL: no emergency `.env.save`, which nano writes on SIGHUP / SIGTERM with a modified buffer — possibly world-readable) + `rm` the lock. Next step 4 without an editor: append the three lines with the password read at a hidden prompt (`read -rsp`, never on the command line → not in the shell history) through `sudo tee -a` (owner and mode kept). Cleanup result: « kill: (262968): No such process » — nano had already exited; the folder holds only `.env` (2745, Sep 8) and `.env.example` — no lock, no `.env.save`. New step 4 given (hidden prompt + `tee -a`) → « appended ». Step 5 given (diff with the password hidden, `ls -l`, and `sudo find / -xdev -name '*.save' -mmin -240` for an emergency copy left by the nano that exited on its own) → `7a8,11` (only the four added lines), `deploy:deploy` 600, no `*.save`. Step 6 given (the SMTP login test before the restart) → « SMTP login OK ». Step 7 given: `sudo systemctl restart travelapp.service; sleep 5; systemctl is-active travelapp.service; curl -s http://127.0.0.1:8001/config` → `active`, `{"signup":false,"trial":true}`; step 8 by the assistant (public): the same, `/app/` and `/essai.html` 200. **`trial` is ON (≈ 15:45 UTC).** §I.5 answer 1 for Alex updated. Step 9 offered (a test request). « How Alex can test it? » → his six steps given for forwarding (essai.html with a test address ≠ contact@ → notification at contact@ → « Demandes d'essai » → Valider → welcome e-mail + password link → « Crédits : 20 » → delete the test account; « Refuser » = no e-mail); reminder: Alex needs the admin password — give him the new one after the change | B step 9 (the trial test) and step 10 (delete `~/env-before-smtp`); the admin password change — §I.0.1 items 1–3 |
+| 5 | « Now update the SCANID-HANDOVER.md in such way that with the fresh session you could resume continue what we are doing seamlessly! » | **DONE.** The resume protocol (top) points to the new §I.0.1 « RESUME HERE » (where things stand, the ordered open items with their commands, how to guide, the server facts learned); §I.0's state line; Alex's trial test added to §I.5; « Last updated »; the memory note `scanid-task-i-third-check` | — |
+| 6 | « Mark in SCANID-HANDOVER.md all what we have not done from this session! » | **DONE.** §I.0.1 « ❌ NOT DONE » table: 11 items, each with its source (PDF section or prompt), who / why, and its item in the ordered list | — |
+| 7 | « Mark in SCANID-HANDOVER.md all prompts what we have not done from attached pdf of this seesion! » | **DONE.** §I.0.1 « 📄 Alex's PDF » table: every PDF item with ✅ / ⚠️ / ❌ — ❌ 3.1 (the list) and 5 a–c (the nginx reload); ⚠️ 4 (done, not pushed) and the answers 2 / 3.2 / 3.3 (not forwarded); ✅ 2 (a) `trial` ON (test pending); pointer added under the PDF summary in §I.1 | — |
+| 8 | « what is next step? To implement code changes that make that i do not wiil to change the password each time manually? » | **DONE.** Answered: not next — first §I.0.1 items 1–2 (delete `~/env-before-smtp`; change the admin password), then ship task I (item 5); the separate-mailbox change starts with Alex (mailbox + sender address), then a small code change (`MAIL_REPLY_TO`, design in item 7a) as its own task — not mixed into task I's commit | — |
+| 9 | « Alex can not change admin password? » then « he is admin » | **DONE.** Answered: yes — Alex changes it himself in « Mon compte » (best: nothing to pass around); the user tells him why; for the user's own admin access, a separate admin account rather than a shared password. §I.0.1 item 2 and the NOT DONE row 7 updated | — |
+| 10 | « Alex should create an another email? what email exactely? » | **DONE.** Answered: optional (only to remove the manual password step); if yes, one mailbox for the app alone — suggested `notifications@scanid.fr` (not noreply@); customers still see « ScanID », replies go to contact@ (the code change); Alex creates it, forwards it to contact@, hands over the password safely; no DNS change. Recorded in §I.0.1 item 7a | — |
+| 11 | « Alex creates on ionos another mail with strong password? … which password it is? the password of newly created email? » | **DONE.** Answered: yes — a new address with its own new password; forwarding to contact@ in its IONOS settings; the password handed over = the new mailbox's (it replaces contact@'s on the server); afterwards contact@'s password can change freely | — |
+| 12 | « after it we will to made other remainig prompts? » then « and with doing all this all the prompts from pdf will be done? » | **DONE.** Answered: the remaining items do not wait for the mailbox (it depends on Alex) — order = §I.0.1 items 1–7; yes, items 3–6 complete every PDF item (see the « Item below » column of the « 📄 Alex's PDF » table); caveat for 3.1: e-mails and credits come from the database (complete), the creation dates from the logs (may not reach back to go-live, 2026-09-08) | — |
+| 13 | « Now if i open a new session and tell you "read SCANID-HANDOVER.md and we resume our work!" it will be ok? » | **DONE.** Answered: yes — the resume protocol leads to §I.0.1; tell the new session what was done since (e.g. « I deleted the backup ») | — |
+
+### I.0.0b RESUMED SESSION (2026-10-03, later) — EVERY PROMPT, WHAT IS DONE, WHAT IS LEFT
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « Read SCANID-HANDOVER.md and resume our work exactly where it stopped: start at the first unticked item of §I.0.1 « RESUME HERE », under the same restrictions and permissions recorded there. Guide me one command at a time and update SCANID-HANDOVER.md after each step. » | **Resume check DONE:** `git status --short` = §I.0 exactly (13 ` M` + 1 `??`, `git add --dry-run .` = 14), `HEAD` = `origin/master` = `c027cfa`; backend **366 passed**, unit **89 passed**; live `/api/config` → `{"signup":false,"trial":true}`. Verified in the code before quoting it: `password_policy.py` (12 / 1 uppercase / 2 digits / 2 specials + a zxcvbn strength score ≥ 3), « Nouveau mot de passe (optionnel) » and « Enregistrer les modifications » in « Mon compte » (the live bundle still says « Mon Compte » until task I ships). **Item 2 given:** it is Alex's action (no command) → a short message for the user to send Alex now (security — not held back for item 4's long forward) | Items 2–7 of §I.0.1 |
+| 2 | « He will change the admin password tell me what 's next? » | **Item 2:** Alex informed, not confirmed → left unticked (tick on his confirmation). **Item 3:** Alex's (needs the admin login) → rides on item 4. **Item 4 given:** the full message for Alex (texts re-verified in the code first: `emails.py` subjects « Demande d'essai — … » / « Votre espace ScanID est ouvert — 20 documents offerts », `TRIAL_CREDITS` 20, the 48 h link, essai.js « Dès sa validation, vous recevez à … », the App.jsx tabs and buttons) | « sent » → item 5 (ship), one command per message |
+| 3 | « we will forget the tasks that requires Alex's engagemment and we will continue to resolve tha task that we can do without Alex! » | **Recorded:** items 2, 3, 4, 7 ⏸ PARKED in §I.0.1 (and the resume protocol skips them). **Item 5 started:** pre-commit check (14 paths, nothing staged, no secret in the diff); step 1a given — `git add . && git status --short` | Item 5 (commit → push → « CI » / « Deploy » → nginx reload + `verify-front-end.sh` → laptop checks → SHIPPED), item 6 (the list, read-only), « Also open » |
+| 4 | « there is something outside of .gitignore that must be in? » | **Checked — no, both ways.** `git add .` stages exactly the 14 paths (the only `??` is `labels.spec.js`). Ignored and rightly so: `backend/.env`, `frontend/.env.local` (secrets); the root's `DUBROVNIK.pdf` and « ITALIE 2 PIECES IDENTITE - copie.pdf » (real identity documents); `backend/bench_*` (local OCR benchmarks); `newvenv/`, caches, `frontend/dist/` (built by CI), `test-results/`, `tests/.browser-libs/`, `tests/fixtures/files/` (regenerated by `npm run test:fixtures`); `site.html`, `site1.html`. Nothing ignored is needed: `labels.spec.js` imports only `test-base.js` and `helpers/index.js` (tracked); « CI » runs the build + unit tests only. Tracked env-like file: only `backend/.env.example` (empty values) | Step 1a still to run |
+
+### I.0 State in one line (update after every stage)
+
+**I0–I5 DONE — task I's code is complete locally and verified, NOT committed. Server step B DONE up to its step 8:
+`trial` is ON since 2026-10-03 ≈ 15:45 UTC. Item 1 done; items 2, 3, 4, 7 ⏸ PARKED (need Alex — the user, resumed
+session). NOW: §I.0.1 item 5 — shipping task I, one command per message (then item 6, then « Also open »). Do not
+re-implement anything.** Nothing committed yet (§0.3: the user commits).
+
+**Ship progress** (tick as the user reports each §I.5 step; one command per message when guiding):
+- [ ] 1 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
+- [ ] 2 « CI » green · « Deploy » green — live bundle `index-CJFY_9p8.js`
+- [ ] 3 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED (ticks §F.0 step 4, §G.0 step 3, §H.0
+  step 3)
+- [ ] 4 laptop checks of §I.5 step 4 (= §G.5 step 4 + §F.6 step 5 + task I's bundle check)
+- [ ] 5 SHIPPED → §F.0, §G.0, §H.0 and §I.0 say SHIPPED (hashes, date); memory notes updated
+- [x] B `trial` **true since 2026-10-03 ≈ 15:45 UTC** (SMTP login OK → restart → `/api/config`) · [ ] Alex's trial run · [ ] A the list sent to Alex ·
+  [ ] C `signup` true (later, with Alex) · [ ] §I.5's answers forwarded to Alex
+- **B in progress (2026-10-03), §I.5 B steps:** [x] 1 ssh (15:11 UTC; the server shows « System restart required », 29 updates — unrelated, left for later) · [x] 2 look — **no `SMTP_` / `MAIL_` line at all** in the server's `.env` (empty output, no error; so no `MAIL_BACKEND` either) → step 4 **adds** the three lines at the end · [x] 3 backup — `~/env-before-smtp` `-rw------- deploy deploy 2745 Sep 8 13:49` (the `.env` is `deploy:deploy` 600, untouched since go-live) · [x] 4 edit — appended with the hidden prompt + `tee -a` (« appended ») · [x] 5 diff — `7a8,11`: only the blank line + the three mail lines added; `.env` still `deploy:deploy` `-rw-------` (2840 bytes, Oct 3 15:42); no `*.save` anywhere ·
+  [x] 6 login test — « SMTP login OK » (port 587 + STARTTLS reachable from the VPS) · [x] 7 restart — `active`, `127.0.0.1:8001/config` → `{"signup":false,"trial":true}` · [x] 8 `/api/config` — from the laptop: `{"signup":false,"trial":true}`; `/app/` and `/essai.html` 200 · [ ] 9 test request · [x] 10 backup removed (16:32 UTC)
+
+**Expected `git status --short` now (nothing staged) — 13 modified, 1 untracked:** ` M` `README.md`,
+`SCANID-HANDOVER.md`, `backend/emails.py`, `backend/tests/test_email_wording.py`, `frontend/src/App.jsx`,
+`frontend/tests/e2e/{a11y,account,capture,design-system,features,fonts,privacy}.spec.js`, `frontend/tests/mock/api.js`;
+`??` `frontend/tests/e2e/labels.spec.js` — `git add --dry-run .` = **14 paths**. Any other difference: report it, do not
+« fix » it.
+**Quick baseline for a resumed session:** `cd /home/lasha/Public/new/backend && /home/lasha/Public/new/newvenv/bin/python -m pytest -q`
+→ **366 passed**; `cd /home/lasha/Public/new/frontend && npm run test:unit` → **89 passed**; `./node_modules/.bin/eslint
+src/App.jsx` → **11 problems**; full e2e **448 passed, 1 skipped** (end of I4). Git at the start of task I: `master` =
+`origin/master` = `c027cfa`, tree clean; baselines then: backend 365, unit 89, eslint 11.
+
+### I.1 The demand, verbatim (user, 2026-10-03)
+
+> Read SCANID-HANDOVER.md to see your restrictions and permissions!
+> CRUCIAL execute the instructions from attached pdf file of this prompt!
+> CRUCIAL after implementing each stage update SCANID-HANDOVER.md!
+> CRUCIAL if executing current instruction violates any restriction from SCANID-HANDOVER.md respect current instruction!
+
+The PDF was attached to the message (it is **not** in the repository): « Lasha-Third-Check-2026-10-02.pdf », Alex's note,
+1 page, headed « SCANID · FOR LASHA = FOR YOU – Claude Code! », « After go-live — third check: what remains », checked
+live on 02/10/2026 at 22:10 Paris time « after your deployment of 21:26 » (= `c027cfa`, committed 23:26 +04:00), « by
+Claude for Alex », no account used. « What remains: one switch, three answers and a few labels inside the app. Section 5
+is optional, as before. » In substance:
+1. **Confirmed — nothing to do.** Fixed: « Aucun e-mail ne sera envoyé. » and the link to `scanid.fr/tarifs.html`. Still in
+   place: login form only on `/app/`, `/api/users/register` → 404, the 63 website files byte-identical, no console
+   error, no CSP violation. Forms and payments: three test messages (22:06) went through; the four Stripe links are right.
+2. **One switch — trial.** « **trial → true, please.** `GET /api/config` still returns `{"signup": false, "trial":
+   false}`. Requested in the two previous notes; if you are keeping it false for a reason, tell Alex. » « **signup stays
+   false for now: correct.** It waits for the Stripe webhook, which Alex creates first, and for one test purchase. »
+3. **Three answers for Alex.** (1) Accounts created through the old « Créer un compte » form: the list (date, e-mail,
+   credits), or « none ». (2) E-mail templates (welcome, trial, purchase, reset): « documents » and « e-mail »
+   everywhere? (3) Export file (XLSX, CSV): headers in sentence case, as in the table? « Before your deployments they
+   were still « Date de Naissance », « Date d'Expiration », « Score de Confiance ». »
+4. **Labels inside the app — new in this note.** « Read in the JavaScript bundle, not on screen. Sentence case
+   everywhere, and one tab to rename: »
+   | Where | Now | Change to |
+   | --- | --- | --- |
+   | Dashboard, tab | « Mon Compte » | « Mon compte » |
+   | Account screen, title | « Modifier Mon Compte » | « Modifier mon compte » |
+   | Admin, users screen, title | « Gérer les Utilisateurs » | « Gérer les utilisateurs » |
+   | Filters | « Filtrer par Utilisateur / Destination » | « Filtrer par utilisateur / destination » |
+   | Selection, button | « Modifier Destination » | « Modifier la destination » |
+   | Export card, title | « Exportation des Données » | « Exportation des données » |
+   | Selection, export buttons | « Exporter Sélection Excel / CSV (n) » | « Exporter la sélection en Excel / CSV (n) » |
+   | Dashboard, first tab | « Passeports » | « Mes documents », like the screen it opens |
+5. **Optional — server (unchanged).** Compression: CSS and JS still uncompressed (with gzip: home page 162 KB → 40 KB, app
+   304 KB → 92 KB) — `gzip_types text/css application/javascript application/json image/svg+xml text/xml;`. www:
+   `https://www.scanid.fr` still 200 → 301 to `https://scanid.fr`, same path. Old pages: 301 `/temoignages.html` →
+   `/presentation.html`, `/iftm/` → `/essai.html`.
+
+**Status of every item above (2026-10-03, evening): the table « 📄 Alex's PDF » in §I.0.1** — ❌ not done: 3.1, 5 (a, b, c); ⚠️ done but not live / not delivered: 4 (not pushed), the answers to 2, 3.2, 3.3 (not forwarded); ✅ 2 (a) `trial` ON (its end-to-end test still to do).
+
+Constraints and permissions: §0. The user's rule (as for §F–§H): a demand of the PDF wins over a restriction of this file.
+
+### I.2 Findings before touching anything
+
+1. **Git:** `master` = `origin/master` = **`c027cfa`** (task H, committed 2026-10-02 23:26 +04:00 = 21:26 Paris — Alex's
+   « deployment of 21:26 », exactly the 7 paths of §H.0); tree clean. Baselines: backend **365**, unit **89**, eslint
+   `App.jsx` **11**.
+2. **Live (public requests, 2026-10-03):** task H is live — bundle **`index-DvNksTlx.js`** (= H4's build); `POST
+   /api/users/register` → 404. `/api/config` → `{"signup":false,"trial":false}`. **nginx is still NOT reloaded:**
+   `site.css` → 113 379 bytes, no `Content-Encoding` with `Accept-Encoding: gzip`; `https://www.scanid.fr/tarifs.html`
+   → 200; `/temoignages.html` and `/iftm/` → 404. ⇒ Alex's section 5 is still exactly the pending reload (§H.5 step 3):
+   no code.
+3. **Section 4 — every row is in `frontend/src/App.jsx`** (and once each in the live bundle): tab « Mon Compte » (1043);
+   `<h2>Modifier Mon Compte</h2>` (`AccountEditor`, 1217); `CrudManager title="Gérer les Utilisateurs"` (1146);
+   « Filtrer par Utilisateur / Destination » = **three** placeholders — admin `'Filtrer par Utilisateur'` (995), client
+   `'Filtrer par Destination'` (998), the admin's extra destination filter `"Filtrer par Destination"` (2111); « Modifier
+   Destination » (2078); `<h3>Exportation des Données</h3>` (2086); `` `Exporter Sélection Excel (${n})` `` and
+   `` `Exporter Sélection CSV (${n})` `` (2098, 2101); tab « Passeports » (1036) — it opens `PassportsPage`, whose
+   `CrudManager` title is already « Mes documents » (1056).
+4. **« Sentence case everywhere » — survey of every visible string of `src/`** (Babel AST over all 10 source files: JSX
+   text, attributes, string and template literals — 967 strings; script `i0/ast_survey.cjs` in the scratchpad): the only
+   title-case labels are Alex's rows, plus **four** capitals after a parenthesis or a slash, which his rule also covers:
+   « Destination (Optionnel) » (1430) and « Document (Image ou PDF) » (1435) — the « Ajouter un document » card; **Alex's
+   own site shows that card as « Destination (optionnel) » and « Document (image ou PDF) »** (the app mock-ups on
+   `presentation.html` and `guide.html`, which also show the tabs « Mes documents », « Mon compte » and « Exportation des
+   données », « Filtrer par destination »); « Rechercher (Nom, E-mail...) » (2110, admin users search placeholder);
+   `title="Activer/Désactiver le tri sur cette colonne"` (2138, the column-header tooltip). Not title case: « ScanID —
+   Tous droits réservés. », the example « Ex : Groupe Lisbonne — octobre 2026 » (a name), « Wi-Fi », developer strings.
+5. **The e-mails name the tab:** `emails.py` `purchase_confirmation` (109) and `unit_purchase_confirmation` (127) « Le
+   détail de vos achats est dans « Mon Compte » → « Mes achats ». » — they send the customer to the tab, so they follow
+   it (« Mon compte »). No test pins that line. No other template quotes a label that changes.
+6. **Tests pinning the old labels:** e2e `a11y` (1), `account` (2 + titles), `design-system` (2 tab lists), `features`
+   (« Modifier Destination » ×2, « Exporter Sélection … (1) » ×3, « Mon Compte » ×2, « Modifier Mon Compte », « Passeports »),
+   `fonts` (1 tab list), `privacy` (2); `capture.spec.js` has a comment « l'onglet Passeports ». The nav-button locators
+   use `filter({ hasText })` — **case-insensitive substring** — so some would pass unchanged: the new checks must pin the
+   case exactly (`exact: true`, `toHaveText`). Backend: nothing pins the e-mail line.
+7. **Section 2 — `trial`:** unchanged since §H.2.3 — derived, not stored: `trial = mailer.is_configured()` = SMTP set in
+   the server's `.env`, which has no SMTP lines yet. It cannot be set from the repository and must not be forced (no
+   notification to contact@, no welcome e-mail, no password link). It needs the IONOS mailbox password of
+   contact@scanid.fr typed on the server — never in a chat or in the repository.
+8. **Section 3:** (1) the list needs the production journal and database on the VPS (`sudo`) — §H.5 A unchanged; « how
+   many credits »: 5. (2) Answered in §H.3 from the six rendered templates — re-rendered after I2's « Mon compte ». (3)
+   `EXPORT_HEADERS` == the table's headers since `109993f` (18:44), proven on real CSV / XLSX in §H.3 — re-proven on the
+   current code in I3. Alex's « Date de Naissance » export predates 18:44.
+9. **Not in the note, seen:** the XLSX export's sheet is named « Passeports » (`main.py` 616, pinned by `test_export.py`) —
+   a file detail, not the dashboard tab Alex names.
+
+### I.3 Decisions
+
+1. **Section 4 — Alex's eight rows as written** (the three filter placeholders; both export buttons: « Exporter la
+   sélection en Excel (n) », « Exporter la sélection en CSV (n) »).
+2. **« Sentence case everywhere » — the same rule on the four other visible labels of I.2.4:** « Destination
+   (optionnel) », « Document (image ou PDF) » (= Alex's site), « Rechercher (nom, e-mail...) », « Activer/désactiver le
+   tri sur cette colonne ». Reported to Alex as additions under his rule (one line each to undo).
+3. **E-mails:** « Mon Compte » → « Mon compte » in the two purchase confirmations. Test: `test_email_wording.py` — they
+   name the tab as the app writes it, and no template writes « Mon Compte ».
+4. **Tests:** every pinned old label → the new one; Alex's rows and the four additions pinned **case-sensitively**
+   (new e2e checks, plus a negative check: none of the old labels left on the screens). Comments and test titles that
+   quote a renamed label follow in the files touched, and the `App.jsx` comment above `BILLING_FIELDS`; backend
+   docstrings (developer text) unchanged.
+5. **Not changed (not in the note):** the XLSX sheet name « Passeports »; the server messages that still write « email »
+   (§H.5 answer 6); « Crédits pages »; the straight apostrophe. Reported.
+6. **Sections 2, 3.1 and 5 are server-only** — a runbook (§I.5); no VPS connection from here: each needs the user's
+   `sudo` password or the mailbox password, and neither goes through a chat. Answers for Alex in §I.5.
+
+### I.4 Stages
+
+| Stage | Content | Status |
+| --- | --- | --- |
+| I0 | Survey: PDF, git, live state, every label (source, bundle, AST survey, Alex's site mock-ups), e-mails, tests; baselines (backend 365, unit 89, eslint 11) | **DONE** |
+| I1 | Demand, findings, decisions, plan here | **DONE** |
+| I2 | Section 4: the labels (`App.jsx`), « Mon compte » in the two purchase e-mails, the tests (e2e + backend) | **DONE** |
+| I3 | Section 3: export headers re-proven on a real CSV / XLSX; the six e-mail templates re-rendered and read | **DONE** |
+| I4 | Verification: backend, unit, eslint, build + guard + bundle strings, e2e (touched specs, then full), screenshots desktop + 375 px | **DONE** |
+| I5 | Record + how to ship + the server runbook (nginx reload = section 5; `trial` = SMTP; the list = 3.1) + answers for Alex | **DONE** (§I.5) |
+
+### Stage I2 — section 4: the labels — DONE
+
+- `frontend/src/App.jsx` (16 lines, one string each): Alex's rows — tabs « Mes documents » (was « Passeports ») and « Mon
+  compte »; `<h2>Modifier mon compte</h2>`; `CrudManager title="Gérer les utilisateurs"`; placeholders « Filtrer par
+  utilisateur », « Filtrer par destination » (client filter **and** the admin's extra one); « Modifier la destination »;
+  `<h3>Exportation des données</h3>`; `` `Exporter la sélection en Excel (${n})` ``, `` `Exporter la sélection en CSV
+  (${n})` ``. Under « sentence case everywhere » (I.3.2): « Destination (optionnel) », « Document (image ou PDF) »,
+  « Rechercher (nom, e-mail...) », `title="Activer/désactiver le tri sur cette colonne"`. The comment above
+  `BILLING_FIELDS` follows (« Mon compte »). The AST survey re-run on `src/`: **0** title-case labels left.
+- `backend/emails.py`: « Le détail de vos achats est dans « Mon compte » → « Mes achats ». » in `purchase_confirmation` and
+  `unit_purchase_confirmation`.
+- **Tests written first, run against the old code — red for the right reasons:** `test_email_wording.py`
+  `test_the_purchase_e_mails_name_the_tab_as_the_app_writes_it` (the exact line in both purchase e-mails; no template
+  writes « Mon Compte ») → **1 failed / 7 passed**. New `frontend/tests/e2e/labels.spec.js` (2 tests, case-sensitive on
+  purpose: `toHaveText`, `exact: true`, attributes; the export pair compared on `textContent` — the accessible name also
+  carries the CSS « ⬇ »): client — tabs exactly [« Mes documents », « Mon compte »], the first active, heading « Mes
+  documents », the upload card's two labels, « Exportation des données », the destination filter, the sort tooltip, a
+  selection → « Modifier la destination » + « Exporter la sélection en Excel (1) » / « … en CSV (1) », **no horizontal
+  overflow** (the longer labels wrap on a phone), « Mon compte » → « Modifier mon compte »; admin — tabs [« Mes
+  documents », « Administration », « Demandes d'essai », « Mon compte »], « Filtrer par utilisateur » / « Filtrer par
+  destination », « Administration » → « Gérer les utilisateurs », « Rechercher (nom, e-mail...) »; on every screen the
+  markup holds none of the 12 old labels. Old code: both red at the tabs (« Passeports », « Mon Compte »); a temporary
+  soft-assertion copy (deleted after the run) showed **every** other check red with the old value, and the markup check
+  listing the old labels.
+- `frontend/tests/mock/api.js`: `GET /admin/users` (mirrors `main.py` `read_users`, admin only) — the UI calls it when
+  the admin opens « Administration », and the mock answered 501 until now (no test had opened that screen).
+- Existing specs, old label → new: `a11y` (1), `account` (2 + its header comment and `describe`), `design-system` (2 tab
+  lists), `features` (« Modifier la destination » ×2, the export pair ×3, « Mon compte » ×2 + a test title, « Modifier
+  mon compte », « Mes documents »), `fonts` (1 tab list), `privacy` (2), `capture` (a comment). Left on purpose:
+  `tests/mock/xlsx.js` sheet name « Passeports » (= the backend's, I.3.5).
+- Results: e-mail wording **8 passed**; `labels.spec.js` desktop + mobile-small + mobile-375 **6 passed**; the 8 touched
+  specs × 3 projects **242 passed, 1 skipped** (2.1 min); backend **366 passed** (365 + 1); eslint `App.jsx` **11** (=
+  `HEAD`), the 9 touched test files clean.
+
+### Stage I3 — section 3: the export headers and the e-mail templates, proven again — DONE
+
+No code. Evidence from a throw-away pytest file in the session scratchpad (`i3/test_i3_evidence.py`, run from `backend/`
+with `I3_OUT=<scratchpad>/i3 APP_PUBLIC_URL=https://scanid.fr/app/ …/python -m pytest -p tests.conftest <file> -s -q -p
+no:cacheprovider --rootdir=/home/lasha/Public/new/backend` — the repository's fixtures; `git status` unchanged afterwards):
+- **Export (question 3.3):** the real downloads of `GET /export/data?format=csv` and `?format=xlsx` (fixture
+  `user_with_documents`) carry the same header row — « Nom de famille, Prénom, Sexe, Date de naissance, Date
+  d'expiration, Nationalité, Numéro de document, Type, Destination, Score de confiance » — which is **exactly the set of
+  the table's labels**, read from `App.jsx` `columnTranslations` itself for the export's ten fields; every header in
+  sentence case; none of « Date de Naissance », « Date d'Expiration », « Score de Confiance ». CSV with its UTF-8 BOM, 4
+  data rows; XLSX sheet « Passeports », 4 data rows; LibreOffice (`soffice --headless --convert-to csv`, profile in the
+  scratchpad) reads the XLSX header row identically. Live since `109993f` (2026-10-02 18:44 Paris); Alex's export with
+  « Date de Naissance » predates it. Nothing to change.
+- **Templates (question 3.2):** all six rendered (« à la carte » in its two forms — `i3/templates.txt`) and read in full:
+  password reset « Réinitialisation de votre mot de passe ScanID » (« ignorez simplement cet e-mail »); trial
+  notification « Demande d'essai — {société} » (« (20 documents offerts) », « E-mail : »); trial welcome « Votre espace
+  ScanID est ouvert — 20 documents offerts »; pack purchase « Vos 1 000 documents ScanID sont disponibles »; à la carte
+  « Vos 37 documents ScanID sont disponibles » / « Votre document ScanID est disponible »; payment anomaly « Paiement
+  Stripe à rattacher manuellement » (« E-mail du client »). **0** « scan(s) » noun, **0** « email »; the three purchase
+  renderings say « Le détail de vos achats est dans « Mon compte » → « Mes achats ». » (I2). The only « scan » forms are
+  verbs: « Photographiez ou scannez vos documents » (welcome, step 1) and the signature « Scanner · Vérifier ·
+  Sécuriser ».
+
+### Stage I4 — verification — DONE
+
+| Check | Result |
+| --- | --- |
+| `cd backend && …/newvenv/bin/python -m pytest -q` | **366 passed** (365 + the e-mail tab test) |
+| `cd frontend && npm run test:unit` | **89 passed** |
+| eslint | `App.jsx` **11** (= `HEAD`); `labels.spec.js`, the 7 touched specs and `tests/mock/api.js` clean |
+| Full e2e, all projects (`./node_modules/.bin/playwright test`) | **448 passed, 1 skipped** (4.0 min, exit 0) = 442 + `labels.spec.js` (2 tests × desktop, mobile-small, mobile-375) |
+| `VITE_API_URL=/api npm run build` + guard | 64 files, 0 pages rewritten; guard **5/5**; `dist/` root == the folder's 63 files byte for byte + `sw.js`; bundle **`index-CJFY_9p8.js`**: every new label present (`"Mes documents"` ×2 = tab + screen title, `"Mon compte"` ×1, « Filtrer par destination » ×2, the 11 others ×1); **0** × `"Passeports"`, « Mon Compte », « Gérer les Utilisateurs », « Filtrer par Utilisateur », « Filtrer par Destination », « Modifier Destination », « Exportation des Données », « Exporter Sélection », « (Optionnel) », « (Image ou PDF) », « Rechercher (Nom », « Activer/Désactiver », `localhost`; 1 × `"/api"` |
+| Screenshots (throw-away specs, copied into `tests/e2e` for one run and deleted; desktop 1280 + mobile-375 WebKit; looked at) | tabs « Mes documents » (active) / « Mon compte »; upload card « Destination (optionnel) », « Document (image ou PDF) »; title row « Mes documents » + « Modifier la destination », « Supprimer (1) », « + Manuel » (wrapping on the phone); « Exportation des données » + « Exporter la sélection en Excel (1) » / « … CSV (1) »; « Modifier mon compte »; admin « Filtrer par utilisateur », « Filtrer par destination », « Gérer les utilisateurs » + « Rechercher (nom, e-mail...) ». **On a 375 px phone the two selection export buttons wrap to three lines each**, side by side (`flex: 1` each, `scanid-app.css`) — no horizontal scroll (asserted in `labels.spec.js`); a consequence of the longer text, not changed (told to Alex). NB a full-page or element capture after a scroll shows the sticky top bar over the content — a capture artifact (the last capture made it static) |
+| Found and fixed during I4 | `README.md` item 2 sent admins to « Gérer les Utilisateurs » → « Gérer les utilisateurs » — the only living document quoting a changed label (`.github/`, `ops/`, `deploy/`, `frontend/tests/README.md`: none; `HANDOVER.md` / `PROGRESS.md` are historical records, unchanged) |
+| After | ports 5173 / 4173 / 8001 free; `dist/` = the production build above; no `zz-*` spec left; `git status --short` == §I.0 (13 M + 1 ??), nothing staged; `git add --dry-run .` = **14 paths** |
+
+### I.5 How to ship task I — the nginx reload, the server steps, the answers for Alex (stage I5)
+
+**What ships** (nothing committed, §0.3): the 14 entries of §I.0 — `git add --dry-run .` = **14 paths** (checked). No new
+dependency, no migration, no `.env` change, **no vhost change** (the server's vhost is still G's, synced at 18:44 on
+2026-10-02).
+
+**The user ships it — one command per message when guided:**
+1. **Laptop:** `git status --short` (= §I.0) → `git add --dry-run . | wc -l` (14) → `git add .` →
+   `git commit -m "App: sentence-case labels, « Mes documents » tab, « Mon compte » in the purchase e-mails"`
+   → `git push origin master`.
+2. **GitHub:** « CI » green, « Deploy » green (« NOTE: nginx not reloaded … » is expected — deploy account). The deploy
+   restarts the backend (the two purchase e-mails) and ships the bundle `index-CJFY_9p8.js`.
+3. **VPS — reload nginx** (unchanged since §H.5 step 3; independent of 1–2, may come first): `ssh lasha@87.106.22.235` →
+   `sudo nginx -t && sudo systemctl reload nginx` → `bash /opt/travelapp/ops/verify-front-end.sh` → « ALL CHECKS
+   PASSED ». This one reload activates task F (cache headers, `/temoignages.html` and `/iftm/` 301s) and task G (gzip,
+   `www` → 301) = **all of Alex's section 5**. `nginx -t` is the safety gate: if it fails, nothing is reloaded and the
+   site keeps running.
+4. **Laptop checks** (public requests — the assistant may run them): the list of §G.5 step 4 (register 404; `www` → 301
+   `https://scanid.fr/tarifs.html`; `site.css` → `content-encoding: gzip`, `max-age=31536000`, `Vary: Accept-Encoding`;
+   `tarifs.html` → `no-cache`; the two 301s; `/api/config`), plus task I's (the bundle is minified: a label reads
+   `children:"Mon compte"`; both lines tested on 2026-10-03 — the new build gives all 9 / 0, today's live bundle 1 / 13):
+   ```bash
+   B=$(curl -s https://scanid.fr/app/ | grep -o '/app/assets/index-[^"]*\.js'); echo "$B"     # /app/assets/index-CJFY_9p8.js
+   curl -s "https://scanid.fr$B" | grep -o -e '"Mes documents"' -e '"Mon compte"' -e 'Modifier mon compte' -e 'Gérer les utilisateurs' -e 'Filtrer par utilisateur' -e 'Filtrer par destination' -e 'Modifier la destination' -e 'Exportation des données' -e 'Exporter la sélection en' | sort | uniq -c   # all 9, ×1 or ×2 (as I4)
+   curl -s "https://scanid.fr$B" | grep -o -e '"Passeports"' -e 'Mon Compte' -e 'Gérer les Utilisateurs' -e 'Filtrer par Utilisateur' -e 'Filtrer par Destination' -e 'Modifier Destination' -e 'Exportation des Données' -e 'Exporter Sélection' -e '(Optionnel)' -e '(Image ou PDF)' | wc -l   # 0
+   ```
+5. Mark §F.0, §G.0, §H.0 and §I.0 **SHIPPED** (hashes, date); update the memory notes.
+
+**Server steps — the user's (outside the repository; a secret never goes through a chat):** unchanged since §H.5 —
+- **B. `trial` → true (PDF section 2)** — §H.5 B, refined 2026-10-03 (row 4 of §I.0.0); one command per message:
+  1. `ssh lasha@87.106.22.235`
+  2. look, the password hidden (the other values are not secret, and `MAIL_BACKEND`'s must be seen): `sudo grep -nE '^\s*#?\s*(SMTP_|MAIL_)' /opt/travelapp/backend/.env | sed -E 's/(SMTP_PASSWORD=).+/\1<hidden>/'` —
+     `.env.example` ships `SMTP_HOST=`, `SMTP_USERNAME=`, `SMTP_PASSWORD=` **empty**: if present, fill those lines (a
+     later duplicate would win anyway — python-dotenv keeps the last); a `MAIL_BACKEND=disabled` line would keep `trial`
+     false (`config.mail_backend()`: an explicit value wins) — remove it if there is one.
+  3. backup **outside** `backend/` (« Deploy » runs `rsync --delete --exclude '.env'` on it: a copy inside would be
+     erased): `sudo cp -a /opt/travelapp/backend/.env ~/env-before-smtp` — not mandatory, but the server's `.env` has **no other
+     copy anywhere** (not in Git — « Deploy » excludes it —, and `ops/backup.sh` dumps only the database)
+  4. **(as done on 2026-10-03, after a frozen nano session)** no editor — the password read at a hidden prompt, never on
+     the command line (not in the shell history), three lines appended (a leading blank line in case the file has no
+     final newline), owner and mode kept by `tee -a`: `read -rsp 'Mailbox password: ' P; echo; printf
+     "\nSMTP_HOST=smtp.ionos.fr\nSMTP_USERNAME=contact@scanid.fr\nSMTP_PASSWORD='%s'\n" "$P" | sudo tee -a
+     /opt/travelapp/backend/.env > /dev/null; unset P; echo appended` (a password holding `'` or `\` needs other quoting —
+     python-dotenv decodes `\\` and `\'` inside single quotes). The nano way, for the record:
+     `sudo nano /opt/travelapp/backend/.env` → `SMTP_HOST=smtp.ionos.fr`, `SMTP_USERNAME=contact@scanid.fr`,
+     `SMTP_PASSWORD='<the mailbox password>'` (single quotes: literal for python-dotenv; needed if it holds `#`, a space or
+     `$`). Port 587 + STARTTLS, the sender « ScanID <contact@scanid.fr> », the admin address contact@scanid.fr and
+     `APP_PUBLIC_URL` https://scanid.fr/app/ are defaults (`config.py`) — no line needed.
+  5. only those lines changed, owner and mode kept (the `.env` is `deploy:deploy` `-rw-------` — the service's user must
+     still read it; `sudo nano` keeps both when it overwrites): `sudo diff ~/env-before-smtp /opt/travelapp/backend/.env |
+     sed -E 's/(SMTP_PASSWORD=).*/\1<hidden>/'; sudo ls -l /opt/travelapp/backend/.env`
+  6. the login test **before** the restart (§H.5 B step 2) → « SMTP login OK »
+  7. `sudo systemctl restart travelapp.service` → `systemctl is-active travelapp.service` → `active`
+  8. laptop: `curl -s https://scanid.fr/api/config` → `{"signup":false,"trial":true}`
+  9. a test request on essai.html (Alex's run, §H.5 B step 4) — notification at contact@, « Demandes d'essai », Valider,
+     welcome e-mail, password link, « Crédits : 20 »
+  10. `sudo rm ~/env-before-smtp` once everything works (the copy holds the server's secrets).
+  **After B — the mailbox password lives in two places.** If Alex changes the contact@scanid.fr password at IONOS, the
+  server's copy is stale: every e-mail fails (trial notification, welcome + password link, reset, purchase
+  confirmations) and **silently** — `mailer.send` never raises (it logs « Email not sent: kind=… error=
+  SMTPAuthenticationError »), the e-mails go out after the HTTP response, and `/api/config` keeps `trial` true (it only
+  checks that `SMTP_HOST` is set). Rule: Alex tells the user the same day and hands the new password over safely (not
+  e-mail / chat); the user redoes steps 4, 6, 7. Check: `sudo journalctl -u travelapp.service --since today --no-pager |
+  grep -i "email not sent"`. Alternative, later and only if wanted: a mailbox for the app alone (e.g. noreply@) — needs
+  `MAIL_FROM` set to it (IONOS normally sends only under the authenticated address) and a `Reply-To` contact@ (the
+  mailer supports it, no caller sets it yet) — a small code change + test.
+- **A. The list for Alex (PDF question 3.1)** — exactly §H.5 A (read-only): how far the journal goes back, the `"POST
+  /users/register HTTP/1.1" 200` lines (the dates), the database query (e-mails, credits), nginx's logs only if the
+  journal starts after go-live. Nothing is changed — Alex decides.
+- **C. `signup` → true** — unchanged (§G.5 C), later, with Alex (« stays false for now: correct »).
+
+**Answers for Alex** (the user forwards them; in English, like his note):
+1. **Trial (section 2) — done, `trial` is true since 03/10 (≈ 17:45 Paris).** It was not kept false on purpose: `trial`
+   is not a setting anyone toggles — the server turns it on by itself once it can send e-mail, and the outgoing mail
+   of contact@scanid.fr (IONOS SMTP) is now configured on the server (login tested before the restart). Your test run
+   can start: essai.html → your notification « Demande d'essai — … » at contact@scanid.fr → « Valider » in « Demandes
+   d'essai » → the welcome e-mail with the password link → « Crédits : 20 ». **One rule from now on:** the server holds
+   its own copy of the contact@scanid.fr password — if you change that password at IONOS, tell Lasha the same day
+   (and give him the new one safely, not by e-mail or chat): until the server is updated, every e-mail the app sends
+   fails, silently.
+2. **Question 3.1 — accounts from the old « Créer un compte » form.** Each one received **5 credits**, usable at once,
+   with a freely chosen user name. The list (date, e-mail, credits) — or « none » — can only be read on the server (its
+   logs and database): Lasha sends it.
+3. **Question 3.2 — e-mail templates.** Yes. All six (password reset, your trial notification, trial welcome, pack
+   purchase, « à la carte » purchase, payment anomaly) say « documents » and « e-mail » everywhere — re-checked on the
+   rendered texts on 03/10: welcome « Votre espace ScanID est ouvert — 20 documents offerts »; notification « (20
+   documents offerts) », « E-mail : »; purchase « Vos 1 000 documents ScanID sont disponibles »; à la carte « Vos 37
+   documents… » / « Votre document… »; reset « ignorez simplement cet e-mail »; anomaly « E-mail du client ». The only
+   « scan » left is a verb: « Photographiez ou scannez vos documents » (welcome, step 1) and the signature « Scanner ·
+   Vérifier · Sécuriser ». New with this deployment: the purchase e-mails write « Mon compte » → « Mes achats », like the
+   renamed tab.
+4. **Question 3.3 — export headers.** Yes, since the deployment of 02/10 at 18:44: the CSV and XLSX headers are exactly
+   the table's — « Nom de famille, Prénom, Sexe, Date de naissance, Date d'expiration, Nationalité, Numéro de document,
+   Type, Destination, Score de confiance » (checked on real files; the XLSX also opened in LibreOffice). Your export with
+   « Date de Naissance » was made before that deployment.
+5. **Section 4 — labels.** All eight rows done as written; « Filtrer par destination » exists twice (the client's filter
+   and the admin's), both changed. Under your « sentence case everywhere », four labels the table does not list changed
+   too: « Destination (optionnel) » and « Document (image ou PDF) » on the « Ajouter un document » card — exactly as the
+   app mock-ups on presentation.html and guide.html write them —, the admin users search « Rechercher (nom,
+   e-mail...) », and the sorting tooltip of the column headers « Activer/désactiver le tri sur cette colonne ». A scan of
+   every label in the app's source finds no other title case. One visible effect of the longer text: on a 375 px phone,
+   the two selection export buttons now wrap to three lines each (side by side, no sideways scrolling). Live at the next
+   deployment.
+6. **Section 5.** Unchanged: gzip, www → scanid.fr and the two 301s have been in the server configuration since 02/10
+   18:44; they take effect with one nginx reload, which Lasha does by hand (the deployment account may not reload nginx).
+   Checked on 03/10: not reloaded yet.
+7. **Not changed — your call:** the XLSX file's sheet is still named « Passeports » (the export's tab, not the
+   dashboard's); the server messages that still write « email » (listed in the previous answers); « Crédits pages » in
+   the admin users table.
+
+**Alex's trial test** (to forward with the answers; `trial` live since 03/10 ≈ 17:45 Paris):
+1. Open https://scanid.fr/essai.html and send a request with a test company name (e.g. « TEST Alex ») and **an e-mail
+   address you can read other than contact@scanid.fr**. The page confirms: « Dès sa validation, vous recevez à … le lien
+   pour choisir votre mot de passe, avec vos 20 documents offerts… »
+2. Within a minute, contact@scanid.fr receives « Demande d'essai — TEST Alex » with the details.
+3. Log in at https://scanid.fr/app/ as admin → tab « Demandes d'essai » → « Valider » on the request.
+4. The test address receives « Votre espace ScanID est ouvert — 20 documents offerts », with a link to choose a password
+   (valid 48 h).
+5. Open the link, choose a password, log in with the test address: the badge shows « Crédits : 20 ».
+6. Clean up: as admin → « Administration » → « Gérer les utilisateurs » → delete the test account.
+(Also possible: « Refuser » at step 3 — no e-mail is sent then.) An e-mail missing (spam folder first): tell Lasha — the
+server's log says why (§I.0.1 item 3).
+
+---
+
+## H. TASK H (2026-10-02, evening) — ALEX'S « SECOND CHECK » LIST — COMMITTED `c027cfa`, PUSHED, LIVE; NGINX RELOAD PENDING
 
 ### H.0.0 THIS SESSION (2026-10-02, the session after task G's) — EVERY PROMPT, WHAT IS DONE, WHAT IS LEFT
 
@@ -114,21 +618,24 @@ they applied to the previous one (v4).
 
 ### H.0 State in one line (update after every stage)
 
-**H0–H5 DONE — task H is complete locally and verified. NEXT: the user ships it — §H.5 steps 1–5 (commit + push, the
-two workflows, the nginx reload on the VPS — which also finishes tasks F and G and is all of Alex's section 5 —, the
-laptop checks), then the server steps B (`trial` via SMTP) and A (the list for Alex). Do not re-implement anything.**
-Nothing committed (§0.3).
+**H0–H5 DONE; committed `c027cfa` by the user and pushed; « Deploy » ran (21:26 Paris) — live (Alex's third check
+confirms both texts). Still open: the nginx reload (step 3) and what follows it, and the server steps B and A — all
+carried into §I.5 (task I, Alex's « third check »). Do not re-implement anything.**
 
 **Ship progress** (tick as the user reports each §H.5 step; one command per message when guiding):
-- [ ] 1 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
-- [ ] 2 « CI » green · « Deploy » green
-- [ ] 3 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED (ticks §F.0 step 4 and §G.0 step 3)
-- [ ] 4 laptop checks of §H.5 step 4 (= §G.5 step 4 + §F.6 step 5 + task H's)
+- [x] 1 committed **`c027cfa`** (« App: « e-mail » in the trial refusal confirmation, unknown pack links to
+  tarifs.html », the 7 paths below) and pushed, 2026-10-02 23:26 +04:00 — `git ls-remote origin refs/heads/master` =
+  `c027cfa…` = local `HEAD` (checked at the start of task I)
+- [x] 2 « Deploy » ran (21:26 Paris): live bundle `index-DvNksTlx.js` = H4's build; Alex's third check §1 confirms « Aucun
+  e-mail ne sera envoyé. » and the `tarifs.html` link. (« CI » run page not visible from here — `gh` not installed.)
+- [ ] 3 nginx **NOT reloaded** — checked 2026-10-03: no gzip on CSS, `www` → 200, `/temoignages.html` / `/iftm/` →
+  404 → **§I.5**
+- [ ] 4 laptop checks of §H.5 step 4 (= §G.5 step 4 + §F.6 step 5 + task H's) — after the reload (§I.5)
 - [ ] 5 SHIPPED → §F.0, §G.0 and §H.0 say SHIPPED (hashes, date); memory notes updated
 - [ ] B `trial` true (SMTP login OK → restart → `/api/config`) · [ ] Alex's trial run · [ ] A the list sent to Alex ·
-  [ ] C `signup` true (later, with Alex)
+  [ ] C `signup` true (later, with Alex) — server steps, continued in §I.5
 
-**Expected `git status --short` (nothing staged) — 7 modified:** ` M` `SCANID-HANDOVER.md`, `backend/main.py`,
+**Expected `git status --short` at the end of task H (nothing staged) — 7 modified — record:** ` M` `SCANID-HANDOVER.md`, `backend/main.py`,
 `backend/tests/test_pack_purchase.py`, `frontend/src/App.jsx`, `frontend/tests/e2e/{signup,trials}.spec.js`,
 `frontend/tests/mock/api.js`. Any other difference: report it, do not « fix » it.
 **Quick baseline for a resumed session:** `cd /home/lasha/Public/new/backend && /home/lasha/Public/new/newvenv/bin/python -m pytest -q`

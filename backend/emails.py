@@ -106,7 +106,7 @@ def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime)
         f"votre espace ScanID ; ils sont valables jusqu'au {_date_fr(expires_at)}.\n\n"
         f"Votre espace : {config.app_public_url()}\n"
         f"Votre identifiant : {user.get('user_name')}\n\n"
-        "Le détail de vos achats est dans « Mon Compte » → « Mes achats ». Le reçu de paiement "
+        "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
         "vous a été envoyé par Stripe.\n\n"
         f"{SIGNATURE}\n"
     )
@@ -124,7 +124,7 @@ def unit_purchase_confirmation(user: Dict[str, Any], quantity: int, expires_at: 
         f"votre espace ScanID ; {'ils sont valables' if many else 'il est valable'} jusqu'au {_date_fr(expires_at)}.\n\n"
         f"Votre espace : {config.app_public_url()}\n"
         f"Votre identifiant : {user.get('user_name')}\n\n"
-        "Le détail de vos achats est dans « Mon Compte » → « Mes achats ». Le reçu de paiement "
+        "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
         "vous a été envoyé par Stripe.\n\n"
         f"{SIGNATURE}\n"
     )

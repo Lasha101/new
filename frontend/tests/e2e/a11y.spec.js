@@ -75,7 +75,7 @@ test.describe('Zoom des champs sur iOS', () => {
 
         // And the CRUD form, which is the only place type="number" and
         // type="date" inputs are rendered.
-        await page.getByRole('button', { name: 'Mon Compte', exact: true }).click();
+        await page.getByRole('button', { name: 'Mon compte', exact: true }).click();
         await expect(page.getByRole('button', { name: 'Enregistrer les modifications' })).toBeVisible();
         const onAccount = await measure();
 

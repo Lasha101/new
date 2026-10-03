@@ -992,10 +992,10 @@ function Dashboard({ user, token, fetchUser }) {
 
     const renderTabContent = () => {
         const passportFilterConfig = user.role === 'admin'
-            ? [{ name: 'user_filter', placeholder: 'Filtrer par Utilisateur', options: filterableUsers, getOptionValue: (o) => o.id, getOptionLabel: (o) => `${o.first_name} ${o.last_name} (${o.user_name})` }]
+            ? [{ name: 'user_filter', placeholder: 'Filtrer par utilisateur', options: filterableUsers, getOptionValue: (o) => o.id, getOptionLabel: (o) => `${o.first_name} ${o.last_name} (${o.user_name})` }]
             : [{
                 name: 'destination_filter',
-                placeholder: 'Filtrer par Destination',
+                placeholder: 'Filtrer par destination',
                 options: userSpecificDestinations.map(d => ({ destination: d })),
                 getOptionValue: (o) => o.destination,
                 getOptionLabel: (o) => o.destination
@@ -1033,14 +1033,14 @@ function Dashboard({ user, token, fetchUser }) {
                     <span style={{ display: 'block' }}>Documents traités : {user.uploaded_pages_count}</span>
                 </div>
                 <div className="nav-menu">
-                    <button onClick={() => setActiveTab('passports')} className={`nav-button ${activeTab === 'passports' ? 'active' : ''}`}>Passeports</button>
+                    <button onClick={() => setActiveTab('passports')} className={`nav-button ${activeTab === 'passports' ? 'active' : ''}`}>Mes documents</button>
                     {user.role === 'admin' && (
                         <button onClick={() => setActiveTab('admin_manage')} className={`nav-button ${activeTab === 'admin_manage' ? 'active' : ''}`}>Administration</button>
                     )}
                     {user.role === 'admin' && (
                         <button onClick={() => setActiveTab('trials')} className={`nav-button ${activeTab === 'trials' ? 'active' : ''}`}>Demandes d'essai</button>
                     )}
-                    <button onClick={() => setActiveTab('account')} className={`nav-button ${activeTab === 'account' ? 'active' : ''}`}>Mon Compte</button>
+                    <button onClick={() => setActiveTab('account')} className={`nav-button ${activeTab === 'account' ? 'active' : ''}`}>Mon compte</button>
                 </div>
             </nav>
             <div className={`dashboard-content sid-card${activeTab === 'passports' ? ' passports-view' : ''}`}>{renderTabContent()}</div>
@@ -1143,12 +1143,12 @@ function TrialRequestsPage() {
 function AdminManagementPage({ token, user, userFields }) {
     return (
         <div>
-             <CrudManager title="Gérer les Utilisateurs" endpoint="admin/users" token={token} user={user} fields={userFields} />
+             <CrudManager title="Gérer les utilisateurs" endpoint="admin/users" token={token} user={user} fields={userFields} />
         </div>
     );
 }
 
-// « Mon Compte » → Facturation: the fields a French B2B invoice needs.
+// « Mon compte » → Facturation: the fields a French B2B invoice needs.
 const BILLING_FIELDS = [
     ['company', 'Société / agence'],
     ['siret', 'SIRET'],
@@ -1214,7 +1214,7 @@ function AccountEditor({ user, fetchUser }) {
     
     return (
         <div>
-            <h2>Modifier Mon Compte</h2>
+            <h2>Modifier mon compte</h2>
             {message && <p className="sid-alert sid-alert--ok">{message}</p>}
             {error && <p className="sid-alert sid-alert--err">{error}</p>}
             <form onSubmit={handleSubmit}>
@@ -1427,12 +1427,12 @@ function OcrUploader({ token, onUpload, isUploading, onCancelUpload }) {
             {error && <p className="sid-alert sid-alert--err">{error}</p>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label className="sid-label">Destination (Optionnel)</label>
+                    <label className="sid-label">Destination (optionnel)</label>
                     <input type="text" name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="sid-input" list="destination-datalist-ocr" placeholder="Ex : Groupe Lisbonne — octobre 2026" autoComplete="off" />
                     <datalist id="destination-datalist-ocr">{destinations.map(dest => <option key={dest} value={dest} />)}</datalist>
                 </div>
                 <div className="form-group">
-                    <label className="sid-label">Document (Image ou PDF)</label>
+                    <label className="sid-label">Document (image ou PDF)</label>
                     <div className={`sid-dropzone ${isDragging ? 'is-dragover' : ''}`} onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileInput}>
                         {/* No `capture` here: this is the picker, and on a phone
                             `capture` replaces the photo library with the camera.
@@ -2075,7 +2075,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }} className="mb-1">
                 <h2>{title}</h2>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {endpoint === 'passports' && selectedIds.size > 0 && ( <> {isBulkEditingDest ? ( <form onSubmit={handleBulkEditSubmit} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}><input type="text" className="sid-input" placeholder="Nouvelle destination" value={bulkDestination} onChange={e => setBulkDestination(e.target.value)} list="bulk-dest-list" required style={{ width: '200px' }} /><datalist id="bulk-dest-list">{availableBulkDestinations && availableBulkDestinations.map(d => <option key={d} value={d} />)}</datalist><button type="submit" className="sid-btn">OK</button><button type="button" onClick={() => setIsBulkEditingDest(false)} className="sid-btn-outline">X</button></form> ) : ( <> <button onClick={() => setIsBulkEditingDest(true)} className="sid-btn-outline">Modifier Destination</button> <button onClick={handleMultiDelete} className="sid-btn-outline">Supprimer ({selectedIds.size})</button> </> )} </> )}
+                    {endpoint === 'passports' && selectedIds.size > 0 && ( <> {isBulkEditingDest ? ( <form onSubmit={handleBulkEditSubmit} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}><input type="text" className="sid-input" placeholder="Nouvelle destination" value={bulkDestination} onChange={e => setBulkDestination(e.target.value)} list="bulk-dest-list" required style={{ width: '200px' }} /><datalist id="bulk-dest-list">{availableBulkDestinations && availableBulkDestinations.map(d => <option key={d} value={d} />)}</datalist><button type="submit" className="sid-btn">OK</button><button type="button" onClick={() => setIsBulkEditingDest(false)} className="sid-btn-outline">X</button></form> ) : ( <> <button onClick={() => setIsBulkEditingDest(true)} className="sid-btn-outline">Modifier la destination</button> <button onClick={handleMultiDelete} className="sid-btn-outline">Supprimer ({selectedIds.size})</button> </> )} </> )}
                     <button onClick={startCreating} className="sid-btn-outline">{endpoint === 'passports' ? '+ Manuel' : '+ Nouveau'}</button>
                 </div>
             </div>
@@ -2083,7 +2083,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             {/* --- INTEGRATED EXPORT PANEL --- */}
             {endpoint === 'passports' && (
                 <div className="sid-card">
-                    <h3 style={{ marginTop: 0 }}>Exportation des Données</h3>
+                    <h3 style={{ marginTop: 0 }}>Exportation des données</h3>
                     <div className="filter-bar mb-1">
                         {user.role === 'admin' && ( 
                             <ComboBoxFilter name="user_id" placeholder="Tous les utilisateurs" options={adminUsers || []} getOptionValue={(o) => o.id} getOptionLabel={(o) => `${o.first_name} ${o.last_name}`} onChange={handleExportFilterChange} /> 
@@ -2095,10 +2095,10 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                          {/* XLSX is the primary of the pair, CSV the outline one. */}
                          <div className="sid-download-group">
                              <button onClick={() => handleUnifiedExport('xlsx')} className="sid-btn">
-                                 {selectedIds.size > 0 ? `Exporter Sélection Excel (${selectedIds.size})` : 'Télécharger Excel'}
+                                 {selectedIds.size > 0 ? `Exporter la sélection en Excel (${selectedIds.size})` : 'Télécharger Excel'}
                              </button>
                              <button onClick={() => handleUnifiedExport('csv')} className="sid-btn-outline">
-                                 {selectedIds.size > 0 ? `Exporter Sélection CSV (${selectedIds.size})` : 'Télécharger CSV'}
+                                 {selectedIds.size > 0 ? `Exporter la sélection en CSV (${selectedIds.size})` : 'Télécharger CSV'}
                              </button>
                          </div>
                     </div>
@@ -2107,8 +2107,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             )}
             {/* --- END EXPORT PANEL --- */}
 
-            {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-1"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (Nom, E-mail...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="sid-input" autoComplete="off"/></div></div> )}
-            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-1">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par Destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><span className="sid-label" style={{ margin: 0 }}>Type</span><div className="sid-seg" role="group" aria-label="Filtrer par type de document (PP = passeport, PI = pièce d'identité)" data-name="document_type_filter">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <button key={option.value} type="button" value={option.value} className={docTypeFilter === option.value ? 'is-active' : ''} aria-pressed={docTypeFilter === option.value} onClick={() => handleDocTypeFilterChange(option.value)}>{option.label}</button> ))}</div></div> )} </div> )}
+            {endpoint.includes('users') && !filterConfig && ( <div className="filter-bar mb-1"><div className="form-group" style={{ flex: 1, marginBottom: 0 }}><input type="text" name="name_filter" placeholder="Rechercher (nom, e-mail...)" onChange={(e) => handleFilterChange(e.target.name, e.target.value)} className="sid-input" autoComplete="off"/></div></div> )}
+            {(filterConfig || endpoint === 'passports') && ( <div className="filter-bar mb-1">{filterConfig && filterConfig.map(filter => ( <ComboBoxFilter key={filter.name} {...filter} onChange={handleFilterChange} /> ))} {user.role === 'admin' && endpoint === 'passports' && ( <ComboBoxFilter key="voyage_filter" name="voyage_filter" placeholder="Filtrer par destination" options={dynamicDestinations.map(d => ({ destination: d }))} getOptionValue={(o) => o.destination} getOptionLabel={(o) => o.destination} onChange={handleFilterChange} /> )} {endpoint === 'passports' && ( <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><span className="sid-label" style={{ margin: 0 }}>Type</span><div className="sid-seg" role="group" aria-label="Filtrer par type de document (PP = passeport, PI = pièce d'identité)" data-name="document_type_filter">{DOC_TYPE_FILTER_OPTIONS.map(option => ( <button key={option.value} type="button" value={option.value} className={docTypeFilter === option.value ? 'is-active' : ''} aria-pressed={docTypeFilter === option.value} onClick={() => handleDocTypeFilterChange(option.value)}>{option.label}</button> ))}</div></div> )} </div> )}
             {/* Both views are always mounted; only CSS decides which one shows,
                 so a resize never unmounts a view and never loses state. */}
             <div className="sid-results">
@@ -2135,7 +2135,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                                                 checked={isChecked}
                                                 onClick={(e) => e.stopPropagation()} // Prevent header click trigger
                                                 onChange={(e) => handleMultiSortToggle(field, e.target.checked)}
-                                                title="Activer/Désactiver le tri sur cette colonne"
+                                                title="Activer/désactiver le tri sur cette colonne"
                                             />
                                             <span>{columnTranslations[field] || field.replace(/_/g, ' ')}</span>
                                             

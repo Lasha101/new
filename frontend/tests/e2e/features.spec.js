@@ -120,7 +120,7 @@ test.describe('Actions groupées', () => {
         await login(page);
         await selectAll(page).check();
 
-        await page.getByRole('button', { name: 'Modifier Destination' }).click();
+        await page.getByRole('button', { name: 'Modifier la destination' }).click();
         await page.getByPlaceholder('Nouvelle destination').fill('Lisbonne 2027');
         await page.getByRole('button', { name: 'OK', exact: true }).click();
 
@@ -273,13 +273,13 @@ test.describe('Panneau d’exportation', () => {
         await login(page);
         await resultsTable(page).locator('tbody tr').first().locator('input[type="checkbox"]').check();
 
-        await expect(page.getByRole('button', { name: 'Exporter Sélection Excel (1)' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Exporter Sélection CSV (1)' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Exporter la sélection en Excel (1)' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Exporter la sélection en CSV (1)' })).toBeVisible();
         // Aperçu is disabled while a selection is active, as before.
         await expect(page.getByRole('button', { name: TEXT.preview })).toBeDisabled();
 
         const download = page.waitForEvent('download', { timeout: 30_000 });
-        await page.getByRole('button', { name: 'Exporter Sélection CSV (1)' }).click();
+        await page.getByRole('button', { name: 'Exporter la sélection en CSV (1)' }).click();
         expect((await download).suggestedFilename()).toMatch(/\.csv$/);
     });
 
@@ -328,10 +328,10 @@ test.describe('Formulaires', () => {
         await expect(page.getByText('Créer un nouveau compte')).toHaveCount(0);
     });
 
-    test('« Mon Compte » se pré-remplit et enregistre', async ({ page, api }) => {
+    test('« Mon compte » se pré-remplit et enregistre', async ({ page, api }) => {
         test.skip(LIVE, 'pilote l’état du mock (api.*) : sur un vrai backend il n’y a pas de mock à piloter');
         await login(page);
-        await page.getByRole('button', { name: 'Mon Compte', exact: true }).click();
+        await page.getByRole('button', { name: 'Mon compte', exact: true }).click();
 
         await expect(page.locator('input[name="first_name"]')).toHaveValue(api.user.first_name);
         await expect(page.locator('input[name="email"]')).toHaveValue(api.user.email);
@@ -350,11 +350,11 @@ test.describe('Navigation et session', () => {
         await login(page);
         await expect(page.locator(SELECTORS.uploadCard)).toBeVisible();
 
-        await page.getByRole('button', { name: 'Mon Compte', exact: true }).click();
-        await expect(page.getByRole('heading', { name: 'Modifier Mon Compte' })).toBeVisible();
+        await page.getByRole('button', { name: 'Mon compte', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'Modifier mon compte' })).toBeVisible();
         await expect(page.locator(SELECTORS.uploadCard)).toHaveCount(0);
 
-        await page.getByRole('button', { name: 'Passeports', exact: true }).click();
+        await page.getByRole('button', { name: 'Mes documents', exact: true }).click();
         await expect(page.locator(SELECTORS.uploadCard)).toBeVisible();
         await expect(resultsRows(page).first()).toBeVisible();
     });
@@ -413,7 +413,7 @@ test.describe('Ce que les cartes permettent sur mobile', () => {
         await login(page);
         await page.locator(SELECTORS.cardItem).first().locator('input[type="checkbox"]').check();
 
-        await page.getByRole('button', { name: 'Modifier Destination' }).click();
+        await page.getByRole('button', { name: 'Modifier la destination' }).click();
         await page.getByPlaceholder('Nouvelle destination').fill('Porto');
         await page.getByRole('button', { name: 'OK', exact: true }).click();
 

@@ -36,3 +36,13 @@ def test_the_documents_are_named_as_alex_asked():
     assert emails.trial_welcome(USER, "t")[0] == "Votre espace ScanID est ouvert — 20 documents offerts"
     assert emails.purchase_confirmation(USER, 1000, EXPIRY)[0] == "Vos 1 000 documents ScanID sont disponibles"
     assert "(20 documents offerts)" in emails.trial_admin_notification(TRIAL)[1]
+
+
+def test_the_purchase_e_mails_name_the_tab_as_the_app_writes_it():
+    """Alex's third check (2026-10-02): the tab is « Mon compte », in sentence
+    case. The purchase e-mails send the customer to it, so they write it the same."""
+    line = "Le détail de vos achats est dans « Mon compte » → « Mes achats »."
+    assert line in emails.purchase_confirmation(USER, 1000, EXPIRY)[1]
+    assert line in emails.unit_purchase_confirmation(USER, 37, EXPIRY)[1]
+    for name, render in TEMPLATES.items():
+        assert "Mon Compte" not in "\n".join(render()), name
