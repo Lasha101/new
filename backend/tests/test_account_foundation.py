@@ -205,3 +205,44 @@ def test_a_failing_smtp_server_never_raises(monkeypatch, caplog):
 def test_outbox_keeps_the_email(outbox):
     assert mailer.send("a@b.fr", "Objet", "Corps", kind="test")
     assert [(e.to, e.subject, e.body, e.kind) for e in outbox] == [("a@b.fr", "Objet", "Corps", "test")]
+
+
+def test_reply_to_comes_from_mail_reply_to_unless_the_caller_names_one(outbox, monkeypatch):
+    monkeypatch.delenv("MAIL_REPLY_TO", raising=False)
+    assert mailer.send("a@b.fr", "Objet", "Corps", kind="test")
+    monkeypatch.setenv("MAIL_REPLY_TO", "contact@scanid.fr")
+    assert mailer.send("a@b.fr", "Objet", "Corps", kind="test")
+    assert mailer.send("contact@scanid.fr", "Objet", "Corps", kind="trial_notification", reply_to="marie@agence.fr")
+    # Unset: no Reply-To, as before. Set: the default. The caller's value wins.
+    assert [e.reply_to for e in outbox] == [None, "contact@scanid.fr", "marie@agence.fr"]
+
+
+def test_smtp_from_the_apps_own_mailbox_sends_replies_to_contact(monkeypatch):
+    sent = []
+
+    class FakeSMTP:
+        def __init__(self, host, port, timeout):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *exc):
+            return False
+        def starttls(self, context):
+            pass
+        def login(self, username, password):
+            sent.append(("login", username))
+        def send_message(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(mailer.smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setenv("MAIL_BACKEND", "smtp")
+    monkeypatch.setenv("SMTP_HOST", "smtp.ionos.fr")
+    monkeypatch.setenv("SMTP_USERNAME", "devis@scanid.fr")
+    monkeypatch.setenv("MAIL_FROM", "ScanID <devis@scanid.fr>")
+    monkeypatch.setenv("MAIL_REPLY_TO", "contact@scanid.fr")
+
+    assert mailer.send("client@agence.fr", "Bienvenue", "Répondez simplement à cet e-mail.", kind="trial_welcome")
+
+    assert sent[0] == ("login", "devis@scanid.fr")
+    assert sent[1]["From"] == "ScanID <devis@scanid.fr>"
+    assert sent[1]["Reply-To"] == "contact@scanid.fr"

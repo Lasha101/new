@@ -16,7 +16,9 @@ application tasks that followed it.
 >    write only with permission; never connect to the VPS without the user's go-ahead). The user's
 >    rule (§F.1, repeated for §G, §H and §I): a demand of the current prompt wins over a restriction
 >    of this file.
-> 2. Read **§I** (the current task, 2026-10-03 — Alex's « third check ») first. **§I.0.1 « RESUME HERE »
+> 2. **NEWEST (2026-10-03, evening): §J — the app's own mailbox devis@scanid.fr. Resume at §J.0 « RESUME HERE »
+>    first** (one instruction per message — the user's rule); then come back to §I.0.1.
+>    Read **§I** (the current task, 2026-10-03 — Alex's « third check ») too. **§I.0.1 « RESUME HERE »
 >    is the ordered to-do list, with the exact commands — start there.** §I.0.0 lists every prompt of
 >    the session (what is done, what is left); §I.0 holds the state, the checklists and the expected
 >    `git status`; §I.5 holds the ship steps, the server runbook and the answers for Alex. §B.0.3
@@ -105,6 +107,106 @@ they applied to the previous one (v4).
   the user asked for: `site.html` = the v4 build (`frontend/site/`), `site1.html` = the
   build before it (`frontend/site1/`). They do **not** show v5. They are gitignored (root
   `.gitignore`: `/site.html`, `/site[0-9]*.html`), so `git add .` does not stage them.
+
+---
+
+## J. TASK J (2026-10-03, evening) — THE APP'S OWN MAILBOX devis@scanid.fr (§I.0.1 item 7a)
+
+### J.0 ▶ RESUME HERE — state and checklist
+
+**The user's rule for this task: ONE instruction per message** (« You provide one instruction each time for me »); the
+user runs every Git / server command and pastes the output; the assistant checks GitHub and the public site itself.
+
+- [x] **J1 — code + tests (assistant): DONE** — §J.4; backend **368 passed**
+- [ ] **J2 — the user commits + pushes** (its own commit, not mixed with task I's `a769f33`); « CI » / « Deploy » green
+  (the assistant reads them from the GitHub API). **Instruction given:** `cd /home/lasha/Public/new && git add . &&
+  git commit -m "Mail: MAIL_REPLY_TO setting for the app's own mailbox" && git push origin master` — expected `git status --short` before it: 5 ` M` paths
+  (`SCANID-HANDOVER.md`, `backend/.env.example`, `backend/config.py`, `backend/mailer.py`,
+  `backend/tests/test_account_foundation.py`)
+  The user: « I already pushed what is commited! » → true for task I (`a769f33` = `origin/master`, checked); J's 5
+  paths are NOT committed yet (checked) → explained, the same instruction repeated.
+- [ ] **J3 — VPS:** §J.5 steps 1–2 (ssh; the nginx reload + `verify-front-end.sh` = task I's item 5 step 3)
+- [ ] **J4 — VPS:** §J.5 steps 3–7 (backup → swap → diff → test e-mail **before** the restart → restart)
+- [ ] **J5 — finish:** laptop checks (assistant: §I.5 step 4 + `/api/config`), §J.5 step 8 (delete the backup), mark J
+  done, §I.0.1 item 5 → SHIPPED, memory notes
+
+### J.1 The demand, verbatim (user, 2026-10-03, evening)
+
+> Alex has created this email: devis@scanid.fr!
+> Now i have the password and we can setup to avoid manual changing each time Alex changes password
+
+Then, mid-turn: « You provide one instruction each time for me ».
+
+### J.2 Findings (read in the code before touching anything)
+
+- `mailer.send(to, subject, body, kind, reply_to=None)`: From = `config.mail_from()` (`MAIL_FROM`, default « ScanID
+  <contact@scanid.fr> »); a `Reply-To` only when the caller passes one — only `trial_notification` does (the requester,
+  `main.py` ≈ l. 895). The SMTP login = `SMTP_USERNAME` / `SMTP_PASSWORD`; the envelope sender = the From address.
+- IONOS sends only under the authenticated mailbox → once the login is devis@, **From must be devis@** too. Without a
+  `Reply-To`, customers' replies (the welcome e-mail says « Répondez simplement à cet e-mail ») would then reach devis@
+  instead of contact@ — a change of today's behaviour (§0.1) → **the small code change is necessary**.
+- The server's `.env` is read by python-dotenv (`main.py` `load_dotenv()`): inside single quotes everything is literal
+  except `\\` and `\'` → the swap command refuses a password holding `'` or `\` (nothing changed then; another quoting
+  is needed — ask).
+- No DNS change: SPF `include:_spf-eu.ionos.com` and the IONOS DKIM keys cover every mailbox of scanid.fr; From stays on
+  scanid.fr → DMARC-aligned. `MAIL_ADMIN_TO` (trial requests, payment anomalies) stays contact@ (default).
+- Bounces go to the envelope sender = devis@ → **later, with Alex (parked):** forward devis@'s incoming mail to contact@
+  in its IONOS settings, so bounces and stray replies are seen.
+
+### J.3 Decisions
+
+- `config.mail_reply_to()` = `MAIL_REPLY_TO`, **default empty = today's behaviour** (no `Reply-To`). `mailer.send`
+  applies it when the caller gives no `reply_to` — in both backends (the outbox records the effective value). The
+  caller's `reply_to` wins (the trial notification keeps the requester).
+- Server lines after J4: `SMTP_HOST=smtp.ionos.fr` (unchanged), `SMTP_USERNAME=devis@scanid.fr`, `SMTP_PASSWORD='<the
+  devis@ password>'`, `MAIL_FROM='ScanID <devis@scanid.fr>'`, `MAIL_REPLY_TO=contact@scanid.fr`. Customers then see
+  « ScanID <devis@scanid.fr> »; « Répondre » goes to contact@scanid.fr.
+- **Rule after J:** contact@'s password can change freely (the server no longer holds it). devis@'s password must not
+  change without telling the user (the server holds it) — to say to Alex when item 4 is un-parked (and drop the
+  optional-mailbox paragraph from item 4's message: done; answer 1's « one rule » now concerns devis@).
+
+### J.4 Stages — record
+
+- **J1 — DONE (2026-10-03, evening).** `backend/config.py`: `mail_reply_to()` (`MAIL_REPLY_TO`, stripped, default
+  empty). `backend/mailer.py` `send()`: `reply_to = reply_to or config.mail_reply_to() or None` before both backends.
+  `backend/.env.example`: a commented `# MAIL_REPLY_TO=contact@scanid.fr` line. `backend/tests/test_account_foundation.py`:
+  two tests (outbox: unset → `None`, set → contact@, the caller's value wins; SMTP: login devis@, From « ScanID
+  <devis@scanid.fr> », Reply-To contact@). Backend **368 passed** (366 + 2); the two new tests **fail without** the
+  `mailer.py` line (checked, then restored). No README change (it documents no mail setting).
+  **Runbook dry-run (scratchpad copy, `sudo` removed):** step 4 keeps `$ # " % ; & |` and leading / trailing spaces
+  exactly (read back with python-dotenv), refuses `'` and `\` with the file unchanged, is idempotent (two runs = one),
+  keeps mode 600; step 6's one-liner (outbox backend instead of SMTP) → « SENT », the message carries `From: ScanID
+  <devis@scanid.fr>` and `Reply-To: contact@scanid.fr`.
+
+### J.5 Server runbook — the user's, ONE instruction per message
+
+1. `ssh -o ServerAliveInterval=30 lasha@87.106.22.235`
+2. nginx (task I item 5 step 3; covers F, G, H, I): `sudo nginx -t && sudo systemctl reload nginx && bash
+   /opt/travelapp/ops/verify-front-end.sh` → « syntax is ok », « test is successful », « ALL CHECKS PASSED ». If
+   `nginx -t` fails nothing is reloaded and the site keeps running — paste the output.
+3. backup outside `backend/` (« Deploy » runs `rsync --delete` there): `sudo cp -a /opt/travelapp/backend/.env
+   ~/env-before-devis && sudo ls -l ~/env-before-devis` → `-rw------- 1 deploy deploy 2840 …`
+4. swap — `sudo -v` first (so sudo's own prompt, if any, comes before the mailbox prompt), the password at a hidden
+   prompt (never on a command line, never in the chat), idempotent (re-running gives the same file), owner and mode kept
+   (GNU `sed -i` keeps them; `tee -a` appends):
+   ```bash
+   sudo -v && IFS= read -rsp 'devis@scanid.fr password: ' P && echo && case "$P" in *\'*|*\\*) echo "STOP: the password contains ' or \\ - nothing changed";; *) sudo sed -i -E '/^(SMTP_USERNAME|SMTP_PASSWORD|MAIL_FROM|MAIL_REPLY_TO)=/d' /opt/travelapp/backend/.env && printf "SMTP_USERNAME=devis@scanid.fr\nSMTP_PASSWORD='%s'\nMAIL_FROM='ScanID <devis@scanid.fr>'\nMAIL_REPLY_TO=contact@scanid.fr\n" "$P" | sudo tee -a /opt/travelapp/backend/.env > /dev/null && echo swapped;; esac; unset P
+   ```
+5. diff, the passwords hidden: `sudo diff ~/env-before-devis /opt/travelapp/backend/.env | sed -E
+   's/(SMTP_PASSWORD=).*/\1<hidden>/'; sudo ls -l /opt/travelapp/backend/.env` → expected `10,11c10,13`, `<` the old
+   SMTP_USERNAME (contact@) and SMTP_PASSWORD, `>` the four new lines; still `deploy deploy` `-rw-------`.
+6. a real test e-mail **before** the restart (the running service still uses the old lines until step 7), through the
+   app's own mailer as the service would send it; the user types the destination address at the prompt (one they read):
+   **Only after J2's « Deploy » is green** (the `Reply-To` needs the new `mailer.py`):
+   ```bash
+   sudo -u deploy env PYTHONPATH=/opt/travelapp/backend /opt/travelapp/venv/bin/python -c "from dotenv import load_dotenv; load_dotenv('/opt/travelapp/backend/.env'); import mailer; print('SENT' if mailer.send(input('Send the test to: '), 'ScanID - test devis@', 'Test of the new sender. Reply to this e-mail: the reply must go to contact@scanid.fr.', 'smtp_test') else 'NOT SENT')"
+   ```
+   → « SENT »; in the inbox: From « ScanID <devis@scanid.fr> », « Reply » addressed to contact@scanid.fr. « NOT SENT »
+   + « Email not sent: kind=smtp_test error=SMTPAuthenticationError » = wrong password → redo step 4 (the service is
+   untouched: it still runs on the old lines).
+7. `sudo systemctl restart travelapp.service; sleep 5; systemctl is-active travelapp.service; curl -s
+   http://127.0.0.1:8001/config` → `active`, `{"signup":false,"trial":true}`
+8. once everything works: `sudo rm ~/env-before-devis; ls -l ~/env-before-devis` → « No such file or directory »
 
 ---
 
@@ -197,15 +299,22 @@ does, with item 4), then **« Also open »** (task D's checks 5–7; the VPS upd
   voice (first person — no « Lasha … him »), answers 1–7 of §I.5 condensed, « Alex's trial test », the optional
   mailbox request; the admin-password request left out (already sent, item 2); « live with the next deployment — I'll
   confirm » for sections 4 and 5 (the confirmation goes with item 6's list). Waiting for « sent ».
-- [ ] **5. Ship task I** — ▶ **IN PROGRESS (2026-10-03, resumed session)**: pre-commit check by the assistant —
+- [ ] **5. Ship task I** — **steps 1–2 DONE: committed `a769f33` « App: sentence-case labels and « Mes documents » tab »,
+  pushed (`origin/master` = `a769f33`), « CI » ✅ and « Deploy » ✅ (both 17:46 UTC, read by the assistant from the GitHub
+  API — the repository `Lasha101/new` is public), live bundle `index-CJFY_9p8.js` = task I is LIVE.** Left: step 3 (the
+  nginx reload — now done inside §J.5 step 2, same server visit), step 4 (laptop checks), step 5 (SHIPPED marks).
+  History: ▶ IN PROGRESS (2026-10-03, resumed session): pre-commit check by the assistant —
   `git status --short` = §I.0 (14 paths, nothing staged), no secret in the handover's diff (only the empty
-  `.env.example` lines quoted), the user's commits are one-line messages without a trailer; **step 1a given:**
-  `cd /home/lasha/Public/new && git add . && git status --short` (expect 13 `M ` + 1 `A `). §I.5 steps 1–5: `git add .` → commit (the message is there) → `git push origin master` →
+  `.env.example` lines quoted), the user's commits are one-line messages without a trailer; **step 1a DONE:** `git add .`
+  → 14 staged (13 `M ` + `A  frontend/tests/e2e/labels.spec.js`, nothing unstaged — checked by the assistant).
+  **Step 1b given** (the user asked for a short message): `git add . && git commit -m "App: sentence-case labels and « Mes documents » tab"`
+  (the second `git add .` picks up the handover's latest note). §I.5 steps 1–5: `git add .` → commit (the message is there) → `git push origin master` →
   « CI » / « Deploy » green → the nginx reload on the VPS + `verify-front-end.sh` → the laptop checks (the assistant can
   run them) → mark F, G, H and I SHIPPED + the memory notes.
 - [ ] **6. The list for Alex** (his question 3.1) — §H.5 A, read-only on the VPS (the journal's range, the `"POST
   /users/register HTTP/1.1" 200` lines, the database query); then send Alex the list, or « none ».
-- [ ] ⏸ PARKED (needs Alex) **7. Later, with Alex:** (a) a mailbox for the app alone (e.g. noreply@scanid.fr), so that a contact@ password
+- [ ] **7. (a) ▶ ACTIVE → §J** (Alex created **devis@scanid.fr**, the user has its password — 2026-10-03 evening);
+  (b) ⏸ PARKED (needs Alex). Original text: **Later, with Alex:** (a) a mailbox for the app alone (e.g. noreply@scanid.fr), so that a contact@ password
   change never breaks the app's e-mails — needs Alex's mailbox and the sender address customers will see → code change
   (`MAIL_FROM` + a `Reply-To` contact@: the mailer supports it, no caller sets it yet), tests, deploy, then swap the three
   `.env` lines (order agreed with the user: only after B — B is done). Design noted 2026-10-03: a `MAIL_REPLY_TO` setting
@@ -264,6 +373,7 @@ does, with item 4), then **« Also open »** (task D's checks 5–7; the VPS upd
 | 2 | « He will change the admin password tell me what 's next? » | **Item 2:** Alex informed, not confirmed → left unticked (tick on his confirmation). **Item 3:** Alex's (needs the admin login) → rides on item 4. **Item 4 given:** the full message for Alex (texts re-verified in the code first: `emails.py` subjects « Demande d'essai — … » / « Votre espace ScanID est ouvert — 20 documents offerts », `TRIAL_CREDITS` 20, the 48 h link, essai.js « Dès sa validation, vous recevez à … », the App.jsx tabs and buttons) | « sent » → item 5 (ship), one command per message |
 | 3 | « we will forget the tasks that requires Alex's engagemment and we will continue to resolve tha task that we can do without Alex! » | **Recorded:** items 2, 3, 4, 7 ⏸ PARKED in §I.0.1 (and the resume protocol skips them). **Item 5 started:** pre-commit check (14 paths, nothing staged, no secret in the diff); step 1a given — `git add . && git status --short` | Item 5 (commit → push → « CI » / « Deploy » → nginx reload + `verify-front-end.sh` → laptop checks → SHIPPED), item 6 (the list, read-only), « Also open » |
 | 4 | « there is something outside of .gitignore that must be in? » | **Checked — no, both ways.** `git add .` stages exactly the 14 paths (the only `??` is `labels.spec.js`). Ignored and rightly so: `backend/.env`, `frontend/.env.local` (secrets); the root's `DUBROVNIK.pdf` and « ITALIE 2 PIECES IDENTITE - copie.pdf » (real identity documents); `backend/bench_*` (local OCR benchmarks); `newvenv/`, caches, `frontend/dist/` (built by CI), `test-results/`, `tests/.browser-libs/`, `tests/fixtures/files/` (regenerated by `npm run test:fixtures`); `site.html`, `site1.html`. Nothing ignored is needed: `labels.spec.js` imports only `test-base.js` and `helpers/index.js` (tracked); « CI » runs the build + unit tests only. Tracked env-like file: only `backend/.env.example` (empty values) | Step 1a still to run |
+| 5 | « provide a short commit message » | **Step 1a confirmed DONE** (the user had run `git add .`: 14 staged, nothing unstaged). **Step 1b given:** `git add . && git commit -m "App: sentence-case labels and « Mes documents » tab"` — one line, the « App: … » style of `c027cfa`, no trailer (the user's commits carry none) | Paste the commit's output → the hash in §I.0 « Ship progress » 1, then step 1c `git push origin master` |
 
 ### I.0 State in one line (update after every stage)
 
@@ -273,8 +383,8 @@ session). NOW: §I.0.1 item 5 — shipping task I, one command per message (then
 re-implement anything.** Nothing committed yet (§0.3: the user commits).
 
 **Ship progress** (tick as the user reports each §I.5 step; one command per message when guiding):
-- [ ] 1 committed (hash: …) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD`
-- [ ] 2 « CI » green · « Deploy » green — live bundle `index-CJFY_9p8.js`
+- [x] 1 committed (hash: **`a769f33`**) and pushed — `git ls-remote origin refs/heads/master` = local `HEAD` (checked)
+- [x] 2 « CI » green · « Deploy » green (17:46 UTC) — live bundle `index-CJFY_9p8.js` (checked)
 - [ ] 3 nginx reloaded on the VPS · `ops/verify-front-end.sh` → ALL CHECKS PASSED (ticks §F.0 step 4, §G.0 step 3, §H.0
   step 3)
 - [ ] 4 laptop checks of §I.5 step 4 (= §G.5 step 4 + §F.6 step 5 + task I's bundle check)
@@ -490,6 +600,7 @@ dependency, no migration, no `.env` change, **no vhost change** (the server's vh
 **The user ships it — one command per message when guided:**
 1. **Laptop:** `git status --short` (= §I.0) → `git add --dry-run . | wc -l` (14) → `git add .` →
    `git commit -m "App: sentence-case labels, « Mes documents » tab, « Mon compte » in the purchase e-mails"`
+   (**used instead, 2026-10-03 — the user asked for a short one: `App: sentence-case labels and « Mes documents » tab`**)
    → `git push origin master`.
 2. **GitHub:** « CI » green, « Deploy » green (« NOTE: nginx not reloaded … » is expected — deploy account). The deploy
    restarts the backend (the two purchase e-mails) and ships the bundle `index-CJFY_9p8.js`.

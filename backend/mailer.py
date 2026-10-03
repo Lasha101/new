@@ -67,6 +67,8 @@ def send(to: str, subject: str, body: str, kind: str, reply_to: Optional[str] = 
     an exception would only be swallowed less legibly.
     """
     backend = config.mail_backend()
+    # The caller's reply_to wins (the trial notification: the requester).
+    reply_to = reply_to or config.mail_reply_to() or None
     try:
         if backend == "outbox":
             with _outbox_lock:

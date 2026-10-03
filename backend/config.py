@@ -175,6 +175,15 @@ def mail_admin_to() -> str:
     return os.getenv("MAIL_ADMIN_TO", "contact@scanid.fr")
 
 
+def mail_reply_to() -> str:
+    """Reply-To of the emails that name no one else; empty: replies go to MAIL_FROM.
+
+    contact@scanid.fr when the app sends from a mailbox of its own (MAIL_FROM and
+    SMTP_USERNAME devis@scanid.fr), so customers' replies still reach Alex and a
+    change of contact@'s password never touches the server."""
+    return os.getenv("MAIL_REPLY_TO", "").strip()
+
+
 # --- Password links ------------------------------------------------------
 # « Mot de passe oublié ? » and the free-trial welcome email: 48 hours.
 PASSWORD_TOKEN_HOURS = _env_int("PASSWORD_TOKEN_HOURS", 48)
