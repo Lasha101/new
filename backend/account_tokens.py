@@ -27,9 +27,10 @@ def _digest(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
-def issue(db: Session, user_id: str, purpose: str) -> str:
-    """Creates a link token for the user and returns the raw value (for the
-    email only — it is not retrievable afterwards)."""
+def add(db: Session, user_id: str, purpose: str) -> str:
+    """issue() without its commit: the caller commits the link together with its
+    own changes (an account opened by an « à la carte » purchase gets its link in
+    the same transaction as its credits)."""
     now = datetime.now(timezone.utc)
     db.query(models.AuthToken).filter(
         models.AuthToken.user_id == str(user_id),
@@ -40,6 +41,13 @@ def issue(db: Session, user_id: str, purpose: str) -> str:
         user_id=str(user_id), token_hash=_digest(raw), purpose=purpose,
         created_at=now, expires_at=now + timedelta(hours=config.PASSWORD_TOKEN_HOURS),
     ))
+    return raw
+
+
+def issue(db: Session, user_id: str, purpose: str) -> str:
+    """Creates a link token for the user and returns the raw value (for the
+    email only — it is not retrievable afterwards)."""
+    raw = add(db, user_id, purpose)
     db.commit()
     return raw
 

@@ -127,6 +127,88 @@ def test_an_existing_customer_is_asked_to_log_in(client, db_session):
     assert response.status_code == 400 and "Connectez-vous" in response.json()["detail"]
 
 
+# Alex, 03/10/2026: « an e-mail whose trial request is still waiting must also be
+# able to buy a pack on /app/inscription; the account then takes the details
+# typed in that form » — it was refused as « already used » before.
+TRIAL = {"nom": "Claire Essai", "societe": "Agence Essai", "email": "claire.achat@agence-test.fr",
+         "telephone": "+33 6 00 00 00 09", "consentement": True}
+
+
+def test_an_e_mail_whose_trial_request_waits_buys_a_pack_and_the_account_takes_the_form(client, db_session):
+    import trials
+    assert client.post("/trial-requests", json=TRIAL).status_code == 201
+    waiting = db_session.query(models.User).one()
+    assert (waiting.status, waiting.page_credits) == ("pending", 20)
+
+    response = client.post("/signup", json=signup_payload())          # the same address, another letter case
+    assert response.status_code == 200, response.text
+
+    db_session.expire_all()
+    user = db_session.query(models.User).one()                         # the same account, not a second one
+    assert (user.id, user.status, user.page_credits, user.email, user.user_name) == (
+        waiting.id, "active", 0, "claire.achat@agence-test.fr", "claire.achat@agence-test.fr")
+    assert (user.first_name, user.last_name, user.company, user.phone_number) == (
+        "Claire", "Achat", "Agence Test Voyages", "+33 1 00 00 00 00")
+    assert (user.siret, user.vat_number, user.billing_street, user.billing_postal_code, user.billing_city,
+            user.billing_country) == (SIRET, "FR12345678901", "1 rue de l'Essai", "75001", "Paris", "France")
+    assert client.post("/token", data={"username": "claire.achat@agence-test.fr", "password": STRONG}).status_code == 200
+    request = db_session.query(models.TrialRequest).one()
+    assert request.status == "pending"                                  # still Alex's to decide
+    assert parse_qs(urlsplit(response.json()["checkout_url"]).query)["client_reference_id"] == [user.id]
+
+    mailer.OUTBOX.clear()
+    assert signed(client, completed(user.id)).json()["result"] == "credited"
+    db_session.expire_all()
+    assert db_session.get(models.User, user.id).page_credits == 1000
+    # « Valider » then adds the trial's 20 documents — no new password link.
+    request_out, _, already_open = trials.validate(db_session, request.id)
+    assert (request_out["status"], already_open) == ("validated", True)
+    db_session.expire_all()
+    assert db_session.get(models.User, user.id).page_credits == 1020
+
+
+def test_an_e_mail_whose_trial_request_was_refused_buys_a_pack_too(client, db_session):
+    import trials
+    assert client.post("/trial-requests", json=TRIAL).status_code == 201
+    trials.reject(db_session, db_session.query(models.TrialRequest).one().id)
+    assert client.post("/signup", json=signup_payload()).status_code == 200
+    db_session.expire_all()
+    user = db_session.query(models.User).one()
+    assert (user.status, user.page_credits, user.first_name) == ("active", 0, "Claire")
+    assert db_session.query(models.TrialRequest).one().status == "rejected"
+
+
+def test_a_validated_trial_is_an_open_account_asked_to_log_in(client, db_session):
+    import trials
+    assert client.post("/trial-requests", json=TRIAL).status_code == 201
+    trials.validate(db_session, db_session.query(models.TrialRequest).one().id)
+    response = client.post("/signup", json=signup_payload())
+    assert response.status_code == 400 and "Connectez-vous" in response.json()["detail"]
+    assert db_session.query(models.Purchase).count() == 0
+
+
+def test_an_account_a_purchase_opens_while_the_form_is_sent_is_already_used(client, db_session, monkeypatch):
+    import trials
+    from sqlalchemy import update as sa_update
+    assert client.post("/trial-requests", json=TRIAL).status_code == 201
+    real = trials.unopened_account
+
+    def opened_meanwhile(db, email):
+        row = real(db, email)
+        db.execute(sa_update(models.User).where(models.User.id == row.id).values(status="active", page_credits=7))
+        db.commit()
+        return row
+
+    monkeypatch.setattr(trials, "unopened_account", opened_meanwhile)
+    response = client.post("/signup", json=signup_payload())
+    assert response.status_code == 400 and "Connectez-vous" in response.json()["detail"]
+    db_session.expire_all()
+    user = db_session.query(models.User).one()
+    assert (user.page_credits, user.first_name) == (7, "Claire")         # untouched by the form
+    assert user.hashed_password.startswith("!pending-trial-")
+    assert db_session.query(models.Purchase).count() == 0
+
+
 def test_a_logged_in_customer_orders_without_the_form(client, db_session):
     user = make_user(db_session, "fidele")
     assert client.post("/orders", json={"pack": 3000}).status_code == 401

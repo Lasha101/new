@@ -179,7 +179,8 @@ def test_valider_sends_the_welcome_email_and_the_client_logs_in_with_20_credits(
     outbox.clear()
 
     decided = client.post(f"/admin/trial-requests/{request_id}/validate", headers=admin)
-    assert decided.status_code == 200 and decided.json()["status"] == "validated"
+    assert decided.status_code == 200
+    assert (decided.json()["status"], decided.json()["account_open"]) == ("validated", False)
     assert client.get("/admin/trial-requests", headers=admin).json() == []
 
     assert len(outbox) == 1
@@ -205,7 +206,8 @@ def test_refuser_sends_nothing_and_the_account_stays_closed(client, db_session, 
     outbox.clear()
 
     refused = client.post(f"/admin/trial-requests/{request_id}/reject", headers=admin)
-    assert refused.status_code == 200 and refused.json()["status"] == "rejected"
+    assert refused.status_code == 200
+    assert (refused.json()["status"], refused.json()["account_open"]) == ("rejected", False)
     assert outbox == []
     assert db_session.query(models.User).filter_by(user_name="marie.test@agence-horizon.fr").one().status == "rejected"
     assert client.post("/auth/forgot-password", json={"identifier": "marie.test@agence-horizon.fr"}).status_code == 200

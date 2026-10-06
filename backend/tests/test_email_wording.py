@@ -18,8 +18,11 @@ TEMPLATES = {
     "password_reset": lambda: emails.password_reset(USER, "raw-token"),
     "trial_admin_notification": lambda: emails.trial_admin_notification(TRIAL),
     "trial_welcome": lambda: emails.trial_welcome(USER, "raw-token"),
+    "trial_credits_added": lambda: emails.trial_credits_added(USER),
     "purchase_confirmation": lambda: emails.purchase_confirmation(USER, 1000, EXPIRY),
     "unit_purchase_confirmation": lambda: emails.unit_purchase_confirmation(USER, 37, EXPIRY),
+    "unit_purchase_welcome": lambda: emails.unit_purchase_welcome(USER, "raw-token", 37, EXPIRY),
+    "unit_purchase_welcome_one": lambda: emails.unit_purchase_welcome(USER, "raw-token", 1, EXPIRY),
     "payment_anomaly": lambda: emails.payment_anomaly("raison", SESSION),
 }
 
@@ -44,5 +47,6 @@ def test_the_purchase_e_mails_name_the_tab_as_the_app_writes_it():
     line = "Le détail de vos achats est dans « Mon compte » → « Mes achats »."
     assert line in emails.purchase_confirmation(USER, 1000, EXPIRY)[1]
     assert line in emails.unit_purchase_confirmation(USER, 37, EXPIRY)[1]
+    assert line in emails.unit_purchase_welcome(USER, "raw-token", 37, EXPIRY)[1]
     for name, render in TEMPLATES.items():
         assert "Mon Compte" not in "\n".join(render()), name

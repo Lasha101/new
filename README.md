@@ -30,12 +30,16 @@ original implementation, with these changes:
    `POST /users/register` no longer exists (closed 2026-10-02). An account is
    opened by a trial request validated in « Demandes d'essai »
    (`/trial-requests`), by the pack purchase (`/app/inscription` →
-   `POST /signup`), or by an admin from « Gérer les utilisateurs ». Admin
+   `POST /signup`), by an « à la carte » purchase (the Stripe webhook opens
+   the buyer's account and e-mails the link to choose its password), or by
+   an admin from « Gérer les utilisateurs ». Admin
    invitation links were removed entirely (endpoints, admin UI and the
    `/register/<token>` page).
 3. **Starting credits** — a trial account gets **20 credits**
    (`TRIAL_CREDITS`); a pack account starts at 0 and receives its pack from
-   the Stripe webhook (1 credit = 1 extracted document), enforced
+   the Stripe webhook (1 credit = 1 extracted document); an account opened
+   by an « à la carte » purchase holds the documents bought only (a waiting
+   trial's 20 come when it is validated), enforced
    server-side; the client cannot influence it.
 4. **French National ID support** — in addition to French passports, the OCR
    pipeline extracts French national identity cards (CNI), both old-format

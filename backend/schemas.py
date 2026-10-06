@@ -109,6 +109,8 @@ class TrialRequestOut(BaseModel):
     status: str
     created_at: datetime
     decided_at: Optional[datetime] = None
+    # A purchase has already opened the account (« Valider » adds the trial's documents).
+    account_open: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 

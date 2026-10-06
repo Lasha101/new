@@ -768,7 +768,10 @@ UNKNOWN_PACK = "Ce pack n'existe pas. Choisissez un pack sur https://scanid.fr/t
 def signup_for_pack(request: Request, payload: schemas.PackSignupRequest, db: Session = Depends(get_db)):
     """/app/inscription: creates the active account with 0 credits and a pending
     purchase, then returns the pack's Payment Link to redirect to. Credits
-    arrive with the Stripe webhook, never before."""
+    arrive with the Stripe webhook, never before. An e-mail whose trial request
+    still waits (or was refused) is not « already used »: that account takes
+    the details typed here and opens, without the trial's documents — « Valider »
+    adds them (Alex, 03/10/2026)."""
     if not billing.is_known_pack(payload.pack):
         raise HTTPException(status_code=400, detail=UNKNOWN_PACK)
     fields = {name: (getattr(payload, name) or "").strip() for name in (
@@ -794,19 +797,38 @@ def signup_for_pack(request: Request, payload: schemas.PackSignupRequest, db: Se
         raise HTTPException(status_code=400, detail=billing_identity.VAT_ERROR)
     if not payload.consent:
         raise HTTPException(status_code=400, detail="Veuillez accepter le traitement de vos données pour créer le compte.")
-    if crud.get_user_by_login_identifier(db, email) or trials._email_taken(db, email):
-        raise HTTPException(status_code=400, detail="Un compte existe déjà avec cette adresse email. Connectez-vous pour acheter ce pack.")
+    already_used = "Un compte existe déjà avec cette adresse email. Connectez-vous pour acheter ce pack."
+    unopened = trials.unopened_account(db, email)
+    if unopened is None and (crud.get_user_by_login_identifier(db, email) or trials._email_taken(db, email)):
+        raise HTTPException(status_code=400, detail=already_used)
     password_policy.assert_valid_password(payload.password, email=email, user_name=email)
 
-    user = crud.create_user(db=db, user=schemas.UserCreate(
-        first_name=fields["first_name"], last_name=fields["last_name"], email=email,
-        phone_number=fields["phone_number"], user_name=email, password=payload.password, page_credits=0,
-    ), role="user")
-    row = db.get(models.User, user["id"])
-    row.company, row.siret, row.vat_number = fields["company"], siret, vat or None
-    row.billing_street, row.billing_postal_code = fields["billing_street"], fields["billing_postal_code"]
-    row.billing_city, row.billing_country = fields["billing_city"], fields["billing_country"]
-    db.commit()
+    billing_fields = {"company": fields["company"], "siret": siret, "vat_number": vat or None,
+                      "billing_street": fields["billing_street"], "billing_postal_code": fields["billing_postal_code"],
+                      "billing_city": fields["billing_city"], "billing_country": fields["billing_country"]}
+    if unopened is not None:
+        user = {"id": unopened.id}
+        # Conditional: if a purchase opened it meanwhile, it is « already used ».
+        opened = db.execute(
+            sa_update(models.User)
+            .where(models.User.id == user["id"], models.User.status.in_(("pending", "rejected")))
+            .values(first_name=fields["first_name"], last_name=fields["last_name"],
+                    phone_number=fields["phone_number"], hashed_password=auth.get_password_hash(payload.password),
+                    status="active", page_credits=0, **billing_fields)
+        ).rowcount
+        if not opened:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=already_used)
+        db.commit()
+    else:
+        user = crud.create_user(db=db, user=schemas.UserCreate(
+            first_name=fields["first_name"], last_name=fields["last_name"], email=email,
+            phone_number=fields["phone_number"], user_name=email, password=payload.password, page_credits=0,
+        ), role="user")
+        row = db.get(models.User, user["id"])
+        for name, value in billing_fields.items():
+            setattr(row, name, value)
+        db.commit()
     purchase = billing.create_pending_purchase(db, user["id"], payload.pack)
     return {"checkout_url": billing.checkout_url(payload.pack, email, user["id"]), "purchase_id": purchase["id"]}
 
@@ -825,9 +847,11 @@ def order_pack(payload: schemas.OrderRequest, db: Session = Depends(get_db), cur
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """checkout.session.completed (and async_payment_succeeded, for bank
     transfers) → credits the pack paid for — or, for the « à la carte » link,
-    the quantity of documents bought — once. Signature verified with
-    STRIPE_WEBHOOK_SECRET. Anything that cannot be credited automatically is
-    acknowledged (Stripe would otherwise retry for days) and reported to Alex."""
+    the quantity of documents bought, opening the buyer's account when it is
+    not open yet (its welcome e-mail carries the link to choose the password) —
+    once. Signature verified with STRIPE_WEBHOOK_SECRET. Anything that cannot
+    be credited automatically is acknowledged (Stripe would otherwise retry for
+    days) and reported to Alex."""
     secret = config.stripe_webhook_secret()
     if not secret:
         return JSONResponse(status_code=503, content={"detail": "Webhook Stripe non configuré."})
@@ -845,13 +869,18 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db
 
     outcome = await asyncio.to_thread(billing.credit_checkout_session, db, session)
     if outcome.status == "credited":
-        if outcome.pack == billing.UNIT_PACK:
+        kind = "purchase_confirmation"
+        if outcome.pack == billing.UNIT_PACK and outcome.password_token:
+            logger.info("Stripe: %s documents à la carte crédités, compte ouvert par l'achat (session traitée).", outcome.credits)
+            subject, text_body = emails.unit_purchase_welcome(outcome.user, outcome.password_token, outcome.credits, outcome.expires_at)
+            kind = "purchase_welcome"
+        elif outcome.pack == billing.UNIT_PACK:
             logger.info("Stripe: %s documents à la carte crédités (session traitée).", outcome.credits)
             subject, text_body = emails.unit_purchase_confirmation(outcome.user, outcome.credits, outcome.expires_at)
         else:
             logger.info("Stripe: pack %s crédité (session traitée).", outcome.pack)
             subject, text_body = emails.purchase_confirmation(outcome.user, outcome.pack, outcome.expires_at)
-        background_tasks.add_task(mailer.send, outcome.user["email"], subject, text_body, "purchase_confirmation")
+        background_tasks.add_task(mailer.send, outcome.user["email"], subject, text_body, kind)
         await manager.send_update(outcome.user["id"], {"type": "credit_update"})
     elif outcome.status == "unmatched":
         logger.error("Stripe: paiement non crédité automatiquement (%s).", outcome.reason)
@@ -904,13 +933,18 @@ def list_trial_requests(db: Session = Depends(get_db)):
 @app.post("/admin/trial-requests/{request_id}/validate", response_model=schemas.TrialRequestOut, dependencies=[Depends(auth.require_admin)])
 def validate_trial_request(request_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Activates the account and emails the welcome message with a 48-hour link
-    to choose the password."""
+    to choose the password. When a purchase has already opened the account, adds
+    the trial's documents to it and only says so (no link: its access exists)."""
     if not mailer.is_configured():
         raise HTTPException(status_code=503, detail="L'envoi d'emails n'est pas configuré : le compte n'a pas été activé.")
     try:
-        trial, user = trials.validate(db, request_id)
+        trial, user, already_open = trials.validate(db, request_id)
     except trials.TrialRequestError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    if already_open:
+        subject, text_body = emails.trial_credits_added(user)
+        background_tasks.add_task(mailer.send, user["email"], subject, text_body, "trial_credits")
+        return trial
     raw_token = account_tokens.issue(db, user["id"], account_tokens.PURPOSE_SET)
     subject, text_body = emails.trial_welcome(user, raw_token)
     background_tasks.add_task(mailer.send, user["email"], subject, text_body, "trial_welcome")
@@ -919,7 +953,8 @@ def validate_trial_request(request_id: str, background_tasks: BackgroundTasks, d
 
 @app.post("/admin/trial-requests/{request_id}/reject", response_model=schemas.TrialRequestOut, dependencies=[Depends(auth.require_admin)])
 def reject_trial_request(request_id: str, db: Session = Depends(get_db)):
-    """Refuses the request. No email: Alex answers by hand if useful."""
+    """Refuses the request. No email: Alex answers by hand if useful. An account
+    a purchase has already opened stays open (only the request is refused)."""
     try:
         return trials.reject(db, request_id)
     except trials.TrialRequestError as e:

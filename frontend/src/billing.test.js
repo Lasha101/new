@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { readFileSync } from 'node:fs';
+import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, UNIT_PAYMENT_LINK, unitCheckoutUrl, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 test('the four packs and their HT prices match the Stripe sheet', () => {
     assert.deepEqual(Object.keys(PACKS), ['100', '1000', '3000', '5000']);
@@ -27,6 +28,17 @@ test('« Mes achats »: a pack by its size, « à la carte » by the documents b
     assert.equal(purchaseLabel({ pack: 100, credits: 100 }), 'Pack 100');
     assert.equal(purchaseLabel({ pack: 0, credits: 1250 }), 'À la carte · 1 250 documents');
     assert.equal(purchaseLabel({ pack: 0, credits: 1 }), 'À la carte · 1 document');
+});
+
+test('« à la carte » from the app: the site\'s link, tied to the account by its id and e-mail', () => {
+    // The site's « Acheter à l'unité » button (tarifs.html, Alex 03/10/2026) opens the same link.
+    const tarifs = readFileSync(new URL('../ScanID-nouveau-site-2026-09-30/nouveau-site/tarifs.html', import.meta.url), 'utf8');
+    assert.ok(tarifs.includes(`data-pack="unite" href="${UNIT_PAYMENT_LINK}"`));
+    const user = { id: '0f3c9a1e2b4d4c6f8a0b1c2d3e4f5a6b', email: 'Marie.Dupont+agence@exemple.fr' };
+    assert.equal(unitCheckoutUrl(user), 'https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05'
+        + '?client_reference_id=0f3c9a1e2b4d4c6f8a0b1c2d3e4f5a6b&locked_prefilled_email=Marie.Dupont%2Bagence%40exemple.fr');
+    const url = new URL(unitCheckoutUrl(user));
+    assert.deepEqual([...url.searchParams], [['client_reference_id', user.id], ['locked_prefilled_email', user.email]]);
 });
 
 test('SIRET: 14 digits and a valid Luhn key, spaces allowed when typing', () => {

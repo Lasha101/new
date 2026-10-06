@@ -25,6 +25,16 @@ export const purchaseLabel = purchase => (purchase.pack === UNIT_PACK
     ? `À la carte · ${formatCount(purchase.credits)} document${purchase.credits > 1 ? 's' : ''}`
     : `Pack ${formatCount(purchase.pack)}`);
 
+/** The « à la carte » Stripe link (Alex, 03/10/2026) — the « Acheter à l'unité »
+ * button of the site's tarifs.html: 1,50 € HT the document, quantity 1 to 99. */
+export const UNIT_PAYMENT_LINK = 'https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05';
+
+/** The same link from inside the app: Stripe sends client_reference_id back
+ * in the event, so this account is credited whatever the e-mail; the e-mail
+ * is shown and cannot be edited on Stripe's page. */
+export const unitCheckoutUrl = user =>
+    `${UNIT_PAYMENT_LINK}?${new URLSearchParams({ client_reference_id: user.id, locked_prefilled_email: user.email })}`;
+
 /** « 1 890,00 € » */
 export function formatEuros(cents) {
     const euros = Math.floor(cents / 100);

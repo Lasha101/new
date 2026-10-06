@@ -19,24 +19,28 @@ Three rules make crediting safe:
 amount »: its link sells N documents at 1,50 € HT, and N × 1,50 € can equal a
 pack's price (66 documents = 99 € = Pack 100). Its sessions are recognised by
 their Payment Link instead, before any amount is looked at, and credited with
-the quantity bought — see _credit_unit_session.
+the quantity bought — see _credit_unit_session. Its buyer needs no account
+beforehand (Alex, 03/10/2026): the purchase opens one when there is none yet.
 """
 import calendar
 import hashlib
 import hmac
 import json
+import secrets
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote, urlencode
 
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import func, update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+import account_tokens
 import config
 import crud
 import models
@@ -48,6 +52,11 @@ PAID_EVENTS = ("checkout.session.completed", "checkout.session.async_payment_suc
 UNIT_PACK = 0
 STRIPE_API_BASE = "https://api.stripe.com"
 STRIPE_API_TIMEOUT_SECONDS = 10
+# Accounts an « à la carte » purchase opens instead of only crediting: a trial
+# request still waiting for Alex, or one he refused (users.status).
+UNOPENED_STATUSES = ("pending", "rejected")
+
+_EMAIL = TypeAdapter(EmailStr)
 
 
 def is_known_pack(pack: Any) -> bool:
@@ -137,10 +146,18 @@ class CreditOutcome:
     pack: Optional[int] = None
     expires_at: Optional[datetime] = None
     credits: Optional[int] = None    # « à la carte »: the documents bought
+    # « à la carte »: the purchase opened the account — the raw one-time link to
+    # choose its password, for the welcome e-mail only (never stored as is).
+    password_token: Optional[str] = None
 
 
 class StripeApiError(Exception):
     """The line items of a session could not be read — worded for Alex."""
+
+
+class UnmatchedPayment(Exception):
+    """An « à la carte » payment whose account cannot be established for
+    certain — worded for Alex's anomaly e-mail."""
 
 
 def is_unit_session(session: Dict[str, Any]) -> bool:
@@ -180,18 +197,49 @@ def unit_quantity(items: List[Dict[str, Any]]) -> Optional[int]:
     return quantity
 
 
-def unit_buyer(db: Session, session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """The account an « à la carte » payment is for. The link is a plain link
-    on the site, so there is usually no client_reference_id: the e-mail typed
-    at checkout names the account — exactly one, whatever the letter case."""
+def unit_buyer(db: Session, session: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], str]:
+    """(account, e-mail) an « à la carte » payment is for; the account is None
+    when the purchase must open a new one. Reads only — nothing is written here.
+
+    The app's own link carries client_reference_id (the account's id), so the
+    right account is credited whatever e-mail was typed. The site's plain link
+    does not: the e-mail typed at checkout names the account, whatever the
+    letter case (Alex, 03/10/2026)."""
     user_id = session.get("client_reference_id")
     if user_id:
-        return crud.get_user(db, str(user_id))
-    email = ((session.get("customer_details") or {}).get("email") or session.get("customer_email") or "").strip()
-    if not email:
-        return None
-    rows = db.query(models.User).filter(func.lower(models.User.email) == email.lower()).limit(2).all()
-    return crud._row_to_dict(rows[0]) if len(rows) == 1 else None
+        user = crud.get_user(db, str(user_id))
+        if user is None:
+            raise UnmatchedPayment("à la carte : client_reference_id ne correspond à aucun compte ScanID")
+        return user, user["email"]
+    typed = ((session.get("customer_details") or {}).get("email") or session.get("customer_email") or "").strip()
+    if not typed:
+        raise UnmatchedPayment("à la carte : le paiement ne porte aucune adresse e-mail")
+    try:
+        email = str(_EMAIL.validate_python(typed)).lower()
+    except ValidationError:
+        raise UnmatchedPayment("à la carte : l'adresse e-mail du paiement n'est pas valide") from None
+    rows = db.query(models.User).filter(func.lower(models.User.email) == email).limit(2).all()
+    if len(rows) > 1:
+        raise UnmatchedPayment("à la carte : plusieurs comptes ScanID ont cette adresse e-mail")
+    if rows:
+        return crud._row_to_dict(rows[0]), email
+    if db.query(models.User).filter(func.lower(models.User.user_name) == email).first() is not None:
+        # Every account logs in with its e-mail; this one cannot be created.
+        raise UnmatchedPayment("à la carte : cette adresse e-mail est l'identifiant d'un autre compte ScanID")
+    return None, email
+
+
+def checkout_identity(session: Dict[str, Any]) -> Dict[str, Any]:
+    """What the « à la carte » page asks besides the e-mail — the full name, the
+    business name and the phone — for an account the purchase creates. The name
+    is split at its first space, as a trial request's « nom » is."""
+    details = session.get("customer_details") or {}
+    collected = session.get("collected_information") or {}
+    full_name = str(details.get("individual_name") or collected.get("individual_name") or details.get("name") or "").strip()
+    first_name, _, last_name = full_name.partition(" ")
+    company = str(details.get("business_name") or collected.get("business_name") or "").strip()
+    return {"first_name": first_name, "last_name": last_name.strip(), "company": company or None,
+            "phone_number": str(details.get("phone") or "").strip()}
 
 
 def already_processed(db: Session, session_id: str) -> bool:
@@ -256,16 +304,22 @@ def credit_checkout_session(db: Session, session: Dict[str, Any]) -> CreditOutco
 
 
 def _credit_unit_session(db: Session, session: Dict[str, Any]) -> CreditOutcome:
-    """« À la carte »: the quantity of the session's line item, credited once.
-    Whatever cannot be established for certain — the account, the quantity —
-    is reported to Alex rather than guessed."""
+    """« À la carte »: the quantity of the session's line item, credited once
+    (Alex, 03/10/2026). The checkout e-mail's account is credited when it is
+    open; otherwise the purchase opens it — no account yet, a trial request
+    still waiting, or one Alex refused — with the documents bought only, and a
+    link to choose its password goes to that address. A purchase never touches
+    the e-mail or the password of an open account, and never logs anyone in.
+
+    The account and the quantity are both established before anything is
+    written; whatever cannot be established for certain is reported to Alex
+    rather than guessed."""
     if str(session.get("currency") or "").lower() != "eur":
         return CreditOutcome("unmatched", reason="à la carte : paiement dans une autre devise que l'euro")
-    user = unit_buyer(db, session)
-    if user is None:
-        return CreditOutcome("unmatched", reason="à la carte : aucun compte ScanID unique pour ce client (client_reference_id ou e-mail)")
-    if user.get("status") == "rejected":
-        return CreditOutcome("unmatched", reason="à la carte : le compte de ce client a été refusé")
+    try:
+        user, email = unit_buyer(db, session)
+    except UnmatchedPayment as exc:
+        return CreditOutcome("unmatched", reason=str(exc))
     try:
         quantity = unit_quantity(fetch_line_items(session["id"]))
     except StripeApiError as exc:
@@ -273,24 +327,69 @@ def _credit_unit_session(db: Session, session: Dict[str, Any]) -> CreditOutcome:
     if quantity is None:
         return CreditOutcome("unmatched", reason="à la carte : la session ne porte pas un seul article avec sa quantité")
 
+    for attempt in (1, 2):
+        try:
+            return _write_unit_purchase(db, session, user, email, quantity)
+        except IntegrityError:
+            db.rollback()
+            if already_processed(db, session["id"]):
+                return CreditOutcome("duplicate")
+            if attempt == 2:
+                raise   # 500: Stripe delivers again later; nothing was written
+            # The account was created meanwhile (another payment from the same
+            # new address): look again — it now exists and is credited.
+            try:
+                user, email = unit_buyer(db, session)
+            except UnmatchedPayment as exc:
+                return CreditOutcome("unmatched", reason=str(exc))
+
+
+def _write_unit_purchase(db: Session, session: Dict[str, Any], user: Optional[Dict[str, Any]],
+                         email: str, quantity: int) -> CreditOutcome:
+    """One transaction: the account (created or opened if need be), the paid
+    purchase, the credits and — for an account this purchase opens — its
+    password link. The UNIQUE session id makes a replay roll all of it back."""
     now = datetime.now(timezone.utc)
     expires_at = add_months(now, config.CREDIT_VALIDITY_MONTHS)
-    try:
-        db.add(models.Purchase(
-            user_id=user["id"], pack=UNIT_PACK, credits=quantity,
-            amount_ht_cents=quantity * config.UNIT_PRICE_HT_CENTS, created_at=now,
-            status="paid", paid_at=now, expires_at=expires_at, stripe_session_id=session["id"],
-            amount_paid_cents=session.get("amount_total"), currency="eur",
-        ))
-        db.flush()
-        db.execute(
-            sa_update(models.User)
-            .where(models.User.id == user["id"])
-            .values(page_credits=func.coalesce(models.User.page_credits, 0) + quantity)
+    if user is None:
+        identity = checkout_identity(session)
+        row = models.User(
+            first_name=identity["first_name"], last_name=identity["last_name"], email=email,
+            phone_number=identity["phone_number"], user_name=email, company=identity["company"],
+            # Not a hash of anything: no password can match it until the
+            # owner of the address chooses one through the e-mailed link.
+            hashed_password=f"!unit-purchase-{secrets.token_hex(8)}",
+            role="user", uploaded_pages_count=0, page_credits=quantity, status="active",
         )
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        return CreditOutcome("duplicate")
-    return CreditOutcome("credited", user=crud.get_user(db, user["id"]), pack=UNIT_PACK,
-                         expires_at=expires_at, credits=quantity)
+        db.add(row)
+        db.flush()
+        user_id, opened = row.id, True
+    else:
+        user_id, opened = user["id"], False
+    db.add(models.Purchase(
+        user_id=user_id, pack=UNIT_PACK, credits=quantity,
+        amount_ht_cents=quantity * config.UNIT_PRICE_HT_CENTS, created_at=now,
+        status="paid", paid_at=now, expires_at=expires_at, stripe_session_id=session["id"],
+        amount_paid_cents=session.get("amount_total"), currency="eur",
+    ))
+    db.flush()
+    if user is not None:
+        if user.get("status") in UNOPENED_STATUSES:
+            # Conditional: if another payment or /signup opened it meanwhile, the
+            # documents are added below instead. The trial's provisional credits
+            # are not given by a purchase — Alex's « Valider » adds them.
+            opened = db.execute(
+                sa_update(models.User)
+                .where(models.User.id == user_id, models.User.status == user["status"])
+                .values(status="active", page_credits=quantity)
+            ).rowcount == 1
+        if not opened:
+            db.execute(
+                sa_update(models.User)
+                .where(models.User.id == user_id)
+                .values(page_credits=func.coalesce(models.User.page_credits, 0) + quantity)
+            )
+    token = account_tokens.add(db, user_id, account_tokens.PURPOSE_SET) if opened else None
+    db.commit()
+    return CreditOutcome("credited", user=crud.get_user(db, user_id), pack=UNIT_PACK,
+                         expires_at=expires_at, credits=quantity, password_token=token)

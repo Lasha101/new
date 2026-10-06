@@ -98,6 +98,26 @@ def trial_welcome(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
     return subject, body
 
 
+def trial_credits_added(user: Dict[str, Any]) -> Tuple[str, str]:
+    """« Valider » on a trial request whose account a purchase had already opened
+    (Alex, 03/10/2026): only the trial's documents are added — the account and
+    its access exist, so no password link."""
+    subject = f"{config.TRIAL_CREDITS} documents offerts ajoutés à votre espace ScanID"
+    body = (
+        f"Bonjour {user.get('first_name') or ''},\n\n"
+        f"Votre demande d'essai est validée : {config.TRIAL_CREDITS} documents offerts ont été ajoutés à votre "
+        "espace ScanID.\n\n"
+        f"Votre espace : {config.app_public_url()}\n"
+        f"Votre identifiant : {user.get('user_name')}\n"
+        "Votre mot de passe : celui que vous avez choisi (sinon, « Mot de passe oublié ? » sur la page de "
+        "connexion).\n\n"
+        "Une question, un doute, un document qui résiste ? Répondez simplement à cet e-mail — "
+        "c'est moi qui vous lis.\n\n"
+        f"{SIGNATURE}\n"
+    )
+    return subject, body
+
+
 def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime) -> Tuple[str, str]:
     subject = f"Vos {_scans(pack)} documents ScanID sont disponibles"
     body = (
@@ -126,6 +146,37 @@ def unit_purchase_confirmation(user: Dict[str, Any], quantity: int, expires_at: 
         f"Votre identifiant : {user.get('user_name')}\n\n"
         "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
         "vous a été envoyé par Stripe.\n\n"
+        f"{SIGNATURE}\n"
+    )
+    return subject, body
+
+
+def unit_purchase_welcome(user: Dict[str, Any], raw_token: str, quantity: int, expires_at: datetime) -> Tuple[str, str]:
+    """« À la carte » bought by an address whose account was not open yet (Alex,
+    03/10/2026): the purchase opened it — the welcome, with the link to choose the
+    password, and the documents bought. A password is never sent."""
+    many = quantity > 1
+    documents = f"{_scans(quantity)} document{'s' if many else ''}"
+    subject = f"Votre espace ScanID est ouvert — {documents} disponible{'s' if many else ''}"
+    body = (
+        f"Bonjour {user.get('first_name') or ''},\n\n"
+        f"Merci pour votre achat à la carte : {documents} {'ont été ajoutés' if many else 'a été ajouté'} à "
+        f"votre espace ScanID ; {'ils sont valables' if many else 'il est valable'} jusqu'au {_date_fr(expires_at)}.\n\n"
+        "Vos accès :\n"
+        f"- Adresse : {config.app_public_url()}\n"
+        f"- Identifiant : {user.get('user_name')}\n"
+        "- Mot de passe : choisissez-le vous-même grâce à ce lien (valable "
+        f"{config.PASSWORD_TOKEN_HOURS} heures, utilisable une seule fois) :\n"
+        f"  {password_link(raw_token)}\n\n"
+        "Pour bien démarrer, trois minutes suffisent :\n"
+        "1. Photographiez ou scannez vos documents en suivant notre guide photo (la qualité de la "
+        "photo fait toute la fiabilité de la lecture) : https://scanid.fr/guide-photo.html\n"
+        "2. Importez-les dans votre espace, seuls ou par lot.\n"
+        "3. Téléchargez votre fichier Excel/CSV.\n\n"
+        "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
+        "vous a été envoyé par Stripe.\n\n"
+        "Une question, un doute, un document qui résiste ? Répondez simplement à cet e-mail — "
+        "c'est moi qui vous lis.\n\n"
         f"{SIGNATURE}\n"
     )
     return subject, body

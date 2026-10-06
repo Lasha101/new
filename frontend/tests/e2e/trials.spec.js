@@ -8,7 +8,7 @@ const trialRequest = (id, overrides = {}) => ({
     id, user_id: `u-${id}`, nom: 'Marie Dupont-Test', societe: 'Agence Horizon Test',
     email: 'Marie.Test@agence-horizon.fr', telephone: '+33 6 00 00 00 00', volume: '50 à 200 documents / mois',
     message: 'Agence groupes.', siret: '12345678901234', tva: 'FR12345678901', status: 'pending',
-    created_at: '2026-09-14T08:30:00Z', decided_at: null, ...overrides,
+    created_at: '2026-09-14T08:30:00Z', decided_at: null, account_open: false, ...overrides,
 });
 
 test.describe('Demandes d’essai', () => {
@@ -49,6 +49,40 @@ test.describe('Demandes d’essai', () => {
         await expect(page.locator('.sid-alert--ok')).toContainText('Demande de Paul Refus refusée.');
         await expect(page.locator('.sid-trials .sid-empty')).toHaveText("Aucune demande d'essai en attente.");
         expect(api.trialRequests[1].status).toBe('rejected');
+    });
+
+    // Alex, 03/10/2026 (« à la carte », PDF § 4): a purchase opens the account at
+    // once; « Valider » then adds the 20 trial documents, without a password link.
+    test('un compte déjà ouvert par un achat : le repère, puis « Valider » ajoute les 20 documents', async ({ page, api }) => {
+        api.user.role = 'admin';
+        api.trialRequests = [trialRequest('t-1', { account_open: true }), trialRequest('t-2', { nom: 'Paul Attente', email: 'paul@example.com', societe: null })];
+        await login(page);
+
+        await page.locator(SELECTORS.navButtons).filter({ hasText: "Demandes d'essai" }).click();
+        await expect(page.locator('.sid-trials > p').first()).toContainText("Sans décision, une demande est supprimée après 30 jours. Si un achat a déjà ouvert le compte (« Compte déjà ouvert par un achat »), « Valider » y ajoute les 20 documents offerts et en informe le client par e-mail ; « Refuser » et la suppression après 30 jours ne retirent alors que la demande, jamais le compte.");
+        const cards = page.locator('.sid-trial-request');
+        await expect(cards).toHaveCount(2);
+        await expect(cards.nth(0).locator('.sid-chip')).toHaveText('Compte déjà ouvert par un achat');
+        await expect(cards.nth(1).locator('.sid-chip')).toHaveCount(0);
+
+        await cards.first().getByRole('button', { name: 'Valider' }).click();
+        await expect(page.locator('.sid-alert--ok')).toHaveText("Demande validée : les 20 documents offerts sont ajoutés au compte de Marie.Test@agence-horizon.fr, déjà ouvert par un achat ; un e-mail l'en informe.");
+        await expect(cards).toHaveCount(1);
+        expect(api.trialRequests[0].status).toBe('validated');
+    });
+
+    test('un paiement arrivé après l’affichage de la liste : le message suit la réponse du serveur', async ({ page, api }) => {
+        api.user.role = 'admin';
+        api.trialRequests = [trialRequest('t-1')];
+        await login(page);
+
+        await page.locator(SELECTORS.navButtons).filter({ hasText: "Demandes d'essai" }).click();
+        const card = page.locator('.sid-trial-request');
+        await expect(card).toHaveCount(1);
+        await expect(card.locator('.sid-chip')).toHaveCount(0);
+        api.trialRequests[0].account_open = true;            // the payment lands now
+        await card.getByRole('button', { name: 'Valider' }).click();
+        await expect(page.locator('.sid-alert--ok')).toHaveText("Demande validée : les 20 documents offerts sont ajoutés au compte de Marie.Test@agence-horizon.fr, déjà ouvert par un achat ; un e-mail l'en informe.");
     });
 
     test('le lien de l’email de notification ouvre directement l’onglet', async ({ page, api }) => {

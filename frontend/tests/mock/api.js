@@ -362,8 +362,11 @@ export async function installMockApi(context, options = {}) {
         if (path.startsWith('/admin/trial-requests')) {
             if (state.user.role !== 'admin') return json(route, 403, { detail: "Privilèges d'administrateur requis." });
             state.trialRequests = state.trialRequests || [];
+            // account_open: a purchase has already opened the request's account
+            // (trials.list_pending; validate / reject answer it too).
+            const answer = row => ({ ...row, account_open: Boolean(row.account_open) });
             if (path === '/admin/trial-requests' && method === 'GET') {
-                return json(route, 200, state.trialRequests.filter(row => row.status === 'pending'));
+                return json(route, 200, state.trialRequests.filter(row => row.status === 'pending').map(answer));
             }
             const [, , , id, action] = path.split('/');
             const row = state.trialRequests.find(candidate => candidate.id === id);
@@ -372,7 +375,7 @@ export async function installMockApi(context, options = {}) {
             if (method === 'POST' && (action === 'validate' || action === 'reject')) {
                 row.status = action === 'validate' ? 'validated' : 'rejected';
                 row.decided_at = new Date().toISOString();
-                return json(route, 200, row);
+                return json(route, 200, answer(row));
             }
         }
 

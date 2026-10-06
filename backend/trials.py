@@ -6,13 +6,18 @@ password, plus a TrialRequest row with what the form said. Alex validates or
 refuses it from « Administration → Demandes d'essai ». Validation activates the
 account and emails a one-time link to choose the password; a password is never
 sent. Pending and refused requests are deleted after TRIAL_PURGE_DAYS.
+
+A purchase may open the account before Alex decides (« à la carte », or the
+pack form — Alex, 03/10/2026). It never gives the trial's documents: « Valider »
+then adds them to the open account, and « Refuser » or the purge remove the
+request only, never that account.
 """
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import EmailStr, TypeAdapter, ValidationError
-from sqlalchemy import func
+from sqlalchemy import func, update as sa_update
 from sqlalchemy.orm import Session
 
 import billing_identity
@@ -120,11 +125,25 @@ def create(db: Session, data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_pending(db: Session) -> List[Dict[str, Any]]:
+    """The requests waiting for Alex; `account_open` when a purchase has
+    already opened the account (« Valider » then only adds the documents)."""
     rows = (db.query(models.TrialRequest)
             .filter(models.TrialRequest.status == STATUS_PENDING)
             .order_by(models.TrialRequest.created_at.desc())
             .all())
-    return [_row(row) for row in rows]
+    user_ids = [row.user_id for row in rows if row.user_id]
+    open_ids = {user_id for (user_id,) in db.query(models.User.id).filter(
+        models.User.id.in_(user_ids), models.User.status == "active")} if user_ids else set()
+    return [{**_row(row), "account_open": row.user_id in open_ids} for row in rows]
+
+
+def unopened_account(db: Session, email: str) -> Optional[models.User]:
+    """The account of a trial request not validated — waiting, or refused and
+    not purged yet — for this e-mail: a purchase may open it."""
+    return db.query(models.User).filter(
+        func.lower(models.User.email) == email.lower(),
+        models.User.status.in_((STATUS_PENDING, STATUS_REJECTED)),
+    ).first()
 
 
 def _pending_request_and_user(db: Session, request_id: str) -> Tuple[models.TrialRequest, models.User]:
@@ -134,29 +153,64 @@ def _pending_request_and_user(db: Session, request_id: str) -> Tuple[models.Tria
     if request.status != STATUS_PENDING:
         raise TrialRequestError("Cette demande a déjà été traitée.", 409)
     user = db.get(models.User, request.user_id) if request.user_id else None
-    if user is None or user.status != STATUS_PENDING:
+    # Still « en attente », or already open: a purchase opened it.
+    if user is None or user.status not in (STATUS_PENDING, "active"):
         raise TrialRequestError("Le compte associé à cette demande n'existe plus.", 409)
     return request, user
 
 
-def validate(db: Session, request_id: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Activates the account. Returns (request, user); the caller issues the
-    password link and sends the welcome email."""
+def _decide(db: Session, request: models.TrialRequest, status: str) -> None:
+    """Records Alex's decision, only while the request still waits: two clicks
+    at once decide once."""
+    decided = db.execute(
+        sa_update(models.TrialRequest)
+        .where(models.TrialRequest.id == request.id, models.TrialRequest.status == STATUS_PENDING)
+        .values(status=status, decided_at=datetime.now(timezone.utc))
+    ).rowcount
+    if not decided:
+        db.rollback()
+        raise TrialRequestError("Cette demande a déjà été traitée.", 409)
+
+
+def validate(db: Session, request_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], bool]:
+    """Activates the account, its trial credits already there. When a purchase
+    has opened it meanwhile, adds the trial credits to it instead — a purchase
+    never gives them. Returns (request, user, already_open), the request saying
+    `account_open` too; the caller issues the password link and sends the
+    welcome email, or — already open — only says the documents were added."""
     request, user = _pending_request_and_user(db, request_id)
-    user.status = "active"
-    request.status = STATUS_VALIDATED
-    request.decided_at = datetime.now(timezone.utc)
+    _decide(db, request, STATUS_VALIDATED)
+    # Conditional: a purchase opening the account at this very moment is seen.
+    activated = db.execute(
+        sa_update(models.User)
+        .where(models.User.id == user.id, models.User.status == STATUS_PENDING)
+        .values(status="active")
+    ).rowcount == 1
+    if not activated:
+        db.execute(
+            sa_update(models.User)
+            .where(models.User.id == user.id)
+            .values(page_credits=func.coalesce(models.User.page_credits, 0) + config.TRIAL_CREDITS)
+        )
     db.commit()
-    return _row(request), crud.get_user(db, user.id)
+    db.refresh(request)
+    return {**_row(request), "account_open": not activated}, crud.get_user(db, user.id), not activated
 
 
 def reject(db: Session, request_id: str) -> Dict[str, Any]:
+    """Refuses the request. Its account closes with it while still « en
+    attente »; an account a purchase has opened stays as it is, and the
+    request says `account_open`."""
     request, user = _pending_request_and_user(db, request_id)
-    user.status = "rejected"
-    request.status = STATUS_REJECTED
-    request.decided_at = datetime.now(timezone.utc)
+    _decide(db, request, STATUS_REJECTED)
+    closed = db.execute(
+        sa_update(models.User)
+        .where(models.User.id == user.id, models.User.status == STATUS_PENDING)
+        .values(status="rejected")
+    ).rowcount == 1
     db.commit()
-    return _row(request)
+    db.refresh(request)
+    return {**_row(request), "account_open": not closed}
 
 
 def purge(db: Session, now: Optional[datetime] = None) -> int:

@@ -5,7 +5,7 @@ import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUE
 import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
 import { PASSWORD_RULES, evaluatePassword, generateExamplePassword } from './passwordRules.js';
 import OfflineScreen from './OfflineScreen.jsx';
-import { packSummary, formatEuros, formatCount, purchaseLabel, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { packSummary, formatEuros, formatCount, purchaseLabel, unitCheckoutUrl, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -214,6 +214,12 @@ const GlobalStyles = () => (
         .sid-trials .sid-card-item__value { text-transform: none; }
         .sid-trials .sid-card-item__head { flex-wrap: wrap; }
         .sid-trials .sid-card-item__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .sid-trials .sid-chip { margin-top: 0.35rem; }
+
+        /* « Mes achats »: the « à la carte » link and its price. */
+        .sid-purchases__buy { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 1rem 0 0; }
+        .sid-purchases__buy span { font-size: 0.88rem; color: var(--sid-muted-strong); }
+        .sid-purchases__buy a:hover { text-decoration: none; }
 
         /* /app/inscription */
         .sid-signup { max-width: 760px; margin: 0 auto; }
@@ -1091,9 +1097,10 @@ function TrialRequestsPage() {
             let data = {};
             try { data = await response.json(); } catch { /* non-JSON body */ }
             if (response.ok) {
-                setMessage(action === 'validate'
-                    ? `Demande validée : ${request.email} reçoit l'e-mail de bienvenue avec son lien pour choisir un mot de passe.`
-                    : `Demande de ${request.nom} refusée.`);
+                setMessage(action !== 'validate' ? `Demande de ${request.nom} refusée.`
+                    : data.account_open
+                        ? `Demande validée : les 20 documents offerts sont ajoutés au compte de ${request.email}, déjà ouvert par un achat ; un e-mail l'en informe.`
+                        : `Demande validée : ${request.email} reçoit l'e-mail de bienvenue avec son lien pour choisir un mot de passe.`);
             } else {
                 setError(typeof data.detail === 'string' ? data.detail : 'Action impossible.');
             }
@@ -1111,7 +1118,7 @@ function TrialRequestsPage() {
     return (
         <div className="sid-trials">
             <h2>Demandes d'essai</h2>
-            <p>Chaque demande a créé un compte en attente avec 20 documents offerts. « Valider » ouvre le compte et envoie l'e-mail de bienvenue avec un lien pour choisir le mot de passe ; « Refuser » le ferme sans e-mail. Sans décision, une demande est supprimée après 30 jours.</p>
+            <p>Chaque demande a créé un compte en attente avec 20 documents offerts. « Valider » ouvre le compte et envoie l'e-mail de bienvenue avec un lien pour choisir le mot de passe ; « Refuser » le ferme sans e-mail. Sans décision, une demande est supprimée après 30 jours. Si un achat a déjà ouvert le compte (« Compte déjà ouvert par un achat »), « Valider » y ajoute les 20 documents offerts et en informe le client par e-mail ; « Refuser » et la suppression après 30 jours ne retirent alors que la demande, jamais le compte.</p>
             {message && <p className="sid-alert sid-alert--ok">{message}</p>}
             {error && <p className="sid-alert sid-alert--err">{error}</p>}
             {requests === null ? null : requests.length === 0 ? (
@@ -1122,6 +1129,7 @@ function TrialRequestsPage() {
                         <div>
                             <strong>{request.nom}</strong>{request.societe ? ` — ${request.societe}` : ''}
                             <small style={{ display: 'block', color: 'var(--sid-muted-strong)' }}>{formatDate(request.created_at)}</small>
+                            {request.account_open && <span className="sid-chip sid-chip--done">Compte déjà ouvert par un achat</span>}
                         </div>
                         <div className="sid-card-item__actions">
                             <button type="button" className="sid-btn" disabled={busyId === request.id} onClick={() => decide(request, 'validate')}>Valider</button>
@@ -1245,13 +1253,14 @@ function AccountEditor({ user, fetchUser }) {
                 </div>
                 <button type="submit" className="sid-btn" style={{ marginTop: '1rem' }}>Enregistrer les modifications</button>
             </form>
-            <MyPurchases />
+            <MyPurchases user={user} />
         </div>
     );
 }
 
-// « Mes achats »: pack, date, expiry of each paid pack (invoice links later).
-function MyPurchases() {
+// « Mes achats »: pack, date, expiry of each paid pack (invoice links later),
+// and for a customer the « à la carte » link tied to this account.
+function MyPurchases({ user }) {
     const [purchases, setPurchases] = useState(null);
     useEffect(() => {
         (async () => {
@@ -1283,6 +1292,12 @@ function MyPurchases() {
                         </tbody>
                     </table>
                 </div>
+            )}
+            {user.role !== 'admin' && (
+                <p className="sid-purchases__buy">
+                    <a className="sid-btn-outline" href={unitCheckoutUrl(user)}>Acheter des documents à l'unité</a>
+                    <span>1,50 € HT le document, ajouté à ce compte dès le paiement confirmé.</span>
+                </p>
             )}
         </section>
     );

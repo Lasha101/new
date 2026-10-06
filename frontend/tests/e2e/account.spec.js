@@ -11,6 +11,9 @@ const validSiret = () => ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
         return total % 10 === 0;
     });
 
+// Alex, 03/10/2026 (« à la carte »): the « Acheter à l'unité » link of tarifs.html.
+const UNIT_LINK = 'https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05';
+
 const openAccount = async (page) => {
     await page.locator(SELECTORS.navButtons).filter({ hasText: 'Mon compte' }).click();
     await expect(page.getByRole('heading', { name: 'Modifier mon compte' })).toBeVisible();
@@ -77,6 +80,36 @@ test.describe('Mon compte — facturation et achats', () => {
         await expect(rows.nth(0).locator('td')).toHaveText(['À la carte · 37 documents', '02/10/2026', '02/10/2027']);
         await expect(rows.nth(1).locator('td')).toHaveText(['À la carte · 1 document', '20/09/2026', '20/09/2027']);
         await expect(rows.nth(2).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027']);
+    });
+
+    // PDF § 4 « Optional, more robust »: Stripe sends client_reference_id back,
+    // so the webhook credits this account whatever the e-mail.
+    test('« Mes achats » propose l’achat à l’unité, lié au compte par son identifiant et son e-mail', async ({ page }) => {
+        await page.route('https://buy.stripe.com/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Stripe (stub)</title>' }));
+        await login(page);
+        await openAccount(page);
+        const buy = page.locator('.sid-purchases').getByRole('link', { name: "Acheter des documents à l'unité" });
+        await expect(buy).toHaveAttribute('href', `${UNIT_LINK}?client_reference_id=u-alice&locked_prefilled_email=alice%40example.com`);
+        await expect(page.locator('.sid-purchases__buy')).toContainText('1,50 € HT le document, ajouté à ce compte dès le paiement confirmé.');
+
+        // The saved e-mail, never a field still being typed.
+        await page.locator('input[name="email"]').fill('Alice.Achats+unite@example.com');
+        await expect(buy).toHaveAttribute('href', /locked_prefilled_email=alice%40example\.com$/);
+        await page.getByRole('button', { name: 'Enregistrer les modifications' }).click();
+        await expect(page.locator('.sid-alert--ok')).toHaveText('Compte mis à jour avec succès !');
+        await expect(buy).toHaveAttribute('href', `${UNIT_LINK}?client_reference_id=u-alice&locked_prefilled_email=Alice.Achats%2Bunite%40example.com`);
+
+        await buy.click();
+        await page.waitForURL(url => url.href.startsWith(UNIT_LINK));
+        expect([...new URL(page.url()).searchParams]).toEqual([['client_reference_id', 'u-alice'], ['locked_prefilled_email', 'Alice.Achats+unite@example.com']]);
+    });
+
+    test('l’administrateur ne voit pas le lien d’achat', async ({ page, api }) => {
+        api.user.role = 'admin';
+        await login(page);
+        await openAccount(page);
+        await expect(page.getByRole('heading', { name: 'Mes achats' })).toBeVisible();
+        await expect(page.getByRole('link', { name: "Acheter des documents à l'unité" })).toHaveCount(0);
     });
 
     test('sans achat, un état vide en français', async ({ page }) => {

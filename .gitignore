@@ -36,6 +36,9 @@ logs/
 .DS_Store
 Thumbs.db
 *.swp
+# LibreOffice lock files (.~lock.<document>#), left next to an open or copied
+# document; they name the user and the machine.
+.~lock.*#
 
 # Build outputs
 dist-ssr/
@@ -106,3 +109,9 @@ scanid-backup.key
 # can ever match.
 /site.html
 /site[0-9]*.html
+
+# Alex's delivery folder for task K (his instruction PDF, a CRLF copy of
+# tarifs.html already applied to the site source, an unused favicon): kept on
+# this machine only. Its content is recorded in SCANID-HANDOVER.md §K.1, and
+# Alex's instruction PDFs have never been committed.
+/frontend/payment_scanid/
