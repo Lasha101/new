@@ -37,7 +37,7 @@ def read_xlsx(response):
     assert response.status_code == 200, response.text
     assert response.headers["content-type"].startswith(main.XLSX_MEDIA_TYPE)
     workbook = load_workbook(io.BytesIO(response.content))
-    return workbook["Passeports"]
+    return workbook["Documents"]
 
 
 def xlsx_rows(worksheet):
@@ -112,7 +112,7 @@ def test_filter_by_document_type():
 
 def test_csv_export_all_rows_french_headers_uppercase_no_ids(client, user_with_documents):
     response = client.get("/export/data?format=csv", headers=user_with_documents["headers"])
-    assert response.headers["content-disposition"] == "attachment; filename=passeports_pour_alice.csv"
+    assert response.headers["content-disposition"] == "attachment; filename=documents_pour_alice.csv"
     rows = read_csv(response)
 
     assert rows[0] == FRENCH_HEADERS
@@ -214,7 +214,7 @@ def test_csv_export_combines_type_filter_with_destination_filter(client, user_wi
 
 def test_xlsx_export_headers_type_column_uppercase_no_ids(client, user_with_documents):
     response = client.get("/export/data", headers=user_with_documents["headers"])   # xlsx is the default
-    assert response.headers["content-disposition"] == "attachment; filename=passeports_pour_alice.xlsx"
+    assert response.headers["content-disposition"] == "attachment; filename=documents_pour_alice.xlsx"
     ws = read_xlsx(response)
     rows = xlsx_rows(ws)
 
@@ -437,7 +437,7 @@ def test_selection_export_xlsx_and_csv_same_format(client, user_with_documents):
     ids = [docs["pp1"]["id"], docs["pi_old"]["id"], docs["other_pp"]["id"]]   # other_pp is not alice's
 
     xlsx = client.post("/export/data/selection", json={"passport_ids": ids}, headers=user_with_documents["headers"])
-    assert xlsx.headers["content-disposition"] == "attachment; filename=selection_passeports.xlsx"
+    assert xlsx.headers["content-disposition"] == "attachment; filename=selection_documents.xlsx"
     ws = read_xlsx(xlsx)
     rows = xlsx_rows(ws)
     assert rows[0] == FRENCH_HEADERS
@@ -447,7 +447,7 @@ def test_selection_export_xlsx_and_csv_same_format(client, user_with_documents):
         assert cell.alignment.horizontal == "center"
 
     csv_response = client.post("/export/data/selection?format=csv", json={"passport_ids": ids}, headers=user_with_documents["headers"])
-    assert csv_response.headers["content-disposition"] == "attachment; filename=selection_passeports.csv"
+    assert csv_response.headers["content-disposition"] == "attachment; filename=selection_documents.csv"
     csv_rows = read_csv(csv_response)
     assert csv_rows[0] == FRENCH_HEADERS
     assert {row[NUMERO] for row in csv_rows[1:]} == {"12AB34567", '="123456789012"'}
@@ -470,13 +470,13 @@ def test_admin_export_all_users_and_per_user(client, db_session, user_with_docum
     make_user(db_session, "root", role="admin")
     all_rows = read_csv(client.get("/export/data?format=csv", headers=auth_headers("root")))
     assert len(all_rows) - 1 == 5
-    assert client.get("/export/data", headers=auth_headers("root")).headers["content-disposition"] == "attachment; filename=passeports_rapport_complet.xlsx"
+    assert client.get("/export/data", headers=auth_headers("root")).headers["content-disposition"] == "attachment; filename=documents_rapport_complet.xlsx"
 
     bob_id = user_with_documents["other"]["id"]
     bob_rows = read_csv(client.get(f"/export/data?format=csv&user_id={bob_id}", headers=auth_headers("root")))
     assert [row[NUMERO] for row in bob_rows[1:]] == ["11CD22222"]
     response = client.get(f"/export/data?user_id={bob_id}", headers=auth_headers("root"))
-    assert response.headers["content-disposition"] == "attachment; filename=passeports_pour_bob.xlsx"
+    assert response.headers["content-disposition"] == "attachment; filename=documents_pour_bob.xlsx"
 
 
 def test_export_requires_authentication(client, user_with_documents):

@@ -98,7 +98,7 @@ const columnName = (index) => {
  * @param {string[][]} rows First row is the header row.
  * @param {string} sheetName
  */
-export function buildXlsx(rows, sheetName = 'Passeports') {
+export function buildXlsx(rows, sheetName = 'Documents') {
     const sheetRows = rows.map((row, rowIndex) => {
         const cells = row.map((value, cellIndex) =>
             `<c r="${columnName(cellIndex)}${rowIndex + 1}" t="inlineStr">`

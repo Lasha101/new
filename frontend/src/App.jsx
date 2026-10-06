@@ -1977,7 +1977,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
                 if (!response.ok) { const err = await response.json(); alert(`Échec de l'exportation: ${err.detail}`); return; }
                 const blob = await response.blob();
                 const url = trackObjectUrl(URL.createObjectURL(blob));
-                const link = document.createElement('a'); link.href = url; link.setAttribute('download', downloadFilename(response.headers.get('content-disposition'), 'selection_passeports', format));
+                const link = document.createElement('a'); link.href = url; link.setAttribute('download', downloadFilename(response.headers.get('content-disposition'), 'selection_documents', format));
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
                 releaseObjectUrl(url);
             } catch (err) { alert("Une erreur est survenue lors de l'exportation."); }
@@ -1986,7 +1986,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             const response = await getServerExportData(false, format);
             if (response) {
                 const blob = await response.blob();
-                const filename = downloadFilename(response.headers.get('content-disposition'), 'passports_export', format);
+                const filename = downloadFilename(response.headers.get('content-disposition'), 'documents_export', format);
                 const url = trackObjectUrl(window.URL.createObjectURL(blob)); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
                 releaseObjectUrl(url);
                 setPreviewData(null);

@@ -29,6 +29,10 @@ application tasks that followed it.
 >    https://scanid.fr/api/stripe/webhook` (expected 400); K9 live? → `B=$(curl -s https://scanid.fr/app/ | grep -o
 >    'assets/index-[^"]*\.js' | head -1); curl -s "https://scanid.fr/app/$B" | grep -c 'Paiement reçu, merci'` (1 = K9
 >    deployed, 0 = not yet). If the live state is ahead of the ticks, ask what was done, then tick.
+> 3b. **TASK L (the CGV + export names) IS THE CURRENT TASK since 2026-10-06 ≈ 21:22 UTC → go to §L.0 (just above
+>    §K) and continue at its first unticked stage.** Alex's files are in `frontend/payment_scanid/` (cgv.html CRLF,
+>    « Lasha-CGV-Export-2026-10-03.pdf »). Expected `git status --short` during task L: §L.0. Task K's N2–N6 stay
+>    open alongside (« ▶ START HERE »; N1 ✅ — K9 is live as `b22ad9a`).
 > 4. Keep answering the user in their conversation language (English); keep the UI in French. The assistant checks
 >    GitHub (public repository `Lasha101/new`, API) and the public site itself; `gh` is not installed — use `curl`.
 > 5. Environment: §B.0.3 (tests, build, absolute paths); every Playwright run needs
@@ -52,9 +56,13 @@ row 63). Alex then asked: « après la page de paiement faudrait que le client r
 connexion en lui disant de regarder ses mails » → **stage K9** (§K.0 « K9 sub-steps »): the code + tests are DONE
 locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
 
-- [ ] **N1 = K9.5 — U ships K9** (the assistant never commits, §0.3). First `cd /home/lasha/Public/new && git status
-  --short` → the 6 lines of the resume protocol's item 3 (+ nothing else); then `git add . && git commit -m "Back from
-  Stripe: login page tells buyers to check their e-mail" && git push origin master` (`git add .` from the repo root =
+- [x] **N1 = K9.5 — ✅ K9 SHIPPED: `b22ad9a` « Login page message after Stripe payment »** (the user, end of the last
+  session); `origin/master` = `b22ad9a`; CI ✅ 21:13:23 UTC, Deploy ✅ 21:14:17 UTC (GitHub API); live bundle
+  `index-BvTlEKeZ.js` holds « Paiement reçu, merci » (checked 21:22:30 UTC); `/api/config` `{"signup":true,"trial":true}`;
+  webhook unsigned → 400. **Next in task K = N2** (whether the user already set the Stripe redirect is not known — ask).
+  Plan record: (the assistant never commits, §0.3). First `cd /home/lasha/Public/new && git status
+  --short` → the 6 lines of the resume protocol's item 3 (+ nothing else); then `git add . && git commit -m "Login page
+  message after Stripe payment" && git push origin master` (`git add .` from the repo root =
   the same 6 paths; `test-results/` and `playwright-report/` are ignored). C: GitHub API → « CI » + « Deploy » green
   (`curl -s "https://api.github.com/repos/Lasha101/new/actions/runs?per_page=4"`), then the K9-live check of item 3
   (1 = live). A deploy restarts the backend: `/api` may answer 502 for up to ~1.5 min — wait, re-check.
@@ -79,10 +87,41 @@ locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
   = 21:22 Paris; signup ≈ 20:31 UTC = 22:31 Paris; + one line for K9).
 - [ ] **N6 = item 9 — close task K** (mark ✅ here, §K.0, the resume protocol; the memory note).
 - The user's own, any time: delete any plain copy of the `rk_live_…` key. Later, read-only: the slow restart (B10 note).
-- [ ] **❓ OPEN QUESTION (2026-10-06 ≈ 21:15 UTC):** the user wrote « You also forgot to replace the Terms and Conditions in
-  the list I gave you » — no such list is on record (§K.0.0 row 67). Asked which list / which file / the new text; act
-  only on the answer (the site source `nouveau-site/` is read-only unless the user demands the edit, §0).
+- [ ] **▶ TASK L — STARTED 2026-10-06 ≈ 21:22 UTC (the current task): Alex's `cgv.html` + « Lasha-CGV-Export-2026-10-03.pdf »
+  → §L (just above §K): L0–L5 done locally; next = §L.5 S1 (the user commits + pushes), S2–S3 checks, S4 Alex.** (The block below is the plan as written before the files came.)
 
+
+### ▶ TASK L (PLANNED → NOW §L) — THE CGV: ALEX'S NEW `cgv.html` + AN INSTRUCTIONS PDF (announced 2026-10-06 ≈ 21:19 UTC)
+
+**The user:** « Mark CGV task in SCANID-HANDOVER.md and in new session i will give you cgv.html with instructions pdf
+file! » — so the next session may open with « Read SCANID-HANDOVER.md » **plus** a `cgv.html` and a PDF (attached, or
+put in `frontend/payment_scanid/` like task K's files — look there: `ls -la --time-style=full-iso frontend/payment_scanid/`).
+This is most likely the « Terms and Conditions in the list I gave you » of §K.0.0 row 67 (no such list was on record).
+**Then TASK L becomes the current task** (a new section « L. » above « K. », same layout: L.0 state + checklist, L.0.0
+every prompt, L.1 demand, L.2 findings, L.3 decisions, L.4 records, L.5 ship); task K's N1–N6 stay open and go on in
+parallel (independent: N1 can even ship in the same commit as task L).
+
+**State today (2026-10-06, for the comparison):** `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html` = the
+live page (same SHA-256, prefix `7f894c1ff2e4c42d`), 200; **22** site pages link `cgv.html`; it says « Validité des crédits
+et durée » / « validité de douze mois et ne donnent pas lieu à remboursement » and does **not** mention the « à l'unité »
+purchase (1,50 € HT the document). The app: the footer link « CGV » → `https://scanid.fr/cgv.html` (task C, live);
+the 12-month validity in code (`config.CREDIT_VALIDITY_MONTHS`, `billing.py` → `expires_at`, stated in the e-mails).
+
+**How to do it (the same procedure as task K's tarifs.html, §K.4 K2), stage by stage, this file updated after each:**
+- [ ] L0 Survey: read the PDF in full (`pdftotext -layout`); list every demand (only cgv.html? other pages, the app's texts,
+  e-mails, a Stripe setting such as « Require customers to accept your terms of service »?); the new cgv.html: `tr -d
+  '\r'` (Alex's copies come CRLF) → its SHA-256 against the PDF's, if given; `diff` against the current
+  `nouveau-site/cgv.html` (only the announced changes? the same asset version `?v=…`?).
+- [ ] L1 Write the demand, the findings, the decisions and the stages into this file FIRST (§0.9).
+- [ ] L2 Replace `nouveau-site/cgv.html` (the user's demand lifts the source's read-only rule for this file, as for
+  tarifs.html; mode 644 kept); `git diff` = only the announced lines.
+- [ ] L3 Whatever else the PDF demands — one stage each, with tests.
+- [ ] L4 Verify: `VITE_API_URL=/api npm run build` + guard `node --test tests/build/no-google-fonts.test.js` (5/5);
+  `dist/cgv.html` == the source; the folder == `dist/`; the 22 links still answer; unit + e2e `sitenav` / `smoke` /
+  `fonts` (`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`); the page in a real browser at 1280 and 375 px (screenshots
+  looked at).
+- [ ] L5 Record + the ship steps (the user commits and pushes — §0.3; CI + Deploy watched by the assistant; the live
+  page's SHA-256 checked) + a short answer for Alex. A Stripe setting, if any → the user, guided, one step per message.
 
 ### ❌ NOT DONE YET — THE COMPLETE LIST (checked 2026-10-06 ≈ 21:15 UTC against Alex's PDF and his WhatsApp)
 
@@ -106,7 +145,7 @@ locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
 
 **Alex's follow-up (WhatsApp ≈ 20:49 UTC) — « back to the login page, look at your e-mails » = stage K9:**
 - ✅ code + tests done locally (K9.1–K9.4)
-- ❌ **NOT committed / pushed** → **N1** (the user)
+- ✅ committed + pushed + deployed: `b22ad9a` (Deploy ✅ 21:14:17 UTC, live bundle checked 21:22 UTC) — N1 ✅
 - ❌ **the Stripe redirect is NOT set** on the unit link → **N2** (the user, guided; only after N1 is live)
 - ❌ **not checked live, Alex not told** → **N3**
 
@@ -115,8 +154,8 @@ locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
 - ❌ **N6 — close task K** (ticks, memory).
 - ❌ B9's extras: « Resend » the event → credits unchanged (check 3, live); the in-app purchase (« Crédits : 2 »); a pack via
   `/app/inscription?pack=100`; then refunds in Stripe if wanted and deleting the test accounts.
-- ❓ **Open question:** « replace the Terms and Conditions in the list I gave you » — no such list on record (§K.0.0
-  row 67); waiting for the user to say which list / file / text.
+- ▶ **TASK L — IN PROGRESS (§L.0):** Alex's new `cgv.html` (Article 6 now names « l’achat à l’unité et les packs de
+  crédits ») + the export names « documents ». L2–L5 to do.
 - ❓ The user's own: delete any plain copy of the `rk_live_…` key (not confirmed).
 - ❌ Read-only check, later: why the 20:29–20:31 UTC restart took ~1.5 min (B10 note).
 - ❌ Older items, not task K (below, « Older items »): Alex's admin password, Alex's trial test, task I's three answers,
@@ -367,7 +406,9 @@ B7 version below, only the « Update » sentence is sent):
   DEPENDENCIES_VALIDATED`, 2026-09-05) → prefix runs with `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`; refreshing the
   marker would mean writing outside the repository → only with the user's permission.
 
-Last updated: 2026-10-06 ≈ 21:20 UTC (session closed by the user — resume in a new session) — **task K live (`4fd507c`), Stripe + server done (secret ≈ 19:22 UTC, signup ON
+Last updated: 2026-10-06 ≈ 21:30 UTC — **new session: TASK L started (§L.0: L0–L5 ✅ locally — cgv.html replaced, export names
+« documents », verified; next = §L.5 S1 the user commits + pushes, S2–S3 checks, S4 Alex). Task K: N1 ✅ (K9 live `b22ad9a`); next N2.**
+Before: 2026-10-06 ≈ 21:19 UTC (session closed by the user — resume in a new session; TASK L (CGV) planned) — **task K live (`4fd507c`), Stripe + server done (secret ≈ 19:22 UTC, signup ON
 ≈ 20:31 UTC). Alex's test purchase (≈ 20:41 UTC) opened his account; he did not find the welcome e-mail and asked for a
 return to the login page with « look at your e-mails » → **stage K9: code + tests DONE locally, NOT committed** (§K.0
 « K9 sub-steps »). NEXT = « ▶ START HERE » at the top: N1 the user commits + pushes K9 → N2 the Stripe redirect →
@@ -432,6 +473,179 @@ they applied to the previous one (v4).
   the user asked for: `site.html` = the v4 build (`frontend/site/`), `site1.html` = the
   build before it (`frontend/site1/`). They do **not** show v5. They are gitignored (root
   `.gitignore`: `/site.html`, `/site[0-9]*.html`), so `git add .` does not stage them.
+
+---
+
+## L. TASK L (2026-10-06, late evening) — ALEX'S « CGV PAGE AND EXPORT FILE » (PDF of 2026-10-03 22:57) — IN PROGRESS
+
+### L.0 State and checklist — update after EVERY stage (the user's rule)
+
+**Where things stand (2026-10-06 ≈ 21:50 UTC):** L0–L4 done, L5 written; **next = §L.5 S1: the user commits + pushes
+(one command), then the assistant checks CI + Deploy + live (S2–S3), then the user sends Alex §L.5 C (S4).**
+Nothing of task L is committed. Task K's N1 is ✅ (K9 live, `b22ad9a`); N2–N6 stay open in « ▶ START HERE ».
+
+- [x] **L0 Survey** (≈ 21:22–21:28 UTC) — §L.2. Alex's files found in `~/Downloads/` (cgv.html, the PDF, its .docx),
+  copied with `cp -p` into `frontend/payment_scanid/` (gitignored, Alex's delivery folder, as in task K).
+- [x] **L1 This section written** (demand, findings, decisions, stages) before touching anything (§0.9).
+- [x] **L2 ✅ ≈ 21:33 UTC — Replace `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html`** with Alex's file, CR removed
+  (`tr -d '\r'`) → `sha256sum` = `7c60619e…e4a8` (the PDF's), 15 635 bytes, mode 644 kept; `git diff` = exactly the 3
+  lines of §L.1 (the user's demand lifts the source's read-only rule for this one file, as for tarifs.html in K2).
+- [x] **L3 ✅ ≈ 21:40 UTC — Export names « documents »** (PDF §2, 3rd point; §L.3 d2) — backend `main.py` (sheet, the three name stems),
+  `App.jsx` (the two fallbacks), the tests (`backend/tests/test_export.py`, `frontend/tests/mock/api.js`,
+  `frontend/tests/mock/xlsx.js`); backend `test_export.py` + the full backend suite green.
+- [x] **L4 ✅ ≈ 21:48 UTC — Verify** — `VITE_API_URL=/api npm run build` + guard `node --test tests/build/no-google-fonts.test.js` (5/5);
+  `dist/cgv.html` == source (SHA); the source folder == `dist/` for the site files; unit tests + eslint; e2e `sitenav` /
+  `smoke` / `fonts` + the export specs (`features`, `design-system`, `sex-column`)
+  (`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`); the page in a real browser at 1280 and 375 px (screenshots looked at).
+- [x] **L5 ✅ ≈ 21:50 UTC (written; the ship itself = §L.5 S1–S4 below) — Record + ship steps + answer for Alex** (§L.5): the user commits + pushes (§0.3); the assistant watches CI +
+  Deploy (GitHub API) and checks live: `/cgv.html` SHA = `7c60619e…`, last line « 3 octobre 2026 »; an export's name.
+
+**Expected `git status --short` after L2 + L3:** ` M SCANID-HANDOVER.md`, ` M backend/main.py`, ` M
+backend/tests/test_export.py`, ` M frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html`, ` M
+frontend/src/App.jsx`, ` M frontend/tests/mock/api.js`, ` M frontend/tests/mock/xlsx.js` — nothing else
+(`frontend/payment_scanid/` is ignored).
+
+### L.0.0 THIS SESSION (2026-10-06 ≈ 21:20 UTC →) — every prompt, what is done, what is left
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « Read SCANID-HANDOVER.md and continue exactly where we stopped, under its constraints and permissions (§0). First run the resume protocol's checks (item 3). If I attached cgv.html and an instructions PDF, start TASK L: write the demand into SCANID-HANDOVER.md first, then work stage by stage. Otherwise continue task K at « ▶ START HERE ». Give me one command per message for anything I run, and update SCANID-HANDOVER.md after every stage. » + `cgv.html` + « Lasha-CGV-Export-2026-10-03.pdf » | **Item 3 checks (21:22 UTC):** `git status` = only the handover; HEAD = `origin/master` = **`b22ad9a`** « Login page message after Stripe payment »; CI ✅ 21:13:23, Deploy ✅ 21:14:17 UTC; live bundle `index-BvTlEKeZ.js` holds « Paiement reçu, merci » (1) → **N1 ✅** (the user shipped K9 at the end of the last session); `/api/config` `{"signup":true,"trial":true}`; webhook unsigned → 400. **TASK L: L0–L5 done locally** (cgv.html = Alex's `7c60619e…`; export names « documents »;
+backend 397, unit 91, e2e 171, build + guard 5/5, browser 1280 / 375) — §L.4 | §L.5 S1 (the user commits + pushes) → S2–S4; task K N2–N6 |
+| 2 | « Everithing what must be in .gitignore is in? » | **Answered: yes, nothing to add** (checked ≈ 21:55 UTC): untracked-not-ignored = none; `git ls-files -ci --exclude-standard` empty; `git add --dry-run .` = exactly §L.0's 7 paths; Alex's new files (cgv.html CRLF, the CGV PDF + .docx) sit in the ignored `frontend/payment_scanid/`; ignored as before: `backend/.env`, `frontend/.env.local`, `dist/`, `node_modules/`, `test-results/`, `tests/.browser-libs/`, `tests/fixtures/files/`, `newvenv/`, caches, `bench_*`, the two identity PDFs, `site*.html`; the screenshots and the browser script live in the session scratchpad (outside the repo); the added lines hold no secret / Stripe id / customer address (grep) | §L.5 S1 |
+
+### L.1 The demand (user, 2026-10-06) and Alex's PDF in substance
+
+The user's message is row 1 above. The PDF (1 page, « SCANID · FOR LASHA = You-Claude Code! », « CGV page and export
+file », « Prepared on 03/10/2026 (22:57) by Claude for Alex. It comes in addition to the note “Tarifs page, « à la
+carte » link and webhook” of the same day, and changes nothing in it. […] This version replaces any earlier one. »):
+
+**§1 Website — one more file to replace.**
+- **File.** `cgv.html` (attached), at the site root: **15 635 bytes, SHA-256
+  `7c60619e97c848b21c7913204c82b89bcfa752fc67782105d17cf78e8123e4a8`**.
+- **When.** Together with tarifs.html, in the same way: on the server and in our deployment source.
+- **What changes.** Three lines. « The site sells units and packs, with no subscription: the terms of sale now say the
+  same. »
+
+| Where | Before | Now |
+| --- | --- | --- |
+| Article 6 · Prix | « … paiement à l’usage et abonnements annuels à crédits dégressifs selon le volume. » | « … l’achat à l’unité et les packs de crédits, valables douze mois, à tarif dégressif selon le volume. » |
+| Article 14 · Propriété intellectuelle | « … pour la durée de l’abonnement. » | « … pour la durée de validité des crédits. » |
+| Last line | « Dernière mise à jour : 12 septembre 2026. » | « Dernière mise à jour : 3 octobre 2026. » |
+
+- **Nothing else.** Same asset version (`?v=202609302115`): no CSS or JS change.
+- **Test:** the last line of `/cgv.html` shows « 3 octobre 2026 ».
+
+**§2 Export file.**
+- **Headers: confirmed.** Alex's export of 03/10 (20:56 UTC) has « Date de naissance », « Date d’expiration » and
+  « Score de confiance » in sentence case, as on screen — thank you. → nothing to do.
+- **No « Pays émetteur » column.** Alex decided not to add it: « Nationalité » is enough, on screen and in the exports.
+  → nothing to do.
+- **Names — suggestion.** The exports are called `selection_passeports.xlsx` and `passeports_rapport_complet.xlsx`, and
+  their sheet « Passeports », although they also hold identity cards. Same vocabulary as in the app: « documents »
+  instead of « passeports » in the file names (XLSX and CSV) and in the sheet name. → stage L3.
+
+### L.2 Findings (L0, before touching anything — 2026-10-06 ≈ 21:22–21:28 UTC)
+
+1. **Where the files are:** not attached as files in the repo — `~/Downloads/cgv.html` (15 773 bytes, CRLF, 01:16 local
+   = 21:16 UTC), `~/Downloads/Lasha-CGV-Export-2026-10-03.pdf` (52 322 bytes) and `.docx` (11 660 bytes). Copied (`cp
+   -p`) into `frontend/payment_scanid/` (ignored by `.gitignore:117 /frontend/payment_scanid/`).
+2. **The file is Alex's, byte for byte:** CR removed → **15 635 bytes, SHA-256 `7c60619e…e4a8` = the PDF's** ✅ (the
+   raw CRLF copy hashes `8925632e…`: 138 `\r` added in transit, as with tarifs.html).
+3. **`diff` against `nouveau-site/cgv.html` = exactly the three lines of the PDF** (l. 81 Article 6, l. 103 Article 14,
+   l. 113 the date); everything else identical, including `?v=202609302115` (CSS + both JS).
+4. **Today:** source = `dist/cgv.html` = live `/cgv.html` = `7f894c1f…89bd` (15 608 bytes), mode 644, last commit
+   `e9d527d` (task F). 22 pages reference it (21 `href="cgv.html"` + `404.html`'s `/cgv.html`) + `sitemap.xml` (`<lastmod>
+   2026-09-30` — left as is: « Nothing else »; tarifs.html's entry was not touched in K either).
+5. **Article 8 (unchanged by Alex) still says « les crédits des formules annuelles sont valables douze (12) mois »** —
+   « formules annuelles » is the old subscription wording; the app gives every credit 12 months (packs and unit
+   purchases, `config.CREDIT_VALIDITY_MONTHS`). Alex's text → not ours to change; an optional remark for him (§L.5 C).
+6. **The export names (PDF §2, 3rd point)** — all in our code:
+   - `backend/main.py` l. 616–617: `sheet_name="Passeports"` + `writer.sheets["Passeports"]` (every XLSX);
+   - l. 1332: `filename_parts = ["passeports"]` → `passeports_rapport_complet`, `passeports_pour_<user>`,
+     `passeports_pour_utilisateur_<id>`, `passeports_<destination>_…` (`GET /export/data`);
+   - l. 1369: `"selection_passeports"` (`POST /export/data/selection`);
+   - `frontend/src/App.jsx` l. 1980 fallback `'selection_passeports'`, l. 1989 fallback `'passports_export'` — used
+     only when the `Content-Disposition` header is missing (never on scanid.fr: same origin);
+   - tests: `backend/tests/test_export.py` l. 40 (`workbook["Passeports"]`), 115, 217, 440, 450, 473, 479; the e2e mock
+     `frontend/tests/mock/api.js` l. 443, 454 and `frontend/tests/mock/xlsx.js` l. 101 (default sheet name);
+     `frontend/src/resultsHelpers.test.js` l. 92–98 = examples for the pure parser `downloadFilename` (not the app's
+     names → unchanged). No e2e spec asserts the exact name (`features.spec.js` l. 283 checks only `.csv$`);
+     `tests/helpers/spreadsheet.js` reads `sheet1.xml` whatever its name. The site never names the files (grep).
+7. **Not in the PDF, not changed:** other « passeport(s) » words in app messages — « Aucune donnée de passeport trouvée
+   pour les critères donnés » (404), « Aucun passeport sélectionné. », « Êtes-vous sûr de vouloir supprimer N passeports
+   ? », « N passeports supprimés. » → a possible follow-up for Alex (§L.5 C), not done (§0.2).
+8. Nothing in the app says « abonnement » (grep `backend/*.py`, `frontend/src`) → consistent with the new CGV. No Stripe
+   setting is asked for.
+
+### L.3 Decisions
+
+- **d1 — cgv.html stored with LF** (the PDF's hash is the LF file's; same as tarifs.html in K2). Only this file in the
+  source folder is written.
+- **d2 — the « Names » suggestion is implemented** (it is in the instructions PDF the user brought, and it applies the
+  app's vocabulary of task G), as its own stage L3 so it can be reverted alone. New names: **`selection_documents`**,
+  **`documents_rapport_complet`**, **`documents_pour_<user>`**, `documents_pour_utilisateur_<id>`,
+  `documents_<destination>_…` (`.xlsx` / `.csv`), sheet **« Documents »**; the App.jsx fallbacks `selection_documents`
+  and `documents_export`. Only names — no column, no content change.
+- **d3 — finding 7's messages and the sitemap's `lastmod` are left alone** (not asked: « Nothing else », §0.2).
+
+### L.4 Stage records
+
+**L0 + L1 — DONE (2026-10-06 ≈ 21:30 UTC):** §L.2 and §L.3 above; files copied into `frontend/payment_scanid/`.
+
+**L2 — DONE (≈ 21:33 UTC).** `tr -d '\r' < frontend/payment_scanid/cgv.html > nouveau-site/cgv.html` → `sha256sum -c`
+against `7c60619e…e4a8` **OK**; 15 635 bytes; mode **644** `lasha:lasha` (kept); 0 `\r`; `git diff --stat` = `cgv.html | 6
++++---` (3 lines out, 3 in: Article 6, Article 14, « Dernière mise à jour : 3 octobre 2026. »).
+
+**L3 — DONE (≈ 21:40 UTC).** 6 files, names only:
+- `backend/main.py`: `sheet_name="Documents"` + `writer.sheets["Documents"]` (l. 616–617); `filename_parts =
+  ["documents"]` (l. 1332); `"selection_documents"` (l. 1369). New names: `selection_documents.xlsx/.csv`,
+  `documents_rapport_complet.xlsx/.csv`, `documents_pour_<user>…`, `documents_<destination>_pour_<user>…`.
+- `frontend/src/App.jsx` l. 1980 fallback `'selection_documents'`, l. 1989 `'documents_export'`.
+- Tests: `backend/tests/test_export.py` (7 expectations: the sheet + 6 `content-disposition`), `frontend/tests/mock/api.js`
+  (l. 443 stem, l. 454 selection name), `frontend/tests/mock/xlsx.js` (default sheet « Documents »).
+- grep: no `passeports_` / `_passeports` / `"Passeports"` / `passports_export` left in `backend/`, `frontend/src`,
+  `frontend/tests/{mock,e2e}` (only `resultsHelpers.test.js`'s parser examples, by design).
+- **Results:** `test_export.py` **59 passed**; full backend **397 passed** (= baseline); **mutations 3 / 3 killed** (old
+  sheet name → 11 failed; old `["passeports"]` → 3 failed; old `"selection_passeports"` → 1 failed; `main.py` restored,
+  `cmp` = the L3 version); frontend unit **91 / 91**; eslint `src/App.jsx` **11 problems** (= K9's baseline, none new).
+
+**L4 — DONE (≈ 21:48 UTC).** `VITE_API_URL=/api npm run build` ✅ (site → `dist/`, app → `dist/app/`, bundle
+`index-B4Tdzm0G.js` holds `selection_documents` 1×, `documents_export` 1×, `selection_passeports` 0×); guard
+`no-google-fonts` **5 / 5**; `dist/cgv.html` SHA-256 = **`7c60619e…e4a8`**; `diff -rq nouveau-site dist` = no
+difference (only `dist`-only entries: the app, generated files). e2e `sitenav`, `smoke`, `fonts`, `features`,
+`design-system`, `sex-column` on desktop + mobile-small + mobile-375 → **171 passed** (1.7 min). Real browser
+(Chromium, `dist/` served on 127.0.0.1:8765): 1280 and 375 px → 200, horizontal overflow 0, Mona Sans loaded, 0 console
+errors; Article 6 / 14 / the date read the new text; screenshots of « 6. Prix » (1280) and the page end (375) looked at
+— layout unchanged, « DERNIÈRE MISE À JOUR : 3 OCTOBRE 2026. » (the last line uses U+202F before « : », as in Alex's
+file).
+
+### L.5 How to ship task L — and the answer for Alex (written at L5, ≈ 21:50 UTC)
+
+**What ships:** the 7 paths of §L.0's expected `git status` (`git add --dry-run .` from the repo root = exactly them,
+checked 21:49 UTC). No new dependency, migration, environment variable or nginx change. The deploy restarts the backend
+(`main.py` changed) → `/api` may answer 502 for up to ~1.5 min (B10 note) — wait, re-check.
+
+- [ ] **S1 — U (one command):** `cd /home/lasha/Public/new && git add . && git commit -m "CGV without subscription,
+  exports named documents" && git push origin master`
+- [ ] **S2 — C:** GitHub API → « CI » + « Deploy » green for the new commit (`curl -s
+  "https://api.github.com/repos/Lasha101/new/actions/runs?per_page=4"`).
+- [ ] **S3 — C, live:** `curl -s https://scanid.fr/cgv.html | sha256sum` = `7c60619e…e4a8`; `grep -o '3 octobre 2026'`
+  (the line uses U+202F before « : » — do not grep the whole sentence); `/api/config` `{"signup":true,"trial":true}`;
+  webhook unsigned → 400; the new app bundle holds `selection_documents` (and K9's « Paiement reçu, merci »).
+  The export file names themselves need a login → U, optional: « Mes documents » → « Télécharger Excel » → the file is
+  `documents_pour_<compte>.xlsx`, sheet « Documents ».
+- [ ] **S4 — U → Alex:** the text C below.
+
+**C — the answer for Alex (English, like his PDF):**
+> Hi Alex — your « CGV page and export file » note is done and live. cgv.html is your file byte for byte (15 635 bytes,
+> SHA-256 7c60619e…e4a8), on the server and in our source: Article 6 now names unit purchases and packs valid twelve
+> months, Article 14 « pour la durée de validité des crédits », and the last line reads « 3 octobre 2026 ». Same asset
+> version, nothing else changed on the site. Exports: nothing to do for the headers or « Pays émetteur »; I applied your
+> naming suggestion — the files are now selection_documents.xlsx / .csv, documents_rapport_complet.xlsx and
+> documents_pour_<compte>.xlsx / .csv, and the sheet is « Documents ». Two small remarks, your call: Article 8 still says
+> « les crédits des formules annuelles sont valables douze (12) mois » (the app already gives every credit, unit or
+> pack, twelve months); and a few app messages still say « passeport(s) » (« Aucune donnée de passeport trouvée… »,
+> « Êtes-vous sûr de vouloir supprimer N passeports ? ») — I can switch them to « documents » if you like.
 
 ---
 
@@ -733,11 +947,15 @@ K6.3 rebuilds it as the deploy does (gitignored either way).
 | 67 | « You also forgot to replace the Terms and Conditions in the list I gave you. » | **Searched, nothing found:** no list with « Terms and Conditions » in this session, in this file (only task C, 2026-09-30: the login footer's « CGU » → « CGV », done — `cgu.html` is 404, `cgv.html` 200) or in Alex's PDF (`pdftotext`, 81 lines: its only « replace » is tarifs.html, live with his SHA-256). **Asked the user which list / which file** — not acted on | the user's answer (which list, which file, the new text) |
 | 68 | « Read fronted/payment_scanid and tell me if all is done? » | **Checked (≈ 21:10 UTC):** the folder = the PDF (2 pages, re-read in full with `pdftotext`: §1 link, §2 tarifs.html, §3 webhook, §4 crediting — no « Terms and Conditions »), tarifs.html (CRLF copy), favicon.ico, LibreOffice's lock file; tarifs.html: Alex's SHA-256 `b5765cef…0645` = the folder's copy (CR removed) = `nouveau-site/tarifs.html` (19 405 bytes) = live. **Answer: every item is implemented and live; still open — the end of the test purchase (Alex logs in: N4), the confirmation to Alex (the three checks + the packs answer: N5), and Alex's follow-up (K9: N1–N3)** | N1 |
 | 69 | « Mark what is not done in SCANID-HANDOVER.md! » | **DONE:** new block « ❌ NOT DONE YET — THE COMPLETE LIST » at the top (after « ▶ START HERE »): Alex's PDF item by item (✅ / ⏳ / ❌ / ❓), his K9 follow-up, the rest (N5, N6, B9's extras, the Terms-and-Conditions question, the key copy, the slow restart, the older items) | N1 |
-| 70 | « And we will continue with new fresh seesion! » | **Session closed (2026-10-06 ≈ 21:20 UTC).** Checked: no secret and no full `acct_` / `we_` / `plink_` / `price_` id or customer address in this file; the resume protocol, « ▶ START HERE » (N1–N6) and « ❌ NOT DONE YET » are current; the memory note points here. **The next session starts with the resume protocol's item 3 checks (is K9 committed / pushed / deployed?), then N1** | N1 |
-| 71 | « It is done? » + Alex's WhatsApp again (« … retourne sur le site et sur la page de connexion en lui disant de regarder ses mails ») | **Answered: not yet live** — checked 21:2x UTC: K9 not committed (HEAD `4fd507c` = `origin/master`, the 6 files still in `git status`), live bundle still `index-KR0bPHwB.js` without « Paiement reçu, merci »; the Stripe redirect not set. Next = N1 (commit + push), then N2 | N1 |
+| 70 | « And we will continue with new fresh seesion! » | **Session closed (2026-10-06 ≈ 21:1x UTC).** Checked: no secret and no full `acct_` / `we_` / `plink_` / `price_` id or customer address in this file; the resume protocol, « ▶ START HERE » (N1–N6) and « ❌ NOT DONE YET » are current; the memory note points here. **The next session starts with the resume protocol's item 3 checks (is K9 committed / pushed / deployed?), then N1** | N1 |
+| 71 | « It is done? » + Alex's WhatsApp again (« … retourne sur le site et sur la page de connexion en lui disant de regarder ses mails ») | **Answered: not yet live** — checked 21:1x UTC: K9 not committed (HEAD `4fd507c` = `origin/master`, the 6 files still in `git status`), live bundle still `index-KR0bPHwB.js` without « Paiement reçu, merci »; the Stripe redirect not set. Next = N1 (commit + push), then N2 | N1 |
 | 72 | « After this 2 stepsall will be done? » | **Answered: Alex's « back to the login page » request — yes (after N1 + N2, then N3: a quick check + tell Alex). Task K as a whole — not quite:** N4 (Alex logs in → « Crédits : 1 »; confirms the welcome e-mail), N5 (the confirmations Alex asked for: the three checks + the packs answer), N6 (close); optional B9 extras; the open Terms-and-Conditions question | N1 |
-| 73 | « all what must be in .gitignore is in? » | **Answered: yes, nothing to add** (checked ≈ 21:30 UTC): untracked-not-ignored = only `frontend/tests/e2e/purchase-return.spec.js` (to commit); `git ls-files -ci --exclude-standard` empty; ignored = `backend/.env`, `frontend/.env.local`, `frontend/dist/`, `frontend/node_modules/`, `frontend/test-results/`, `frontend/tests/.browser-libs/`, `frontend/tests/fixtures/files/`, `frontend/payment_scanid/` (Alex's folder + the lock file), the two identity PDFs, `bench_*`, `newvenv/`, caches, `site*.html`; `git add --dry-run .` = exactly K9's 6 paths; their added lines hold no secret / id / address (the only hits: the JSX prop `onForgotPassword=` — false positive) | N1 |
+| 73 | « all what must be in .gitignore is in? » | **Answered: yes, nothing to add** (checked ≈ 21:1x UTC): untracked-not-ignored = only `frontend/tests/e2e/purchase-return.spec.js` (to commit); `git ls-files -ci --exclude-standard` empty; ignored = `backend/.env`, `frontend/.env.local`, `frontend/dist/`, `frontend/node_modules/`, `frontend/test-results/`, `frontend/tests/.browser-libs/`, `frontend/tests/fixtures/files/`, `frontend/payment_scanid/` (Alex's folder + the lock file), the two identity PDFs, `bench_*`, `newvenv/`, caches, `site*.html`; `git add --dry-run .` = exactly K9's 6 paths; their added lines hold no secret / id / address (the only hits: the JSX prop `onForgotPassword=` — false positive) | N1 |
 | 74 | « can i use git add .? » | **Answered: yes** — re-checked: `git add --dry-run .` from the repo root = the 6 paths of K9 (+ the handover); run it from `/home/lasha/Public/new` (from a subfolder `.` means only that subfolder) | N1 |
+| 75 | « write a short git commit message! » | **Given:** « Login page message after Stripe payment » (N1's command updated to it) | N1 |
+| 76 | « The CGV thing is implemented to? » | **Answered (checked ≈ 21:1x UTC):** what the app does with the CGV is live — the footer link « CGV » → `https://scanid.fr/cgv.html` (task C; in the live bundle), and the CGV's 12-month credit validity (`config.CREDIT_VALIDITY_MONTHS`, `billing.py` l. 271 packs / l. 353 unit purchases → `expires_at`, stated in the e-mails). `cgv.html` itself is Alex's page: live = source (same hash), 22 site pages link it; **it does not mention the « à l'unité » purchase (1,50 € HT)** → Alex's call: he sends an updated cgv.html like tarifs.html. If « the CGV thing » is another item (the list of row 67), the user says which | N1 |
+| 77 | « Mark CGV task in SCANID-HANDOVER.md and in new session i will give you cgv.html with instructions pdf file! » | **DONE:** « ▶ TASK L (PLANNED) — THE CGV » block (state today, the K2-like procedure L0–L5), the resume protocol's item 3b, the NOT-DONE list and the START-HERE question now point to it; the memory notes | the next session: TASK L (files from the user) + task K's N1–N6 |
+| 78 | « Provide a command for new session to continue our work seamlessly! » | **Given** — a one-message prompt: read this file, obey §0, run the resume protocol's item 3 checks, then TASK L if `cgv.html` + the PDF are attached (demand into this file first, stage by stage), else task K « ▶ START HERE » N1; one command per message; this file updated after every stage | the next session |
 
 ### K.1 The demand (user, 2026-10-06) and Alex's PDF in substance
 

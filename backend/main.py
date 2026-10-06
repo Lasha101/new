@@ -613,8 +613,8 @@ def _excel_response(export_rows: List[Dict[str, Any]], filename: str) -> Streami
 
     stream = io.BytesIO()
     with pd.ExcelWriter(stream, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Passeports")
-        _format_export_worksheet(writer.sheets["Passeports"])
+        df.to_excel(writer, index=False, sheet_name="Documents")
+        _format_export_worksheet(writer.sheets["Documents"])
     stream.seek(0)
 
     response = StreamingResponse(stream, media_type=XLSX_MEDIA_TYPE)
@@ -1329,7 +1329,7 @@ def export_data(
     if preview:
         return _export_rows_for_preview(_build_export_rows(filtered_data))
 
-    filename_parts = ["passeports"]
+    filename_parts = ["documents"]
     if destination:
         filename_parts.append(destination.replace(' ', '_').lower())
 
@@ -1366,7 +1366,7 @@ def export_selected_data(
     if not passports:
         raise HTTPException(status_code=404, detail="Aucune donnée de passeport trouvée pour les critères donnés")
 
-    return _export_file_response(passports, "selection_passeports", export_format)
+    return _export_file_response(passports, "selection_documents", export_format)
 
 
 @app.get("/passports/", response_model=list[schemas.Passport])

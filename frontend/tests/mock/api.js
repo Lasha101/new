@@ -440,7 +440,7 @@ export async function installMockApi(context, options = {}) {
                     EXPORT_COLUMNS.map(column => [column, exportCell(row, column)]))));
             }
             const format = params.get('format') === 'csv' ? 'csv' : 'xlsx';
-            const stem = `passeports_pour_${state.user.user_name}`;
+            const stem = `documents_pour_${state.user.user_name}`;
             return sendFile(route, format, `${stem}.${format}`, rows);
         }
 
@@ -451,7 +451,7 @@ export async function installMockApi(context, options = {}) {
                 return json(route, 404, { detail: 'Aucune donnée de passeport trouvée pour les critères donnés' });
             }
             const format = url.searchParams.get('format') === 'csv' ? 'csv' : 'xlsx';
-            return sendFile(route, format, `selection_passeports.${format}`, rows);
+            return sendFile(route, format, `selection_documents.${format}`, rows);
         }
 
         // --- Documents ---
