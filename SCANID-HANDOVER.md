@@ -5,58 +5,374 @@ application tasks that followed it.
 
 > ## ▶ NEW SESSION? THIS IS ALL YOU NEED — RESUME PROTOCOL
 >
-> The user may open a new session with nothing but "READ SCANID-HANDOVER.md". That is an
-> instruction to **resume the current task (§K) exactly where it stopped, under the same
-> constraints and permissions**. Do this, in order:
+> The user may open a new session with ONE command — « READ SCANID-HANDOVER.md », « continue », « resume » or the
+> like. That is an instruction to **continue exactly where the work stopped, under the same constraints and
+> permissions**. Do this, in order:
 >
-> 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push`; the site's
->    source of truth is read-only — since task F it is
->    `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/`, §F.3.1; work in stages; update this
->    file after every stage; outside the repository: read **only when needed for the demand**,
->    write only with permission; never connect to the VPS without the user's go-ahead). The user's
->    rule (§F.1, repeated for §G, §H, §I and §K): a demand of the current prompt wins over a restriction
->    of this file.
-> 2. **▶ CURRENT TASK (2026-10-06): §K — Alex's PDF « Lasha-Tarifs-Unit-Link-2026-10-03.pdf » (the « à la carte »
->    link on tarifs.html, the Stripe webhook, the crediting rules for unit purchases). Code, verification and ship
->    documentation are COMPLETE (K0–K7). Resume at §K.0 « Ship progress »: the first unticked step — the user ships
->    (§K.5 A), runs the server runbook (§K.5 B, ONE command per message) and forwards §K.5 C to Alex.** §K.1 holds the demand (the PDF in full substance — the PDF itself is in
->    `frontend/payment_scanid/`), §K.2 the findings, §K.3 the decisions, §K.4 the stage records, §K.5 the ship steps,
->    the server runbook and the answers for Alex. Work stage by stage and update §K.0 after every stage (the user's
->    rule for this task).
-> 3. Older open items (do not resume them unless the user asks): §J (devis@scanid.fr) is ✅ COMPLETE (2026-10-03 ≈
->    18:34 UTC); §I.0.1 « RESUME HERE » keeps the parked Alex items and « Also open » (task D's steps 6–7; the VPS
->    updates). ONE instruction per message whenever the user runs Git / server commands — the user's rule.
->    **§I** (2026-10-03 — Alex's « third check »): **§I.0.1 « RESUME HERE »
->    is the ordered to-do list, with the exact commands — start there.** §I.0.0 lists every prompt of
->    the session (what is done, what is left); §I.0 holds the state, the checklists and the expected
->    `git status`; §I.5 holds the ship steps, the server runbook and the answers for Alex. §B.0.3
->    still holds the environment and the commands (test suites, e2e, lint, build — use **absolute
->    paths**: parallel shell calls share one working directory); §F.5 holds the real-stack harness.
-> 4. Check the working tree matches **§K.0** (`git status --short`) and compare; run §K.0's quick baseline.
->    (§I's checklists: every code stage of §I.4 is DONE and shipped; its open items are the parked ones of §I.0.1 —
->    the user runs every server / Git command; guide **one command per message**, wait for the pasted output.)
->    If a new demand arrives instead, it becomes a new stage: write it here first (§0.9).
-> 5. Keep answering the user in their conversation language; keep the UI in French.
-> 6. **2026-10-03 ≈ 18:12 UTC: nginx reloaded → tasks F (`e9d527d`), G (`109993f`), H (`c027cfa`) and I (`a769f33`)
->    are ✅ SHIPPED.** History: task H committed `c027cfa`, pushed and live; G and F too — all three except the nginx reload (F: cache headers + the two 301s; G: gzip + `www` → 301 = all
->    of Alex's « optional — server » section, unchanged in his third check). One `sudo nginx -t && sudo
->    systemctl reload nginx` on the VPS covers F, G, H and I (§I.5). **Server state on 2026-10-03:
->    `trial` is ON** (SMTP configured with the user, §I.5 B — its steps 9 and 10 still open); nginx still
->    NOT reloaded; `signup` false (later, with Alex); the account list for Alex not yet read (§H.5 A).
-> 7. **Task D (« Sexe ») is committed `cfbcd58`, pushed and live** (§D.7.4 steps 1–4 ticked). Still
->    open: the user's checks, §D.7.3 steps 5–7. Guide them **one command per message** when the
->    user returns to them. (Alex's « after go-live » note confirms « Sexe » live in the list and the
->    XLSX export.)
+> 1. Read **§0** and obey it for the whole session (no `git add` / `commit` / `push` — the user commits; the site's
+>    source of truth `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/` is read-only, §F.3.1; work in stages;
+>    update this file after every step; outside the repository: read only when needed, write only with permission;
+>    **never connect to the VPS** — the user runs every server command). The user's rule (§F.1, repeated for §G–§K): a
+>    demand of the current prompt wins over a restriction of this file.
+> 2. **Go to « ▶ WHAT REMAINS TO DO » just below: it is the single, ordered tick list of everything left. Give the
+>    first unticked item — ONE command or action per message (the user's rule) — wait for the pasted output, check
+>    it, tick the item (with the facts: time, output), add a row to §K.0.0, then give the next one.** The exact server
+>    commands and their expected outputs are in §K.5 B; the answers for Alex in §K.5 C; the background of task K in §K
+>    (§K.1 demand, §K.2 findings, §K.3 decisions, §K.4 records). Secrets (the `whsec_…` signing secret, the `rk_live_…`
+>    key, passwords) never in the chat: typed by the user at hidden prompts on the server.
+> 3. Before the first item, check from the laptop (read-only) — the user may have acted between sessions:
+>    `git status --short` (before K9's commit: ` M SCANID-HANDOVER.md`, ` M frontend/src/App.jsx`, ` M
+>    frontend/src/billing.js`, ` M frontend/src/billing.test.js`, ` M frontend/tests/helpers/selectors.js`, `??
+>    frontend/tests/e2e/purchase-return.spec.js`; after it: clean or only the handover); `git log --oneline -1` (`4fd507c`
+>    = K9 not committed yet); `git ls-remote origin refs/heads/master` (pushed?); `curl -s https://scanid.fr/api/config`
+>    (expected `{"signup":true,"trial":true}`); `curl -s -o /dev/null -w '%{http_code}' -X POST
+>    https://scanid.fr/api/stripe/webhook` (expected 400); K9 live? → `B=$(curl -s https://scanid.fr/app/ | grep -o
+>    'assets/index-[^"]*\.js' | head -1); curl -s "https://scanid.fr/app/$B" | grep -c 'Paiement reçu, merci'` (1 = K9
+>    deployed, 0 = not yet). If the live state is ahead of the ticks, ask what was done, then tick.
+> 4. Keep answering the user in their conversation language (English); keep the UI in French. The assistant checks
+>    GitHub (public repository `Lasha101/new`, API) and the public site itself; `gh` is not installed — use `curl`.
+> 5. Environment: §B.0.3 (tests, build, absolute paths); every Playwright run needs
+>    `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1` (§K.0 K5.5); §K.4 K6 / §F.5 hold the real-stack harness recipe.
 >
-> §A (task A — committed `a2b235d`, pushed), §B (committed `b3028b4`, live), §C (committed
-> `68dde4a`), §E (committed `bf7dc3c`, pushed) and §1–§9 (the v5 site task, live) are records only.
-> §F (`e9d527d`), §G (`109993f`), §H (`c027cfa`) and §I (`a769f33`) are ✅ SHIPPED (nginx reloaded 2026-10-03).
+> Records only: §A (`a2b235d`), §B (`b3028b4`), §C (`68dde4a`), §D (`cfbcd58`, live), §E (`bf7dc3c`), §F (`e9d527d`),
+> §G (`109993f`), §H (`c027cfa`), §I (`a769f33`) — ✅ SHIPPED; §J (devis@scanid.fr) ✅ COMPLETE 2026-10-03; §1–§9 (the
+> v5 site task). **§K — code ✅ LIVE `4fd507c` (2026-10-06 15:36 UTC); Stripe + server B0–B8, B10, B11 ✅ (secret ≈ 19:22
+> UTC, signup ON ≈ 20:31 UTC); NEW stage K9 (Alex: « back to the login page, look at your e-mails ») — code + tests
+> DONE locally, NOT committed → « ▶ START HERE » below.**
 
-Last updated: 2026-10-06 (second session) — **task K (§K): K0–K7 COMPLETE (site, à la carte crediting, trial side +
-packs, the app; verification: backend 397, unit 90, e2e 460 + 1 skipped, real stack 45 + 19 + 3; §K.5 ship steps, server
-runbook, answers for Alex); K8 `.gitignore` (LibreOffice lock files + `frontend/payment_scanid/`). Nothing committed — 21
-modified files. Next = the user's shipping: §K.0 « Ship progress », first unticked step.**
-Every Playwright run needs `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1` now (§K.0 K5.5, WebKit note). Before: 2026-10-03 ≈ 18:34 UTC — F, G, H, I ✅ SHIPPED (nginx reloaded); task J (devis@scanid.fr) ✅ COMPLETE.
+## ▶ WHAT REMAINS TO DO — THE SINGLE TICK LIST (state: 2026-10-06 ≈ 21:05 UTC — secret ≈ 19:22 UTC, signup ON ≈ 20:31 UTC, K9 code done locally)
+
+### ▶ START HERE — THE NEXT STEPS, IN ORDER (2026-10-06 ≈ 21:05 UTC; one command or action per message)
+
+**Where we are:** Alex made his test purchase at ≈ 20:41 UTC (1 document, 1,80 €, a Hotmail address): **the payment
+worked and the webhook OPENED his client account** (he sees it in « Gérer les utilisateurs »). He was « stuck » on
+Stripe's « Merci pour votre paiement » page and did not see the welcome e-mail (likely Hotmail's « Courrier indésirable
+»). A French message for him (junk folder, the link, « Mot de passe oublié ? ») was given to the user ≈ 20:47 UTC (§K.0.0
+row 63). Alex then asked: « après la page de paiement faudrait que le client retourne sur le site et sur la page de
+connexion en lui disant de regarder ses mails » → **stage K9** (§K.0 « K9 sub-steps »): the code + tests are DONE
+locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
+
+- [ ] **N1 = K9.5 — U ships K9** (the assistant never commits, §0.3). First `cd /home/lasha/Public/new && git status
+  --short` → the 6 lines of the resume protocol's item 3 (+ nothing else); then `git add . && git commit -m "Back from
+  Stripe: login page tells buyers to check their e-mail" && git push origin master` (`git add .` from the repo root =
+  the same 6 paths; `test-results/` and `playwright-report/` are ignored). C: GitHub API → « CI » + « Deploy » green
+  (`curl -s "https://api.github.com/repos/Lasha101/new/actions/runs?per_page=4"`), then the K9-live check of item 3
+  (1 = live). A deploy restarts the backend: `/api` may answer 502 for up to ~1.5 min — wait, re-check.
+- [ ] **N2 = K9.6 — U, Stripe (guided, screenshots; only AFTER N1 is live):** the « Document à l'unité » payment link
+  — open `https://dashboard.stripe.com/payment-links` (no menu entry in Stripe's 2026 dashboard; it is « Checkout »
+  (Preview) → tab « Payment links ») → « Document à l'unité », 1,80 €, Active (its link ends `…Elebu05`) → « Edit » / « Modifier » → tab « After payment » (« Après le paiement ») → « Don't show confirmation page » →
+  « Redirect customers to your website » → **`https://scanid.fr/app/?achat=unite`** → save. ONLY this link (the four
+  pack links keep Stripe's page: their buyers chose a password in /app/inscription).
+- [ ] **N3 = K9.7 — check:** U opens `https://scanid.fr/app/?achat=unite` in a private window → the blue message «
+  Paiement reçu, merci ! … » above the login form, and the address becomes `https://scanid.fr/app/`. Then U tells Alex:
+  > C'est fait : après le paiement, le client revient maintenant sur la page de connexion de scanid.fr, avec un message
+  > qui lui dit de regarder ses e-mails (et ses courriers indésirables) pour choisir son mot de passe.
+- [ ] **N4 = B9's end — A:** Alex finds the welcome e-mail « Votre espace ScanID est ouvert — 1 document disponible »
+  (from devis@scanid.fr; junk folder) → the link (48 h from ≈ 20:41 UTC) → a password → login → « Crédits : 1 »; or «
+  Mot de passe oublié ? » on https://scanid.fr/app/ with the same address. **If he finds NO e-mail anywhere:** U runs
+  `sudo journalctl -u travelapp.service --since "2026-10-06 20:35" --no-pager | grep -E "Email not sent|Stripe|ERROR"`
+  (« Email not sent: kind=purchase_welcome error=… » = the SMTP failed; nothing = it left the server → look again in
+  Hotmail / check the address typed on Stripe). Optional (b) the in-app « Acheter des documents à l'unité » → « Crédits
+  : 2 »; (c) `https://scanid.fr/app/inscription?pack=100` → « Crédits : 100 ». Afterwards: refunds in Stripe if wanted,
+  delete the test accounts in « Gérer les utilisateurs ».
+- [ ] **N5 = item 8 — the full answers for Alex** (§K.5 C 1–9; dates: deployed 2026-10-06 15:36 UTC; secret ≈ 19:22 UTC
+  = 21:22 Paris; signup ≈ 20:31 UTC = 22:31 Paris; + one line for K9).
+- [ ] **N6 = item 9 — close task K** (mark ✅ here, §K.0, the resume protocol; the memory note).
+- The user's own, any time: delete any plain copy of the `rk_live_…` key. Later, read-only: the slow restart (B10 note).
+- [ ] **❓ OPEN QUESTION (2026-10-06 ≈ 21:15 UTC):** the user wrote « You also forgot to replace the Terms and Conditions in
+  the list I gave you » — no such list is on record (§K.0.0 row 67). Asked which list / which file / the new text; act
+  only on the answer (the site source `nouveau-site/` is read-only unless the user demands the edit, §0).
+
+
+### ❌ NOT DONE YET — THE COMPLETE LIST (checked 2026-10-06 ≈ 21:15 UTC against Alex's PDF and his WhatsApp)
+
+**Alex's PDF « Lasha-Tarifs-Unit-Link-2026-10-03.pdf » (`frontend/payment_scanid/`), item by item:**
+
+| PDF item | Status |
+| --- | --- |
+| §1 The link `…Elebu05`, « Document à l'unité » 1,80 € TTC, quantity 1–99 | ✅ live (Stripe shows the adjustable quantity as 0–99; a single item cannot go to 0, and a 0 order would pay and credit nothing) |
+| §2 tarifs.html replaced, in our source too; « Acheter à l'unité » not `js-buy` | ✅ live — SHA-256 `b5765cef…0645` = Alex's = source = live (re-checked 21:10 UTC) |
+| §3 Endpoint URL + event checked | ✅ (+ `checkout.session.async_payment_succeeded` added) |
+| §3 Invitation accepted, signing secret revealed and installed | ✅ since ≈ 19:22 UTC (public webhook → 400) |
+| §3 Tell Alex | ✅ (he made his test purchase) |
+| §3 **One test purchase together** | ⏳ **NOT FINISHED:** paid ≈ 20:41 UTC, the account was opened, but Alex has NOT logged in yet — the welcome e-mail was not found (junk?) → **N4** |
+| §3 signup → true | ✅ since ≈ 20:31 UTC (before the test — the user's decision) |
+| §3 **Three checks — « please confirm »** | ✅ implemented and tested (check 1 also live); ❌ **the confirmation is NOT SENT to Alex** → **N5** (§K.5 C.3) |
+| §4 Crediting: when, how many (line items), which account, the four cases | ✅ live; « no account » proven live by Alex's purchase (account opened) |
+| §4 **The welcome e-mail with the password link** | ❓ **NOT CONFIRMED** — Alex did not find it → **N4** (junk folder; else the journal check) |
+| §4 Access rules | ✅ live |
+| §4 **Packs — Alex's question « is that e-mail refused? »** | ✅ implemented (now accepted); ❌ **the answer is NOT SENT to Alex** → **N5** (§K.5 C.6) |
+| §4 Optional in-app link (`client_reference_id` + `locked_prefilled_email`) | ✅ live |
+
+**Alex's follow-up (WhatsApp ≈ 20:49 UTC) — « back to the login page, look at your e-mails » = stage K9:**
+- ✅ code + tests done locally (K9.1–K9.4)
+- ❌ **NOT committed / pushed** → **N1** (the user)
+- ❌ **the Stripe redirect is NOT set** on the unit link → **N2** (the user, guided; only after N1 is live)
+- ❌ **not checked live, Alex not told** → **N3**
+
+**Also not done:**
+- ❌ **N5 — the full answers for Alex** (§K.5 C 1–9) — not sent.
+- ❌ **N6 — close task K** (ticks, memory).
+- ❌ B9's extras: « Resend » the event → credits unchanged (check 3, live); the in-app purchase (« Crédits : 2 »); a pack via
+  `/app/inscription?pack=100`; then refunds in Stripe if wanted and deleting the test accounts.
+- ❓ **Open question:** « replace the Terms and Conditions in the list I gave you » — no such list on record (§K.0.0
+  row 67); waiting for the user to say which list / file / text.
+- ❓ The user's own: delete any plain copy of the `rk_live_…` key (not confirmed).
+- ❌ Read-only check, later: why the 20:29–20:31 UTC restart took ~1.5 min (B10 note).
+- ❌ Older items, not task K (below, « Older items »): Alex's admin password, Alex's trial test, task I's three answers,
+  the logging-bug decision, devis@ forwarding, task D step 7, the VPS's 33 updates + reboot.
+
+**Done today:** task K's code is committed by the user as **`4fd507c`** « À la carte: tarifs link, purchases open
+accounts, in-app link » (21 files), pushed (`origin/master` = `4fd507c`); « CI » ✅ and « Deploy » ✅ (Deploy finished
+**2026-10-06 15:36:27 UTC**, CI 15:36:58 UTC — GitHub API); live checks ✅ by the assistant: `/tarifs.html` = Alex's
+file (19 405 bytes, SHA-256 `b5765cef…0645`, « Acheter à l'unité » → `https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05`,
+no « Commencer par l'essai »), app bundle `index-KR0bPHwB.js` (= the local production build) with « Acheter des
+documents à l'unité », `locked_prefilled_email`, the link, « Compte déjà ouvert par un achat »; `/api/config` →
+`{"signup":false,"trial":true}`; webhook without a signature → **503** (no secret yet).
+
+**⏰ Why it is urgent:** since 15:36 UTC « Acheter à l'unité » is live. Until the secret is installed (item 3, step B7),
+every payment's webhook delivery fails (503) and Stripe retries it **for up to 3 days** → **B7 before 2026-10-09
+15:36 UTC at the latest — ideally today.** After B7 each pending retry is credited automatically; a payment Alex ALSO
+credited by hand would be credited twice (§K.5 C.8) → item 1 first (deferred by the user at 17:42 UTC: B0 c is the
+safeguard instead).
+
+**Task K — in this order** (who: U = the user, A = Alex, C = the assistant)
+- [x] **0. Ship (§K.5 A1–A4)** — `4fd507c`, CI + Deploy green, live checks green (above).
+- [x] **1. ✅ Alex informed (he made his test purchase ≈ 20:41 UTC).** Plan record: the user sends Alex the UPDATED « Ready text for item 1 » below (given
+  ≈ 19:36 UTC, simplified ≈ 19:39 UTC — row 54). Alex answers with a time for the test purchase → the user comes back (« test
+  purchase », or « Read SCANID-HANDOVER.md » in a new session) → item 5 (B9), guided step by step.
+  History: ⏭ DEFERRED by the user (2026-10-06 ≈ 17:42 UTC: « can we continue without sending this to Alex? » → yes).**
+  Its safety purpose moves into item 2: **U checks the endpoint's failed deliveries since 03/10 in Stripe (B0 c)** —
+  none → no double-credit risk, the message simply goes with B7's « the secret is in place »; some unit purchases →
+  note them (date, amount, customer e-mail) and ask Alex whether he credited them by hand **before B7** (else their
+  automatic retry credits them a second time; correcting credits needs the admin login, which is Alex's). Do B1–B7
+  today, so the window in which Alex might credit a new payment by hand stays short. The ready text below stays valid
+  (send it with B7, adding « the secret is in place since … »).
+- [x] **2. B0 — U, Stripe in the browser** (§K.5 B0 a–f) — **✅ done 17:47–19:22 UTC (e and f during B4):** accept Alex's invitation (Stripe's e-mail of 03/10); open
+  Workbench → Webhooks → the endpoint: check URL `https://scanid.fr/api/stripe/webhook` + event
+  `checkout.session.completed` (suggest adding `checkout.session.async_payment_succeeded`); note its failed deliveries
+  (last 3 days); Payment Links → « Document à l'unité » → its id `plink_…`; Developers → API keys → « Create restricted
+  key » with **Checkout Sessions: Read** only (if the role cannot: Alex grants one that can, or creates it while B4's
+  prompt waits); keep the endpoint's « Reveal » secret (`whsec_…`) at hand for B4. U reports « B0 done » (no secret in
+  the chat — the `plink_…` id may be said, it is not secret). **Since item 1 is deferred, B0 c is the safeguard:** U
+  reports how many failed deliveries the endpoint shows since 03/10 and, for each unit purchase among them, its date
+  and amount. If the invitation no longer works, Alex has to send a new one.
+  **▶ 2026-10-06 ≈ 17:42 UTC — instruction given: B0 a + b + c** (accept the invitation, open the endpoint, report its
+  URL, its events and its failed deliveries). **17:44 UTC — new session (« Read SCANID-HANDOVER.md! »): checks = the
+  ticks (HEAD `4fd507c` = `origin/master`, signup false, webhook 503); the same instruction given again — waiting for
+  the user's report.**
+  - [x] **B0 a — invitation accepted (screenshot ≈ 17:47 UTC):** the user is in the « ScanID » Stripe account, live
+    mode, Home. Seen there: gross volume €0.00 today and yesterday; « Your overview », last 7 days: gross and net volume
+    €0.00 (previous period €0.00) → **no live payment since ≈ 29/09 → no unit purchase Alex could have credited by hand
+    → no double-credit risk so far** (B0 c's safeguard — the endpoint's deliveries are still to be looked at). The
+    Home « API keys » card is visible to the user's role (secret key masked) → the role can probably create the
+    restricted key (B0 e).
+  - [x] **B0 c — ✅ no failed delivery (screenshot ≈ 17:52 UTC):** the endpoint's « Performance — This week »: event
+    deliveries **Total 0, Failed 0** (with the €0.00 gross volume of the last 7 days: no payment, no event) → nothing
+    to retry in B8, nothing Alex could have credited twice; item 1's safety purpose is met.
+  - [x] **B0 b — URL ✅, event ✅ `checkout.session.completed` (screenshot ≈ 18:01 UTC, « Listening to: 1 event »):** event destination « brilliant-finesse », **Active**, endpoint URL
+    `https://scanid.fr/api/stripe/webhook` ✅, API version **`2026-06-24.dahlia`**, « Listening to: 1 event » (which
+    one: « Show »). **API version checked by the assistant (docs.stripe.com/changelog/dahlia):** only `2026-03-25.dahlia`
+    has breaking changes (later Dahlia versions are additive); for Checkout / Payment Links the only API one is « Updates
+    Checkout Session UI mode enum values » (`ui_mode`) — the backend never reads `ui_mode` (grep) → no impact on the
+    webhook; « Updates the events_from parameter on event destinations » concerns creating destinations by API, not
+    deliveries. (17:58 UTC « Show » asked → the one event is `checkout.session.completed`.)
+  - [x] **B0 b+ — ✅ added `checkout.session.async_payment_succeeded` (saved ≈ 18:30 UTC: « Listening to: 2 events »):** a completed but unpaid session (a
+    delayed method: SEPA debit, bank transfer) is answered `not_paid` — no credit, **no e-mail to Alex** — and is
+    credited only when this second event arrives (`billing.PAID_EVENTS`); without it such a payment would be lost
+    silently; when no delayed method is used it never fires (harmless). **▶ ≈ 18:02 UTC instruction given:** « Edit
+    destination » → events: tick `checkout.session.async_payment_succeeded` too → save, nothing else changed (URL,
+    API version) → expected « Listening to: 2 events ». If the user prefers not to touch Alex's settings: skip, C.2
+    keeps the suggestion for Alex.
+    **≈ 18:03 UTC — the « Edit destination » form, seen on a screenshot:** Events from « Your account » ✅, Payload
+    style **« Snapshot »** ✅ (the full Checkout Session in `data.object`, which the webhook reads — a « Thin »
+    payload would carry no session), API version `2026-06-24.dahlia`, URL ✅; « Selected events 1 » =
+    `checkout.session.completed`. **Instruction given:** tab « All events » → search `async_payment_succeeded` → tick
+    `checkout.session.async_payment_succeeded` → « Selected events 2 » → « Save destination ».
+  - [x] **B0 d — the unit link's id ✅ (screenshot ≈ 18:41 UTC):** page `https://dashboard.stripe.com/payment-links`
+    (= « Checkout » (Preview) → tab « Payment links » in Stripe's 2026 dashboard: « Document à l'unité » 1,80 € Active,
+    an older 1,50 € one Deactivated, the four packs Active, payment volume « - » everywhere) → the 1,80 € link's page:
+    address `https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05` ✅ (= tarifs.html), **Active**, created 3 Oct 9:35 PM,
+    « Tax included in price: Yes » (1,80 € TTC = 1,50 € HT + 20 % ✅), quantity 1, **adjustable 0–99** (a quantity 0
+    pays nothing → never `paid`; a quantity < 1 would be `unmatched` — never credited), payment methods Card, Apple
+    Pay, Klarna, Link, Amazon Pay, Satispay (normally confirmed at once; the second event covers any delayed one),
+    limited use No, promotion codes No. **The `plink_…` id** = the end of the address bar on that page (24
+    characters after `plink_`, ends `…TmeU`; not written in full here — public repository). At B4 the user copies
+    it from that Stripe page (not from the chat); B5 shows the stored value → compare its ending `…TmeU`.
+  - [x] **B0 e (check) ✅ ≈ 18:45 UTC — the user's role can create the key:** page « Developers » → tabs « API keys »,
+    « Access policies », « Suspicious API activity »; « Restricted keys »: **« Create restricted key » present**, « No
+    restricted keys »; « Standard keys »: publishable `pk_live_…` (public by design), secret key behind « Reveal live
+    key » (not clicked; last used « — »). **The key itself is created while B4's hidden prompt waits** (Stripe may
+    show a new live key only once; §K.5 B0 e). **▶ 18:43 UTC instruction given:** open
+    `https://dashboard.stripe.com/<acct_ id>/apikeys` → screenshot, no « Reveal », no « Create » → is « Create
+    restricted key » there (the role may create keys)? If not: Alex creates it while B4's prompt waits.
+  - [ ] **B0 f — the signing secret:** « Reveal » on the endpoint page, only when B4's prompt asks for it (Stripe:
+    « You can always view or roll this secret from the destination details page »). → open « Document à l'unité », check that its link is
+    `https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05` → the `plink_…` id is in the address bar after `/payment-links/`
+    → the user sends it (not secret; it is NOT written in full into this file — the repository is public).
+- [x] **3. Server — U runs, C checks each output, ONE command per message** (§K.5 B, exact commands + expected outputs) — **✅ B1–B7 done 2026-10-06 18:48–19:22 UTC (the deadline of 2026-10-09 is met):**
+  - [x] B1 `ssh -o ServerAliveInterval=30 lasha@87.106.22.235` — **✅ 18:48 UTC** logged in (`lasha@ubuntu:~$`;
+    Ubuntu 24.04.4, kernel 6.8.0-139; 33 updates (4 security) + 5 ESM, « System restart required », « New release
+    26.04.1 LTS » — not now; last login 3 Oct 18:13). Three Stripe tabs kept open for B4 (endpoint, API keys, link).
+  - [x] B2 look, values hidden → no Stripe / `PUBLIC_SIGNUP` line, 13 lines — **✅ ≈ 18:51 UTC: exactly that** (no
+    grep line; `13 /opt/travelapp/backend/.env`)
+  - [x] B3 backup `~/env-before-stripe` → `-rw------- deploy deploy` — **✅ ≈ 18:53 UTC:** `-rw------- 1 deploy deploy
+    2902 Oct  3 18:21 /home/lasha/env-before-stripe` (2 902 bytes; the date = task J's last change, kept by `cp -a`)
+  - [x] B4 the four lines (`PUBLIC_SIGNUP=0` + secret + link id + key, hidden prompts) → `appended` ✅ 19:14 UTC — **split in two
+    (one instruction per message):** **B4a** create the restricted key in Stripe, guided screen by screen (« Checkout
+    Sessions: Read », everything else None) and leave Stripe's window showing the `rk_live_…` key OPEN — never a
+    screenshot of it, never pasted anywhere but B4's hidden prompt; **B4b** run §K.5 B4's command: prompt 1 = the
+    endpoint's « Reveal » → copy `whsec_…`; prompt 2 = the key from B4a's window; prompt 3 = the `plink_…` from the
+    link page's address bar → `appended`. **▶ 18:53 UTC instruction given: B4a** — « Create restricted key » →
+    screenshot of what opens.
+    - [x] **B4a ✅ ≈ 19:05 UTC — key `scanid-app-checkout-read` created** (« Powering an integration you built » →
+      « Choose your own » → filter « Checkout » → « Checkout Sessions » = Read, everything else None; screenshot
+      checked before « Create key »). The user wrote « I created and saved key! » — where it is saved is not known:
+      **after B6 (`KEY OK 200`) remind: delete any plain copy (file, note, clipboard history) — the server's `.env`
+      is its home; a password manager is fine; if lost, Stripe can roll it.**
+    - [x] **B4b ✅ ≈ 19:14 UTC — `appended`** (sudo password, then the three prompts; the `plink_…` typed = the id read
+      from the « Document à l'unité » screenshot, re-checked by the assistant on a 3× zoom of that screenshot's address
+      bar: `…TmeU`, 24 characters, the account segment `A1JrH8vJE9` like the other ids).
+      Instruction history: **▶ ≈ 19:06 UTC instruction given:** the command of §K.5 B4 (unchanged). Before it: the `.env` ends
+      with a newline — checked from the record: its last write was task J's `printf "…MAIL_REPLY_TO=…\n" | sudo
+      tee -a` (2 902 bytes, Oct 3 18:21 = the backup's date), so the appended lines cannot glue onto the last line.
+      Values: prompt 1 = « Reveal » on the endpoint page (`…/workbench/webhooks/<we_ id>`, « Signing secret »);
+      prompt 2 = the saved key; prompt 3 = the `plink_…` read from the screenshot, validated by opening
+      `…/payment-links/<plink_ id>` (Stripe IDs match exactly: a misread id would not open « Document à l'unité
+      1,80 € »). Expected `appended`; a `STOP: …` line = nothing changed.
+  - [x] B5 masked diff → `13a14,17`, still `deploy deploy -rw-------` — **✅ ≈ 19:18 UTC: exactly that** — `13a14,17`,
+    `> PUBLIC_SIGNUP=0`, `> STRIPE_WEBHOOK_SECRET=<hidden>`, `> STRIPE_UNIT_PAYMENT_LINK_ID=plink_…TmeU` (= the
+    screenshot's id), `> STRIPE_API_KEY=<hidden>`, no `<` line; `-rw------- 1 deploy deploy 3161 Oct  6 19:16`
+    (3 161 − 2 902 = 259 bytes = the four names + `whsec_` 38 + `rk_live_` 107 characters — the usual lengths)
+  - [x] B6 key test before the restart → `KEY OK 200` — **✅ ≈ 19:22 UTC: `KEY OK 200`** (the restricted key reads
+    Checkout Sessions from the server). Reminder still to give after B7: delete any plain copy of the key.
+  - [x] B7 restart → `active`, `{"signup":false,"trial":true}`; C: public webhook without signature → **400**; then U
+    tells Alex « the secret is in place » (§K.5 C.2) — **✅ ≈ 19:22 UTC — THE SECRET IS IN PLACE.** Server: `active`,
+    `{"signup":false,"trial":true}`. The assistant, public, 19:23:11 UTC: `POST /api/stripe/webhook` without a
+    signature → **400** `{"detail":"Signature Stripe invalide."}` (was 503), a forged `Stripe-Signature` → 400;
+    `/api/config` `{"signup":false,"trial":true}`; `/`, `/tarifs.html`, `/app/`, `/essai.html` → 200. Alex not told yet.
+- [x] **4. B8 ✅ ≈ 19:26 UTC — nothing to retry:** the endpoint page reloaded (signing secret masked again,
+  `whsec_·····`): « Event deliveries » **Total 0, Failed 0** over « This week » (chart 9/30 → 10/6) → no payment while
+  the webhook answered 503, nothing Alex could have credited twice. (Kept as the plan's record:) **U / A, Stripe:** (B0 c found **0** deliveries at 17:52 UTC → only a payment made between then and B7 can
+  leave one; after B7 look at the endpoint's « Event deliveries » once.) **▶ ≈ 19:25 UTC instruction given:** reload
+  the endpoint page (F5 — hides the secret revealed in B4) → report in words « Total » and « Failed » under « Event
+  deliveries » (no screenshot needed). The failed deliveries noted in B0 → retried by Stripe or « Resend » → each 200 — **except**
+  the payments Alex credited by hand (C.8: after their automatic credit, lower that account's « Crédits » by the
+  quantity in « Gérer les utilisateurs »).
+- [ ] **5. B9 — IN PROGRESS: Alex made the test purchase ≈ 20:41 UTC (2026-10-06, 22:41 Paris) — he is « stuck ».**
+  His WhatsApp (French, forwarded by the user ≈ 20:45 UTC): a photo of Stripe's default page « Merci pour votre
+  paiement » (Document à l'unité, 1,80 €, VISA, a Hotmail address — not written here), « Je suis coincé ici », « Je
+  suis pas invité à me connecter au site », « Et j ai pas d espace créé »; then a photo of the app as admin, «
+  Gérer les utilisateurs » showing ONE row with that address, and « Je suis présent là mais comme client je peux
+  rien faire ». **Reading:** the payment worked and the webhook OPENED the account (the row exists — only the
+  webhook creates it); what Alex lacks is the way in = the welcome e-mail « Votre espace ScanID est ouvert — 1
+  document disponible » (devis@scanid.fr → the checkout address; the link to choose the password, 48 h) — not seen:
+  likely Hotmail's « Courrier indésirable », or not sent (then the journal holds « Email not sent: kind=
+  purchase_welcome … », `mailer.py` l. 89–105 — errors do reach the journal). And Stripe's default confirmation page
+  says nothing about the next step. **▶ ≈ 20:47 UTC — action given: the user sends Alex a French message** (check
+  the inbox + junk for that e-mail, the link → password → https://scanid.fr/app/ « Crédits : 1 »; else « Mot de
+  passe oublié ? »). **Next, planned (no code): the payment link's « Confirmation page » custom message in Stripe**
+  (« … consultez l'e-mail … pensez aux indésirables … https://scanid.fr/app/ »); if Alex finds no e-mail anywhere →
+  the journal check (`sudo journalctl -u travelapp.service --since "2026-10-06 20:35" --no-pager | grep -E "Email
+  not sent|Stripe|ERROR"`). Plan record — **U + A, the test purchase together:** (a) tarifs.html → « Acheter à l'unité », 1 document, a test address
+  without an account → welcome e-mail « … 1 document disponible » → link → password → « Crédits : 1 », « Mes achats »;
+  « Resend » the event → credits unchanged; (b) in the app « Mon compte » → « Acheter des documents à l'unité » → 1 →
+  « Crédits : 2 »; (c) optional `https://scanid.fr/app/inscription?pack=100` → « Crédits : 100 ». Then refunds if
+  wanted, delete the test accounts.
+- [x] **6. B10 ✅ 2026-10-06 ≈ 20:31 UTC — `signup` IS ON** (before the test purchase — the user's decision). The
+  command's own output was lost (the user typed `exit` ahead — it ran after the command and closed the ssh — and the
+  app took > 1 min to come back, so the `curl` after `sleep 10` printed nothing). The assistant, public: `/api/*` →
+  **502 from ≤ 20:30:09 to 20:31:11 UTC** (backend restarting), then 20:31:16 `{"signup":true,"trial":true}`;
+  20:31:48: webhook unsigned → 400; `/`, `/tarifs.html`, `/app/`, `/app/inscription?pack=100`, `/essai.html` → 200;
+  tarifs.html: the four `js-buy` pack buttons (`data-pack` 100 / 1000 / 3000 / 5000) + their Stripe links, and the
+  unit link `…Elebu05` (not `js-buy` → stays on Stripe); live `assets/js/core.js` (200) holds the rule
+  `location.href = "/app/inscription?pack=" + …` → « Choisir ce pack » now opens the account form. **Slow restart
+  (~1–1.5 min of 502), not seen at 19:22 / 19:31:** probably uvicorn's graceful shutdown waiting for an open SSE
+  connection (a browser with the app open) until systemd's stop timeout — NOT verified; to check later, read-only:
+  `sudo journalctl -u travelapp.service --since "2026-10-06 20:28" --until "2026-10-06 20:32" --no-pager | tail -40`.
+  For any future restart: wait and re-check before assuming a crash.
+  History: **▶ 2026-10-06 ≈ 20:25 UTC — THE USER DECIDED TO ACTIVATE NOW, BEFORE ALEX'S TEST PURCHASE** («
+  I want to activate it! », after the trade-off of row 56: Alex's order was « test first »; risk small — an
+  uncredited pack still sends Alex the « à rattacher » e-mail, as today). Checked first: `/api/config` still
+  `{"signup":false,"trial":true}` at 20:24:40 UTC. **Instruction given: §K.5 B10's command (`sleep 10`).** B9 stays
+  to do (with `signup` on, the pack path is also reachable from the site's « Choisir ce pack »).
+  **NOTE (2026-10-06 ≈ 19:34 UTC): the server's `.env` now holds `PUBLIC_SIGNUP=0` TWICE** (the
+  user ran the « hold it off again » command although the hold was already there → one more line appended at the
+  end, line 18, + a restart; harmless — `signup` stays false; public check 19:34:49 UTC: config `{"signup":false,
+  "trial":true}`, webhook unsigned → 400, pages 200). B10's `sed '/^PUBLIC_SIGNUP=0$/d'` deletes EVERY matching line
+  → both go → `signup` true. Plan: `signup` → true (delete `PUBLIC_SIGNUP=0`, restart) → `{"signup":true,"trial":true}`; C: public
+  checks (`/api/config`; « Choisir ce pack » → `/app/inscription?pack=…`; « Acheter à l'unité » still → Stripe).
+- [x] **7. B11 ✅ ≈ 19:31 UTC — `ls: cannot access '/home/lasha/env-before-stripe': No such file or directory`.** (Just
+  before it the user re-ran B7's restart: `active` but an EMPTY `/config` — the app was still starting 5 s after the
+  restart; the assistant's public check at 19:32:05 UTC: `/api/config` `{"signup":false,"trial":true}`, webhook
+  unsigned → 400, `/`, `/app/`, `/tarifs.html` → 200 — all fine.) Plan record: **U:** `sudo rm ~/env-before-stripe` → « No such file or directory ». **▶ ≈ 19:32 UTC — moved
+  forward at the user's request (« How can i delete … B11? »): safe now — the copy protected B4, and B5 verified the
+  change; it is a pre-Stripe copy anyway (no use for B10's one-line delete) and it holds the other secrets → given:
+  `sudo rm ~/env-before-stripe; ls -l ~/env-before-stripe`.**
+- [ ] **8. C — U forwards the full answers to Alex** (§K.5 C 1–9; fill in: deployed 2026-10-06 15:36 UTC; the secret
+  in place since <B7's time>).
+- [ ] **9. Close task K — C:** mark §K ✅ SHIPPED (here, §K.0, the resume protocol), update the memory note
+  `scanid-task-k-unit-link.md`; the user commits the handover notes when convenient.
+
+**▶ Ready text for item 1 — UPDATED after B10 (2026-10-06 20:33 UTC), THE ONE TO SEND** (if the user already sent the
+B7 version below, only the « Update » sentence is sent):
+> Hi Alex — everything from your PDF is live. tarifs.html is your file byte for byte; « Acheter à l'unité » opens
+> « Document à l'unité » (1,80 €). The webhook is set up: I checked the endpoint URL and `checkout.session.completed`,
+> and added `checkout.session.async_payment_succeeded` (for delayed payment methods). The signing secret is installed
+> since today 21:22 (Paris time): from now on, every unit purchase is credited automatically — no need to add credits
+> by hand. Signup is switched on too, since 22:31: « Choisir ce pack » now opens the account form before Stripe.
+> Could you make one test purchase — 1 document at 1,80 €, with an e-mail that has no account — to confirm the whole
+> chain? You can refund it in Stripe afterwards.
+> *(« Update » sentence alone: « Update: signup is switched on too, since 22:31 — « Choisir ce pack » now opens the
+> account form before Stripe. Could you make one test purchase (1 document, an e-mail with no account)? You can
+> refund it in Stripe afterwards. »)*
+
+**Ready text for item 1 — the B7 version (2026-10-06 19:29 UTC), superseded by the one above:**
+> Hi Alex — everything from your PDF is live. tarifs.html is your file byte for byte; « Acheter à l'unité » opens
+> « Document à l'unité » (1,80 €). The webhook is set up: endpoint URL and `checkout.session.completed` checked, and I
+> added `checkout.session.async_payment_succeeded` (for delayed payment methods). The signing secret is installed
+> since today 21:22 (Paris time): from now on, every unit purchase is credited automatically — no need to add
+> credits by hand. Next: one test purchase together, then I switch signup to true. When suits you?
+> *(Simplified ≈ 19:39 UTC at the user's remark « No one has already payed! »: no payment ever → nothing to correct;
+> the double-credit warning became the positive « no need to add credits by hand ».)*
+
+**Ready text for item 1 — the OLD version, written before B7 (kept as record, do not send):**
+> Hi Alex — your tarifs.html is live, byte for byte (SHA-256 checked): « Acheter à l'unité » opens « Document à
+> l'unité », 1,80 € — you can run your test now. The app's side of your PDF is deployed too: the crediting rules
+> (your four cases), « Valider » / « Refuser » after a purchase, packs for an e-mail whose trial request waits, and the
+> link inside the app. The webhook secret is not installed yet: I'm doing it with the Stripe access you gave me, within
+> the next 3 days at the latest, and I'll tell you when it's done. Until then, please don't credit unit purchases by
+> hand any more: Stripe retries every failed delivery for 3 days, and once the secret is in place each one is credited
+> automatically — a payment also credited by hand would be credited twice. If you already credited unit purchases by
+> hand since 03/10, please send me the list (customer e-mail, quantity, date). After that: one test purchase together,
+> then signup → true.
+
+**Older items, not part of task K** (parked or optional — raise them only when the user does, or after item 9):
+- [ ] ⏸ **A — the app's « admin » password** (exposed in a chat on 2026-10-03): Alex changes it himself in « Mon compte »
+  — informed, not confirmed (§I.0.1 item 2).
+- [ ] ⏸ **A — his end-to-end trial test** (essai.html → notification at contact@ → « Valider » → welcome e-mail from
+  devis@ → password → « Crédits : 20 »): waiting for his report (§I.0.1 item 3).
+- [ ] ⏸ **U → A — task I's three answers** (3.1 « none » — the old « Créer un compte » form made no account to clean up;
+  3.2 yes; 3.3 yes): ready text given 2026-10-03, sent or not unknown → ask the user (§I.0.1 item 4).
+- [ ] ❓ **U decides — the logging bug:** no app INFO line has ever reached the server's journal (since 2026-08-05:
+  `database.py` logs at import time, so `main.py`'s `logging.basicConfig(level=logging.INFO)` is a no-op); errors are
+  recorded, « Email sent » never is. Proposed fix (not done, waiting for a yes): `logging.basicConfig(level=logging.INFO,
+  force=True)` + a test; ship after Alex's tests (the deploy restarts the backend) — §I.0.1 item 6 notes.
+- [ ] **A, optional — forward devis@'s incoming mail to contact@** in IONOS (bounces, stray replies) — §J.2.
+- [ ] **U, optional — task D step 7's last checks** (CSV « Sexe » column, the phone card, « Modifier » keeps « Sexe ») —
+  §D.7.3 / §D.7.4 (« Sexe » in the list and the XLSX already confirmed by Alex).
+- [ ] **U, at a quiet moment — the VPS:** 33 updates (4 security) + « System restart required » (seen 2026-10-06; 29 on 2026-10-03); a reboot restarts
+  the app and nginx; never run `do-release-upgrade` casually (« New release 26.04.1 LTS » is a major upgrade).
+- Dev note (no action): Playwright's WebKit host check expired (marker `~/.cache/ms-playwright/webkit-2359/
+  DEPENDENCIES_VALIDATED`, 2026-09-05) → prefix runs with `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`; refreshing the
+  marker would mean writing outside the repository → only with the user's permission.
+
+Last updated: 2026-10-06 ≈ 21:20 UTC (session closed by the user — resume in a new session) — **task K live (`4fd507c`), Stripe + server done (secret ≈ 19:22 UTC, signup ON
+≈ 20:31 UTC). Alex's test purchase (≈ 20:41 UTC) opened his account; he did not find the welcome e-mail and asked for a
+return to the login page with « look at your e-mails » → **stage K9: code + tests DONE locally, NOT committed** (§K.0
+« K9 sub-steps »). NEXT = « ▶ START HERE » at the top: N1 the user commits + pushes K9 → N2 the Stripe redirect →
+N3 check + tell Alex → N4 Alex logs in (« Crédits : 1 ») → N5 the full answers → N6 close.**
+Before: 2026-10-03 ≈ 18:34 UTC — F, G, H, I ✅ SHIPPED (nginx reloaded); task J (devis@scanid.fr) ✅ COMPLETE.
 (Older line, kept as history: 2026-10-03 ≈ 18:15 UTC — task J at §J.0: J1–J3 done, J4 in progress.) Earlier the same evening: resumed session (§I.0.0b) (task I — Alex's « third check »: **code done and verified locally, not committed**;
 **`trial` switched ON on the server with the user** (≈ 15:45 UTC); next = §I.0.1 « RESUME HERE ». Task H committed
 `c027cfa`, pushed and live except the nginx reload, which also still finishes F and G. Task E committed `bf7dc3c` and
@@ -119,18 +435,20 @@ they applied to the previous one (v4).
 
 ---
 
-## K. TASK K (2026-10-06) — ALEX'S « TARIFS PAGE, À LA CARTE LINK AND WEBHOOK » (PDF of 2026-10-03)
+## K. TASK K (2026-10-06) — ALEX'S « TARIFS PAGE, À LA CARTE LINK AND WEBHOOK » (PDF of 2026-10-03) — CODE ✅ LIVE `4fd507c`; STRIPE / SERVER OPEN
 
 ### K.0 State and checklist — update after EVERY stage (the user's rule for this task)
 
-**Where things stand:** **K0–K7 done — task K's code, verification and ship documentation are complete.** Nothing
-committed (§0.3: the user commits). **What remains is the user's: §K.5 — A (commit + push), B (the server and Stripe,
-ONE command per message), C (forward the answers to Alex).** Resume at the first unticked line of « Ship progress »
-just below, give that step's command (§K.5), wait for the pasted output, tick it here, then the next one.
+**Where things stand (2026-10-06 17:18 UTC):** K0–K8 done; **shipped by the user: `4fd507c`, CI + Deploy green
+(15:36 UTC), live checks green (§K.4 « A — ship »).** What remains — Alex's message, Stripe, the server, the test
+purchase, `signup` → true, the answers — is ticked in **« ▶ WHAT REMAINS TO DO » at the top of this file** (the single
+tick list); the commands are in §K.5 B.
 
 **Ship progress** (§K.5; tick each step as the user reports it — the assistant checks GitHub and the public site itself):
-- [ ] A1 `git status --short` == §K.0's list · [ ] A2 `git add -u` + commit + push (hash: …) · [ ] A3 CI + Deploy green
-  · [ ] A4 laptop checks (tarifs.html SHA, new bundle, webhook still 503)
+- [x] A1 `git status --short` == §K.0's list · [x] A2 `git add .` + commit + push — **`4fd507c`** (the user, 2026-10-06
+  15:35 UTC) · [x] A3 CI + Deploy green (15:36 UTC) · [x] A4 laptop checks (tarifs.html SHA `b5765cef…`, bundle
+  `index-KR0bPHwB.js`, `/api/config` signup false, webhook still 503)
+- **B0–B11 and C: continued in « ▶ WHAT REMAINS TO DO » at the top (items 1–9) — tick them there, not here.**
 - [ ] B0 Stripe: invitation accepted, endpoint URL + event checked, failed deliveries noted, `plink_…`, restricted key,
   secret revealed · [ ] B1 ssh · [ ] B2 look (no Stripe line, 13 lines) · [ ] B3 backup · [ ] B4 `appended`
   · [ ] B5 diff `13a14,17` · [ ] B6 `KEY OK 200` · [ ] B7 restart, `signup` false, public webhook → 400, Alex told
@@ -152,6 +470,46 @@ just below, give that step's command (§K.5), wait for the pasted output, tick i
   no longer true).
 - [x] K7.4 Record K7; task K complete; memory file + MEMORY.md line. **Done:** §K.0 « Ship progress » added, the resume
   protocol (top) and « Last updated » point at it; memory `scanid-task-k-unit-link.md` + its MEMORY.md line.
+
+**K9 sub-steps — NEW DEMAND (2026-10-06 ≈ 20:55 UTC): back from Stripe to the login page, « look at your e-mails »**
+(tick each one as it completes). **Demand:** Alex (WhatsApp, after his test purchase, ≈ 20:49 UTC): « Mais après la
+page de paiement faudrait que le client retourne sur le site et sur la page de connexion en lui disant de regarder ses
+mails » — the user: « He want it! we can do it now? » → yes. **Decisions:** (1) Stripe's Payment Link « After payment »
+→ « Don't show confirmation page » → redirect to **`https://scanid.fr/app/?achat=unite`** (Stripe setting, the user);
+(2) the app's login screen shows, when the address carries `achat=unite`, an info alert: « Paiement reçu, merci ! Vos
+documents sont ajoutés à votre espace ScanID. / Premier achat ? Un e-mail de devis@scanid.fr vous est envoyé avec le lien
+pour choisir votre mot de passe — pensez à regarder dans vos courriers indésirables. / Déjà client ? Connectez-vous
+ci-dessous. »; the marker is read once by `App` and removed from the address bar (only `achat`, other parameters kept —
+`/app/inscription?pack=` untouched); a logged-in buyer (the in-app link) lands on the dashboard as before (no alert);
+after a login the alert is gone (a later logout shows the plain login); with an expired-session hint the purchase alert
+replaces « Votre session a expiré ». **Only the unit link** gets the redirect (its buyer may have no password yet); the
+pack links keep Stripe's page (their buyers chose a password in /app/inscription) — a pack variant later if Alex wants.
+No backend change, no new dependency.
+- [x] K9.1 `src/billing.js`: `PURCHASE_RETURN_PARAM` (`achat`), `UNIT_PURCHASE_RETURN_URL`, `isUnitPurchaseReturn(search)`,
+  `withoutPurchaseReturn(location)`; `src/billing.test.js`: their test. **Done:** + 1 test (« back from the unit link … »),
+  `node --test src/billing.test.js` 8 / 8.
+- [x] K9.2 `src/App.jsx`: `App` reads the marker once (`useState`), strips it (`useEffect` + `history.replaceState`),
+  clears it on a successful `fetchUser`; `Login` gets `purchaseReturn` → the alert (`sid-alert sid-alert--info
+  sid-purchase-return`, `role="status"`); the expired alert yields to it. **Done** (33 changed lines: the import, the
+  state + effect after `sessionExpired`, `setPurchaseReturn(false)` in `fetchUser`'s success, the prop on both `<Login>`,
+  the alert — one `<p>` with `<br />`, the existing alert style); eslint `src/App.jsx` still **11** (pre-existing, none
+  on a changed line). For a logged-in visitor the alert can flash during the usual login-screen flash before
+  `/users/me` answers (existing behaviour), then the dashboard.
+- [x] K9.3 e2e `tests/e2e/purchase-return.spec.js` (+ `SELECTORS.purchaseReturn`): anonymous → alert + login form, address
+  cleaned; plain `/app/` → none; logged in → dashboard, none; expired hint → the alert, not « session expirée »; login
+  then logout → none. **Done:** 5 tests, desktop 5 / 5; **mutations 4 / 4 caught** (scratchpad `k9/mutate.py`: marker
+  never recognised → 4 failed; login does not end it → 1; expired alert not yielding → 1; address not cleaned → 2;
+  files restored byte-identical).
+- [x] K9.4 Verify — **DONE (2026-10-06 ≈ 21:02 UTC):** unit **91 / 91**; eslint `src/App.jsx` **11** (baseline, none on a
+  changed line); the 7 related specs (`purchase-return`, `privacy`, `session-idle`, `smoke`, `account`, `signup`,
+  `password`) on desktop / mobile-small / mobile-375 **117 passed, 0 failed**; **the FULL suite 475 passed, 1 skipped
+  (4.3 min, exit 0)** = 460 + 15; ports 5173 / 4173 free; `VITE_API_URL=/api npm run build` (as « Deploy ») + guard
+  `no-google-fonts` **5 / 5**; the bundle `dist/app/assets/index-BvTlEKeZ.js` holds « Paiement reçu, merci » (1),
+  `achat` (3), no `localhost`. `git status --short` = the 6 lines (5 ` M` + `?? …purchase-return.spec.js`); `git add
+  --dry-run .` = exactly those 6 paths. **K9's code stage is COMPLETE — next = N1 (the user ships).**
+- [ ] K9.5 Ship (the user): commit + push; the assistant watches CI + Deploy and checks the live bundle.
+- [ ] K9.6 Stripe (the user, guided): the unit link → « Edit » → « After payment » → redirect `https://scanid.fr/app/?achat=unite`.
+- [ ] K9.7 Check: open the redirect address (anonymous) → the alert; Alex's next purchase lands there.
 
 **K8 sub-steps** (new demand, 2026-10-06 — tick each one as it completes):
 - [x] K8.1 Root `.gitignore`: `.~lock.*#` under « Editor / OS files »; a commented section for `frontend/payment_scanid/` (patterns tested in a throwaway repo first, §K.0.0 row 8).
@@ -296,12 +654,8 @@ just below, give that step's command (§K.5), wait for the pasted output, tick i
 SCANID-HANDOVER.md` (task J's completion notes, never committed) + `?? frontend/payment_scanid/`.
 **Baselines at the start (2026-10-06, reproduced):** backend **368 passed**; frontend unit **89 passed**; eslint
 `src/App.jsx` **11 problems**. Full e2e last recorded: **448 passed, 1 skipped** (task I).
-**Expected `git status --short` now (after K8) — 21 modified, nothing untracked:** ` M` `.gitignore`, `README.md`,
-`SCANID-HANDOVER.md`, `backend/{.env.example,account_tokens.py,billing.py,emails.py,main.py,schemas.py,trials.py}`,
-`backend/tests/{test_email_wording.py,test_pack_purchase.py,test_trial_requests.py,test_unit_purchase.py}`,
-`frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/tarifs.html`, `frontend/src/{App.jsx,billing.js,billing.test.js}`,
-`frontend/tests/e2e/{account.spec.js,trials.spec.js}`, `frontend/tests/mock/api.js`. `frontend/payment_scanid/` is
-ignored since K8 (`!!` in `git status --ignored`); `git add --dry-run .` = these 21 paths.
+**Expected `git status --short` now (after the commit `4fd507c`):** clean, or only ` M SCANID-HANDOVER.md` (the notes
+written after the commit — they go into a later commit of the user's). `frontend/payment_scanid/` is ignored (K8).
 Update this line after each stage. **Baselines now: backend 397 passed, frontend unit 90, eslint 11.**
 `frontend/dist/`: the K5 e2e runs started the `pwa` web server, which **rebuilt `dist/` with `.env.local`'s API URL** →
 K6.3 rebuilds it as the deploy does (gitignored either way).
@@ -321,6 +675,69 @@ K6.3 rebuilds it as the deploy does (gitignored either way).
 | 9 | « Add what should be added to .gitignore! » | **DONE — K8:** both lines (the lock pattern, and the folder — « what should be added » read as the proposal made in row 8); verified; the handover's expected list, §K.5 A1 / A2 and the memory note updated | — |
 | 10 | « Can i use git add .? » | **Answered: yes** — checked: `git add --dry-run .` from the repo root == `git add --dry-run -u` (the same 21 paths, nothing of `frontend/payment_scanid/`, no lock file); caveat: run it from the repo root (`git add .` from a subfolder stages only that subfolder) — A2 starts with `cd /home/lasha/Public/new` | — |
 | 11 | « Provide a short git commit message! » | **Given:** « À la carte: tarifs link, purchases open accounts, in-app link » — §K.5 A2's command updated to it (with `git add .`) | — |
+| 12 | « Parse entire conversation and update SCANID-HANDOVER.md with what we should do nextly, i aleardy comited and pushed the changes! Update SCANID-HANDOVER.md in such way that if i give you only one command in the new session we can continue working seamlessly! » | **DONE:** checked — `4fd507c` pushed (= `origin/master`, 21 files, tree clean); « CI » ✅ / « Deploy » ✅ (15:36 UTC, GitHub API); live checks ✅ (tarifs.html = Alex's SHA, bundle `index-KR0bPHwB.js` with the K5 strings, signup false, webhook 503). The resume protocol rewritten for a one-command resume; the new top section « ▶ WHAT REMAINS TO DO » = the single ordered tick list (task K items 0–9 + the older items) with the ready message for Alex; §K.0, §K.4, « Last updated », the memory note updated | items 1–9 of the top list |
+| 13 | (mid-turn) « Mark in SCANID-HANDOVER.md all what remains to do! » | **DONE** in the same update: everything still open, task K and older (Alex's admin password and trial test, task I's three answers, the logging-bug decision, devis@ forwarding, task D step 7, the VPS updates, the Playwright note), each with who and where | — |
+| 14 | « can we continue without sending this to Alex? » | **Answered: yes** — nothing in B0–B7 needs Alex's reply; the message's purpose (no double credit) is covered by B0 c (the user checks the endpoint's failed deliveries since 03/10; unit purchases among them → ask Alex before B7); the message goes later, with B7. Still needs Alex: B9 (the test purchase « together »), hence B10 (`signup` → true after it), item 8 (the answers); maybe B0 if the user's Stripe role cannot reveal the secret / create the key. Item 1 marked ⏭ DEFERRED; **instruction given: B0 a + b + c** | B0 → B1–B7 today |
+| 15 | New session (17:44 UTC): « Read SCANID-HANDOVER.md! » | Resume checks: `git status --short` = ` M SCANID-HANDOVER.md`; HEAD `4fd507c` = `origin/master`; `/api/config` `{"signup":false,"trial":true}`; webhook without signature → 503 (no secret: item 3 not done) — the live state = the ticks. **Instruction B0 a + b + c given again** | B0 → B1–B7 today |
+| 16 | « Where should i go? » + a screenshot of Stripe's Home (the « ScanID » account) | **B0 a ticked** (invitation accepted). Read from the screenshot: €0.00 gross volume today, yesterday and over the last 7 days → no payment yet → no double-credit risk so far. **Answered:** bottom-left « Developers » → Workbench → « Webhooks » → the endpoint → a screenshot without « Reveal » | B0 b–f → B1–B7 today |
+| 17 | « What's next? » + a screenshot of the endpoint « brilliant-finesse » | **B0 c ✅** (Total 0, Failed 0 this week); B0 b: URL ✅, API version `2026-06-24.dahlia` checked against Stripe's Dahlia changelog — no breaking change touches what the webhook reads; **instruction: « Show » next to « 1 event »** | B0 b's event, then B0 d–f → B1–B7 |
+| 18 | « ok? » + a screenshot: « Listening to 1 event — checkout.session.completed » | **B0 b ✅.** Next instruction: add `checkout.session.async_payment_succeeded` (« Edit destination »; recommended — an unpaid completed session is answered `not_paid` without any e-mail, so a delayed-method payment would otherwise never be credited nor reported) | B0 b+, d–f → B1–B7 |
+| 19 | « ok? » + a screenshot of « Edit destination » (Selected events 1) | **Answered:** the form is right (Your account, Snapshot, dahlia, URL); the second event is under the « All events » tab — search, tick, « Save destination » | B0 b+ save, d–f → B1–B7 |
+| 20 | « Ok? » + a screenshot: « Selected events 2 », `async_payment_succeeded` ticked, `async_payment_failed` not | **Answered: right** — click « Save destination », then a screenshot of « Destination details » (« Listening to: 2 events ») | B0 b+ save, d–f → B1–B7 |
+| 21 | « ? » + a screenshot: « Listening to 2 events » | **B0 b+ ✅** (saved). Next instruction: **B0 d** — Payment Links → « Document à l'unité » (link `…Elebu05`) → its `plink_…` id from the address bar | B0 d–f → B1–B7 |
+| 22 | « Where is the left menu? » | **Answered:** Workbench covers the page → open `https://dashboard.stripe.com/<the account's acct_ id>/payment-links` in the address bar (or close Workbench with its ✕ → left menu « Payments » → « Payment Links ») | B0 d–f → B1–B7 |
+| 23 | « ? » + a screenshot of the left menu | **Found:** Stripe's 2026 menu « Payments » has NO « Payment Links » entry (Analytics, Managed Payments, Checkout, Disputes, Radar, Terminal, Agentic commerce) → **open the address `https://dashboard.stripe.com/<acct_ id>/payment-links`** (fallback: the dashboard's « Search » → « Document à l'unité ») | B0 d–f → B1–B7 |
+| 24 | « ? » + a screenshot of Stripe's search « document » | **Read:** products « Document à l'unité » **1,80 €** (active ✓) and a second « Document à l'unité » **1,50 €** (clock icon — an older / not active one?), Pack 100 118,80 €, Pack 1000 828 €, Pack 3000 2 268 €, Pack 5000 3 540 € — **all four packs = `config.PACK_PRICES_HT_CENTS` + 20 % (99 / 690 / 1 890 / 2 950 € HT) and 1,80 € = `UNIT_PRICE_HT_CENTS` 150 + 20 % ✓** (checked by the assistant in `backend/config.py`). The search shows no payment link → **instruction:** type « payment links » in the same search → « Go to » → the Payment Links page (or the address bar URL) → « Document à l'unité » 1,80 € (`…Elebu05`) → its `plink_…` | B0 d–f → B1–B7 |
+| 25 | « Tell me what i should to do? » | **Simplified to one action:** paste `https://dashboard.stripe.com/<acct_ id>/payment-links` into the address bar → Enter → send a screenshot (the assistant then says where to click) | B0 d–f → B1–B7 |
+| 26 | « ? » + a screenshot of the Payment links page | **The URL works** — it is Stripe's « Checkout » page (Preview), tab « Payment links » (where Payment Links live in 2026). Six links: « Document à l'unité » **1,80 € Active** (created 3 Oct, 9:35 PM), « Document à l'unité » 1,50 € **Deactivated** (3 Oct, 9:29 PM), Pack 5000 / 3000 / 1000 / 100 Active (25 Jul) — **payment volume « - » on all six: no payment ever made through them.** **Instruction:** click the first row (1,80 €, Active) → screenshot of its page (its `buy.stripe.com` address + the address bar's `plink_…`) | B0 d–f → B1–B7 |
+| 27 | « ? » + a screenshot of the « Document à l'unité » 1,80 € link | **B0 d ✅** (`…Elebu05`, Active, tax included, adjustable 0–99, the `plink_…` id in the address bar, ends `…TmeU`). **Next instruction — B0 e, check only:** open the API keys page → screenshot, nothing revealed or created (the key is created while B4's prompt waits) | B0 e check → B1–B7 |
+| 28 | « ? » + a screenshot of « Developers → API keys » | **B0 e check ✅** (« Create restricted key » there, none yet; secret key not revealed). B0 f and the key's creation wait for B4's prompts. **Next instruction: B1** (ssh), keeping three Stripe tabs open | B1–B7 |
+| 29 | (pasted) the ssh login | **B1 ✅** 18:48 UTC (`lasha@ubuntu:~$`; 33 updates, restart required — parked item). **Next instruction: B2** (the look, values hidden) | B2–B7 |
+| 30 | (pasted) B2's output | **B2 ✅** — no `STRIPE_` / `PUBLIC_SIGNUP` line, `13 /opt/travelapp/backend/.env`. **Next instruction: B3** (the backup) | B3–B7 |
+| 31 | (pasted) B3's output | **B3 ✅** (`-rw------- 1 deploy deploy 2902 Oct  3 18:21 /home/lasha/env-before-stripe`). B4 split into B4a (create the key in Stripe, window left open) and B4b (the command). **Next instruction: B4a** — « Create restricted key » → screenshot | B4a, B4b, B5–B7 |
+| 32 | « ? » + a screenshot: « Create a restricted key — How will you be using this key? » (Powering an integration you built / Providing this key to a third-party application / Authorizing an AI agent) | **Instruction:** « Powering an integration you built » → « Continue » → screenshot | B4a, B4b, B5–B7 |
+| 33 | « ? » + a screenshot: « Choose a permission template » (One-time payments 31 permissions, Recurring 42, Terminal 25, Reporting 34, Payouts 13, « Choose your own → ») | **Instruction:** no template (each gives far more than needed) → « Choose your own → » → screenshot | B4a, B4b, B5–B7 |
+| 34 | « ? » + a screenshot: « Create restricted API key » (`…/apikeys/create`: « Key name », « Filter resources », every resource on « None ») | **Instruction:** Key name `scanid-app-checkout-read` → filter `Checkout` → « Checkout Sessions » = **Read** (not Write), everything else None → screenshot BEFORE the final create button | B4a, B4b, B5–B7 |
+| 35 | « ? » + a screenshot: name `scanid-app-checkout-read`, filter « Checkout » → rows « Core » (group), « Checkout Sessions » (group), « Checkout Sessions ⓘ » (resource) — **all three still on « None »** (Read not clicked yet) | **Instruction:** click « Read » on the bottom, indented row « Checkout Sessions ⓘ » — NOT on « Core » (a group toggle: Read on every core resource) → screenshot again, still no « Create key » | B4a, B4b, B5–B7 |
+| 36 | « ? » + a screenshot: « Checkout Sessions ⓘ » = **Read** (blue), « Core » = None, the « Checkout Sessions » group neutral | **Settings ✅.** **Instruction:** « Create key » → confirm identity if Stripe asks → the `rk_live_…` key: NO screenshot, not pasted anywhere, the tab left as it is (if a « Reveal live key » button appears instead: not clicked yet) → report in words | B4a done → B4b, B5–B7 |
+| 37 | « for middle should i choice none too? » (the « Checkout Sessions » group row, nothing highlighted) | **Answered: no — leave it untouched:** it is only the group's heading (no choice shown = its resource below decides); « None » there would probably reset the row below to None → a key with no permission. Then « Create key » | B4a → B4b, B5–B7 |
+| 38 | « I created and saved key! » | **B4a ✅.** The `.env`'s final newline confirmed from the record (task J's `printf …\n | tee -a` was its last write). **Next instruction: B4b** — open the endpoint page and the link page (URLs with the ids), run §K.5 B4's command, paste whsec / rk_live / plink at the three prompts → `appended` | B4b, B5–B7 |
+| 39 | « ? » + a screenshot: the `…/workbench/webhooks/<we_ id>` URL opened the « Event destinations » LIST (brilliant-finesse, Active, 2 events, Your account, error rate 0 %) | **Answered:** click « brilliant-finesse » → its page → « Signing secret » → « Reveal » → copy (no screenshot after « Reveal ») | B4b, B5–B7 |
+| 40 | (pasted, twice) the prompts waiting: « Webhook signing secret » then « Restricted key » | Guided: paste with Ctrl+Shift+V (nothing shows), Enter; then the key; then the `plink_…` | B4b |
+| 41 | (pasted) `Payment link id (plink_...): plink_…TmeU` → **`appended`** | **B4 ✅** (the plink re-checked on a zoom of the screenshot). **Next instruction: B5** (the masked diff) | B5–B7 |
+| 42 | (pasted) B5's output | **B5 ✅** (`13a14,17`, the four lines, secrets hidden, `deploy deploy` 600, 3 161 bytes). **Next instruction: B6** (the key test before the restart) | B6–B7 |
+| 43 | (pasted) the B6 command alone, then « KEY OK 200 » | **B6 ✅.** **Next instruction: B7** (restart, `active`, `/config`) | B7 |
+| 44 | (pasted) B7's output: `active`, `{"signup":false,"trial":true}` | **B7 ✅ — the secret is in place (≈ 19:22 UTC):** public webhook → 400 (unsigned and forged), config unchanged, pages 200; items 2 and 3 ticked. **Next instruction: B8** — reload the endpoint page, report « Total » / « Failed » in words | B8, Alex's message, key-copy reminder, B9–B11, C |
+| 45 | « Do you have seen any secret during this session? » + a screenshot of the reloaded endpoint page (Total 0, Failed 0, `whsec_·····` masked) | **B8 ✅.** **Answered: no secret seen.** Seen: the publishable key `pk_live_…` in full on the API keys page (public by design — it is in every Stripe payment page; nothing to do); the secret key behind « Reveal live key » (never revealed); the signing secret only masked (`whsec_·····`); the restricted key never shown (created in Stripe, pasted only at B4's hidden prompt); every pasted terminal output had the values hidden (B4 prompts, B5 `<hidden>`, B6 `KEY OK 200`); the sudo password never echoed. Identifiers seen (not secrets): the `acct_`, `we_`, `plink_`, `price_` ids, the `buy.stripe.com` link, the server's IP and the last-login IP. Nothing secret written to this file (only lengths: 38 / 107). **Next instruction: delete the user's plain copy of the key** (and clear the clipboard); then the message to Alex | key copy, Alex's message, B9–B11, C |
+| 46 | « All is done what was demanded? » | **Answered: not all.** Done: the code (live), Stripe (B0), the server (B1–B7: webhook live since ≈ 19:22 UTC), B8. Left: tell Alex (item 1 — ready text UPDATED above), the test purchase with Alex (B9), `signup` → true (B10), `rm ~/env-before-stripe` (B11), the full answers (item 8), close (item 9); the user's own: delete the plain copy of the key. **Next action given: send Alex the updated message** | Alex's message → B9–B11, C |
+| 47 | « How can i delete the server backup ~/env-before-stripe (B11). ? » | **Answered — safe now** (B5 verified the change; the copy is pre-Stripe and holds the other secrets): `sudo rm ~/env-before-stripe; ls -l ~/env-before-stripe` → « No such file or directory » | B11 output; Alex's message, B9, B10, C |
+| 48 | (pasted) a second B7 restart (`active`, empty `/config`) + B11 (« No such file or directory ») | **B11 ✅.** The empty `/config` = the app still starting after 5 s; public check 19:32 UTC all fine (config, webhook 400, pages 200). Left: Alex's message (given), B9 with Alex, B10, item 8, item 9; the user's key copy | Alex's message, B9, B10, C |
+| 49 | « Can alex do this? "Turn signup on (B10)." » | **Answered: no** — `signup` is only the server's `.env` line `PUBLIC_SIGNUP=0` (`config.public_signup_held()`; no switch in the app) + a restart, i.e. `sudo` on the VPS, which only the user has (Alex: the app's admin login and Stripe, no server access on record). Alex decides WHEN (his order: after the test purchase); the user runs B10 (one command) — the assistant gives it then | Alex's message, B9, B10, C |
+| 50 | « If it must be done by terminal command provide it! » | **Given** (§K.5 B10, `sleep 10` now) with « only after the test purchase works » + the command to hold it off again; checked in `main.py` `/config`: `signup` = secret set AND not `PUBLIC_SIGNUP=0` → removing the line gives `true` | Alex's message, B9, then B10, C |
+| 51 | (pasted) the user RAN the « hold it off again » command (`echo 'PUBLIC_SIGNUP=0' | sudo tee -a … && restart`) | **Explained: not needed — the hold was already there; harmless:** the line is now twice, `signup` still false (public check 19:34:49 UTC all fine: config, webhook 400, pages 200); B10 later removes both lines (sed deletes every match). Nothing to run now | Alex's message, B9, then B10, C |
+| 52 | « What to do now? » | **Answered:** (1) send Alex the updated message (item 1, text re-given); (2) delete any plain copy of the key; (3) `exit` the server; then wait for Alex → B9 together (the assistant guides it step by step), B10, item 8 | Alex's reply → B9 |
+| 53 | « unit purchases are now credited automatically — please don't credit them by hand any more, or they would be credited twice. What it does means? » | **Explained:** before, a payment never reached the app, so credits had to be added by hand in « Gérer les utilisateurs »; now Stripe tells the app and the app adds the documents itself (opens the account if needed, e-mails the customer); adding them by hand as well = twice (buys 10 → gets 20) | Alex's reply → B9 |
+| 54 | « No one has already payed! » | **Agreed** (Stripe showed €0 and 0 deliveries): the warning is only about the future → the message to Alex simplified (« from now on, every unit purchase is credited automatically — no need to add credits by hand »), re-given | Alex's reply → B9 |
+| 55 | « after it "Next: one test purchase together" i return to you to finilize implmentation? » | **Answered: yes** — when Alex is ready, come back (this session: « test purchase »; a new one: « Read SCANID-HANDOVER.md »): B9 guided, B10, the full answers (item 8), close (item 9); no code change planned; the handover notes are uncommitted (the user commits them when convenient) | Alex's reply → B9 |
+| 56 | « Can we turning signup on? » | **Answered: technically yes (one command, reversible), but Alex's order is « test purchase first »** → recommended: wait for the test or get Alex's OK. Risk if done now: small — a pack payment not credited automatically still sends Alex the « à rattacher » e-mail, which is what happens TODAY for every pack (the site's direct links carry no account). B10's command re-given for when the user decides | the user's decision → B10, or Alex → B9 first |
+| 57 | « if it is desactivate how Alex can test it? » | **Answered — everything is testable with `signup` off:** checked in the code — `signup` only makes the site's pack buttons (`a.js-buy`, `core.js` l. 270–274) go to `/app/inscription?pack=N` instead of Stripe; `POST /signup` (`main.py` `signup_for_pack`) does not look at the flag. So: (1) unit purchase from tarifs.html « Acheter à l'unité »; (2) from the app « Mon compte » → « Acheter des documents à l'unité »; (3) the pack path by opening `https://scanid.fr/app/inscription?pack=100` directly. Then B10 | Alex → B9, then B10 |
+| 58 | « Alex can test it via Stripe? » | **Answered: the test IS a real Stripe payment** on the live link (1,80 €, a real card), Alex can do it alone; then « Refund » in Stripe if wanted (Stripe keeps its fee — a few cents; a refund does not remove credits → delete the test account in « Gérer les utilisateurs »); after it, « Resend » the event in Stripe → credits unchanged (check 3). Not usable: a fake « test event » (invented data → at best the « à rattacher » e-mail, no crediting) and Stripe's test mode / sandbox (its own secret → the live server answers 400) | Alex → B9, then B10 |
+| 59 | « On the Stripe? » | Same answer, shorter: the real payment on Stripe's page is the test; Alex can do it alone, refund it in Stripe afterwards | — |
+| 60 | « I want to activate it! » | **The user's decision: `signup` on before the test purchase.** `/api/config` checked (still false, 20:24:40 UTC). **Instruction: B10** (ssh first if logged out) | B10 output → public checks; B9 with Alex later |
+| 61 | « It is frozen! » + a screenshot (VS Code terminal: ssh, B10 pasted — its first part shown highlighted and repeated, a bracketed-paste display effect or a double paste — then `[sudo] password for lasha:`) | **Answered: not frozen — sudo waits for the password** (last sudo ≈ 19:34 UTC, > 15 min): type it (nothing shows), Enter, wait ~10 s, paste the output. If the line really held the command twice: the `sed` still runs (idempotent), the first `systemctl restart travelasudo …` fails → the real restart is skipped → `/config` still false → then a plain restart is needed | B10 output |
+| 62 | (pasted) the B10 command line followed by `exit`; then « I entered password but it does not works! » | **B10 ✅ — it did work:** public `/api/*` 502 until 20:31:11 (slow restart), then `{"signup":true,"trial":true}` at 20:31:16; webhook 400, pages 200, the pack buttons → `/app/inscription` (core.js rule live). The `exit` typed ahead closed the ssh. Message to Alex updated (signup on + « one test purchase ») | item 1 (message), B9, item 8, item 9 |
+| 63 | « This is Alexande's resmponse! There is a problem! » + a screenshot of Alex's WhatsApp (French, 2 photos) | **Diagnosed:** payment OK, account OPENED by the webhook (Alex sees the row in « Gérer les utilisateurs »); missing: the welcome e-mail with the password link not found by Alex (Hotmail junk? or not sent → journal), and Stripe's default « Merci pour votre paiement » page gives no next step. **Action given:** a French message for Alex (junk folder, the link, « Mot de passe oublié ? »). Next: the Stripe confirmation message (no code); the journal check if no e-mail at all | Alex's answer; the Stripe message; B9 end; item 8; item 9 |
+| 64 | « Alex should see spam? » | **Answered: yes** — Hotmail's « Courrier indésirable »; if found there, « Ce n'est pas du courrier indésirable » so later ScanID e-mails reach the inbox. Checked by the assistant (public DNS, 2026-10-06 ≈ 20:50 UTC): scanid.fr SPF `v=spf1 include:_spf-eu.ionos.com ~all`, DKIM `s1-ionos` / `s2-ionos` (CNAME → IONOS keys), DMARC `p=none` (→ dmarc.ionos.fr), MX IONOS — authentication is in place; a junk placement = Hotmail's caution with a new sender (DMARC `p=none` gives no extra trust) | Alex's answer |
+| 65 | « He want it! we can do it now? » + Alex's WhatsApp « … faudrait que le client retourne sur le site et sur la page de connexion en lui disant de regarder ses mails » (then « neglect /content ! » — ignore the /context output) | **Yes → new stage K9** written here first (§K.0 « K9 sub-steps »: Stripe redirect to `/app/?achat=unite` + the login screen's alert) | K9.1–K9.7 |
+| 66 | « Finish this stage and update SCANID-HANDOVER.md in such way that if i give you only one command in the new session we can continue working seamlessly! » | **K9.1–K9.3 DONE, K9.4 verification** (unit 91, eslint 11, 117 related e2e on 3 projects, mutations 4 / 4, the full suite, build + guard — §K.0 « K9 sub-steps »); the resume protocol (item 3: the expected `git status` with K9's files, the live checks incl. « is K9 deployed ») and the new top block « ▶ START HERE » (N1 ship K9 → N2 Stripe redirect → N3 check + tell Alex → N4 Alex logs in → N5 answers → N6 close) rewritten for a one-command resume; item 1 ticked (Alex informed); « Last updated »; the memory note | N1 (the user commits + pushes K9) |
+| 67 | « You also forgot to replace the Terms and Conditions in the list I gave you. » | **Searched, nothing found:** no list with « Terms and Conditions » in this session, in this file (only task C, 2026-09-30: the login footer's « CGU » → « CGV », done — `cgu.html` is 404, `cgv.html` 200) or in Alex's PDF (`pdftotext`, 81 lines: its only « replace » is tarifs.html, live with his SHA-256). **Asked the user which list / which file** — not acted on | the user's answer (which list, which file, the new text) |
+| 68 | « Read fronted/payment_scanid and tell me if all is done? » | **Checked (≈ 21:10 UTC):** the folder = the PDF (2 pages, re-read in full with `pdftotext`: §1 link, §2 tarifs.html, §3 webhook, §4 crediting — no « Terms and Conditions »), tarifs.html (CRLF copy), favicon.ico, LibreOffice's lock file; tarifs.html: Alex's SHA-256 `b5765cef…0645` = the folder's copy (CR removed) = `nouveau-site/tarifs.html` (19 405 bytes) = live. **Answer: every item is implemented and live; still open — the end of the test purchase (Alex logs in: N4), the confirmation to Alex (the three checks + the packs answer: N5), and Alex's follow-up (K9: N1–N3)** | N1 |
+| 69 | « Mark what is not done in SCANID-HANDOVER.md! » | **DONE:** new block « ❌ NOT DONE YET — THE COMPLETE LIST » at the top (after « ▶ START HERE »): Alex's PDF item by item (✅ / ⏳ / ❌ / ❓), his K9 follow-up, the rest (N5, N6, B9's extras, the Terms-and-Conditions question, the key copy, the slow restart, the older items) | N1 |
+| 70 | « And we will continue with new fresh seesion! » | **Session closed (2026-10-06 ≈ 21:20 UTC).** Checked: no secret and no full `acct_` / `we_` / `plink_` / `price_` id or customer address in this file; the resume protocol, « ▶ START HERE » (N1–N6) and « ❌ NOT DONE YET » are current; the memory note points here. **The next session starts with the resume protocol's item 3 checks (is K9 committed / pushed / deployed?), then N1** | N1 |
+| 71 | « It is done? » + Alex's WhatsApp again (« … retourne sur le site et sur la page de connexion en lui disant de regarder ses mails ») | **Answered: not yet live** — checked 21:2x UTC: K9 not committed (HEAD `4fd507c` = `origin/master`, the 6 files still in `git status`), live bundle still `index-KR0bPHwB.js` without « Paiement reçu, merci »; the Stripe redirect not set. Next = N1 (commit + push), then N2 | N1 |
+| 72 | « After this 2 stepsall will be done? » | **Answered: Alex's « back to the login page » request — yes (after N1 + N2, then N3: a quick check + tell Alex). Task K as a whole — not quite:** N4 (Alex logs in → « Crédits : 1 »; confirms the welcome e-mail), N5 (the confirmations Alex asked for: the three checks + the packs answer), N6 (close); optional B9 extras; the open Terms-and-Conditions question | N1 |
+| 73 | « all what must be in .gitignore is in? » | **Answered: yes, nothing to add** (checked ≈ 21:30 UTC): untracked-not-ignored = only `frontend/tests/e2e/purchase-return.spec.js` (to commit); `git ls-files -ci --exclude-standard` empty; ignored = `backend/.env`, `frontend/.env.local`, `frontend/dist/`, `frontend/node_modules/`, `frontend/test-results/`, `frontend/tests/.browser-libs/`, `frontend/tests/fixtures/files/`, `frontend/payment_scanid/` (Alex's folder + the lock file), the two identity PDFs, `bench_*`, `newvenv/`, caches, `site*.html`; `git add --dry-run .` = exactly K9's 6 paths; their added lines hold no secret / id / address (the only hits: the JSX prop `onForgotPassword=` — false positive) | N1 |
+| 74 | « can i use git add .? » | **Answered: yes** — re-checked: `git add --dry-run .` from the repo root = the 6 paths of K9 (+ the handover); run it from `/home/lasha/Public/new` (from a subfolder `.` means only that subfolder) | N1 |
 
 ### K.1 The demand (user, 2026-10-06) and Alex's PDF in substance
 
@@ -487,6 +904,15 @@ file) — here it covers writing `tarifs.html` into the read-only site source (P
 ### K.4 Stage records
 
 (K6–K8 records are added here as each stage completes.)
+
+**A — ship — DONE (2026-10-06, by the user; checked by the assistant 17:18 UTC).** Commit **`4fd507c`** « À la carte:
+tarifs link, purchases open accounts, in-app link » (Lasha101, 15:35:28 UTC; 21 files, 1 813+ / 163−; parent
+`82acbd6`), pushed: `origin/master` = `4fd507c`, tree clean. GitHub API: « Deploy » run 37488817523 ✅ (15:35:37 →
+15:36:27 UTC), « CI » run 37488817365 ✅ (→ 15:36:58 UTC). Public checks: `/tarifs.html` 200, 19 405 bytes, SHA-256
+`b5765cef…0645`, the « À la carte » button → the unit link, 0 × « Commencer par l » ; `/app/` → `index-KR0bPHwB.js`
+(the same file name as K6.3's local build) with « Acheter des documents à l'unité » 1, `locked_prefilled_email` 1, the
+link 1, « Compte déjà ouvert par un achat » 2; `/api/config` `{"signup":false,"trial":true}`; `POST /api/stripe/webhook`
+without a signature → 503 (no secret: expected until B7).
 
 **K8 — DONE (2026-10-06).** Root `.gitignore`: `.~lock.*#` (LibreOffice lock files, with a comment) under « Editor / OS
 files »; a new last section for `/frontend/payment_scanid/` (Alex's delivery folder, kept on this machine; content in
@@ -668,8 +1094,8 @@ commits). Secrets never in the chat: typed at hidden prompts on the server; noth
   Webhooks → the endpoint: **URL** `https://scanid.fr/api/stripe/webhook` and **event** `checkout.session.completed`
   (Alex's « please check both »); suggest adding `checkout.session.async_payment_succeeded` (a delayed method — SEPA
   debit, bank transfer — is then credited when the money arrives; the app handles both events); (c) note the endpoint's
-  **failed deliveries** of the last 3 days (C.8); (d) the unit link's id: Payment Links → « Document à l'unité » →
-  `plink_…` (on its page); (e) a **restricted key**: Developers → API keys → « Create restricted key » → **Checkout
+  **failed deliveries** of the last 3 days (C.8); (d) the unit link's id: Payment Links (`https://dashboard.stripe.com/payment-links` — no menu entry in
+  2026) → « Document à l'unité » → `plink_…` (the end of the address bar); (e) a **restricted key**: Developers → API keys → « Create restricted key » → **Checkout
   Sessions: Read**, everything else None (if the role Alex gave cannot create keys: Alex grants one that can, or creates
   it himself while B4's prompt waits — the key never travels by e-mail or chat); (f) the signing secret: « Reveal » on
   the endpoint (`whsec_…`). Keep the Stripe tab open for B4.
@@ -714,7 +1140,9 @@ commits). Secrets never in the chat: typed at hidden prompts on the server; noth
   `https://scanid.fr/app/inscription?pack=100` opened directly (the hold keeps the site's buttons on Stripe) → another
   test address → 118,80 € → « Crédits : 100 », « Mes achats » « Pack 100 ». Afterwards: refunds in Stripe if wanted (a
   refund does not remove credits) and delete the test accounts in « Gérer les utilisateurs ».
-- **B10.** `signup` → true: `sudo sed -i '/^PUBLIC_SIGNUP=0$/d' /opt/travelapp/backend/.env && sudo systemctl restart travelapp.service; sleep 5; systemctl is-active travelapp.service; curl -s http://127.0.0.1:8001/config`
+- **B10.** `signup` → true: `sudo sed -i '/^PUBLIC_SIGNUP=0$/d' /opt/travelapp/backend/.env && sudo systemctl restart travelapp.service; sleep 10; systemctl is-active travelapp.service; curl -s http://127.0.0.1:8001/config`
+  (`sleep 10`, not 5: on 2026-10-06 19:31 UTC a restart left `/config` still empty after 5 s — the app was starting.)
+  To hold it off again: `echo 'PUBLIC_SIGNUP=0' | sudo tee -a /opt/travelapp/backend/.env > /dev/null && sudo systemctl restart travelapp.service`
   → `active`, `{"signup":true,"trial":true}`. The assistant (public): `/api/config` the same; on the site « Choisir ce
   pack » → `/app/inscription?pack=…` (`core.js` rewrites `.js-buy`); « Acheter à l'unité » still → Stripe.
 - **B11.** `sudo rm ~/env-before-stripe; ls -l ~/env-before-stripe` → « No such file or directory ».

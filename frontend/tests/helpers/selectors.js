@@ -43,6 +43,8 @@ export const SELECTORS = {
     // PWA
     offlineScreen: '.sid-offline',
     sessionExpired: '.sid-session-expired',
+    // Back from Stripe after an « à la carte » payment (K9)
+    purchaseReturn: '.sid-purchase-return',
 
     // OCR job monitor
     jobMonitor: '.job-monitor',

@@ -5,7 +5,7 @@ import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUE
 import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
 import { PASSWORD_RULES, evaluatePassword, generateExamplePassword } from './passwordRules.js';
 import OfflineScreen from './OfflineScreen.jsx';
-import { packSummary, formatEuros, formatCount, purchaseLabel, unitCheckoutUrl, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { packSummary, formatEuros, formatCount, purchaseLabel, unitCheckoutUrl, isUnitPurchaseReturn, withoutPurchaseReturn, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -452,6 +452,14 @@ export default function App() {
     // The identifiant shown on the login form after a password was just chosen.
     const [loginPrefill, setLoginPrefill] = useState('');
     const [sessionExpired, setSessionExpired] = useState(false);
+    // Back from Stripe after an « à la carte » payment (the unit link's « After
+    // payment » redirect, Alex 06/10/2026): the login screen says what comes
+    // next. Read once; the marker leaves the address bar at once, and the
+    // first successful login ends it.
+    const [purchaseReturn, setPurchaseReturn] = useState(() => isUnitPurchaseReturn(window.location.search));
+    useEffect(() => {
+        if (purchaseReturn) window.history.replaceState(window.history.state, '', withoutPurchaseReturn(window.location));
+    }, [purchaseReturn]);
     // Whether this browser ever had a session. A first visit answers 401 to
     // /users/me exactly as an expired one does, and only this tells them apart
     // — without it every anonymous visitor would be greeted by « Votre session
@@ -489,7 +497,7 @@ export default function App() {
                 const data = await response.json();
                 hadSessionRef.current = true;
                 // A password link stays on its page even for a logged-in visitor.
-                setUser(data); setToken(true); setView(routeView() || 'dashboard'); setSessionExpired(false);
+                setUser(data); setToken(true); setView(routeView() || 'dashboard'); setSessionExpired(false); setPurchaseReturn(false);
             }
             // The server answered and refused: the session really is over.
             // Say so on the login screen instead of dropping the user there
@@ -544,7 +552,7 @@ export default function App() {
     useEffect(() => { if (online && token && !user) fetchUser(); }, [online, token, user, fetchUser]);
     const renderView = () => {
         switch (view) {
-            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
+            case 'login': return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} purchaseReturn={purchaseReturn} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
             case 'forgot': return <ForgotPasswordPage onBackToLogin={() => setView('login')} />;
             case 'inscription': return <PackSignupPage
                 user={user}
@@ -554,7 +562,7 @@ export default function App() {
                 onDone={(userName) => { setLoginPrefill(userName || ''); window.history.pushState({}, '', APP_ROOT); setUser(null); setToken(false); setView('login'); }}
                 onForgot={() => { window.history.pushState({}, '', APP_ROOT); setView('forgot'); }} />;
             case 'dashboard': return <Dashboard user={user} logout={logout} token={token} fetchUser={fetchUser} />;
-            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
+            default: return <Login setToken={setToken} fetchUser={fetchUser} sessionExpired={sessionExpired} purchaseReturn={purchaseReturn} onForgotPassword={() => setView('forgot')} initialUsername={loginPrefill} />;
         }
     };
     const handleReconnect = useCallback(() => { reportNetworkResult(true); fetchUser(); }, [fetchUser]);
@@ -580,7 +588,7 @@ export default function App() {
 }
 
 // --- PAGE & VIEW COMPONENTS ---
-function Login({ setToken, fetchUser, onForgotPassword, sessionExpired = false, initialUsername = '' }) {
+function Login({ setToken, fetchUser, onForgotPassword, sessionExpired = false, purchaseReturn = false, initialUsername = '' }) {
     const [username, setUsername] = useState(initialUsername);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -624,10 +632,21 @@ function Login({ setToken, fetchUser, onForgotPassword, sessionExpired = false, 
                 <div className="landing-auth">
                     <div className="sid-card">
                         <h2>Connexion</h2>
+                        {/* Back from Stripe after an « à la carte » payment: a
+                            first purchase has no password yet — its link is in
+                            the welcome e-mail. */}
+                        {purchaseReturn && (
+                            <p className="sid-alert sid-alert--info sid-purchase-return" role="status">
+                                <strong>Paiement reçu, merci !</strong> Vos documents sont ajoutés à votre espace ScanID.<br />
+                                Premier achat ? Un e-mail de devis@scanid.fr vous est envoyé avec le lien pour choisir votre mot de passe — pensez à regarder dans vos courriers indésirables.<br />
+                                Déjà client ? Connectez-vous ci-dessous.
+                            </p>
+                        )}
                         {/* An expired session is a prompt to sign in again, not
                             a silent return to the login form. Informational, so
-                            it never competes with a real credentials error. */}
-                        {sessionExpired && !error && (
+                            it never competes with a real credentials error — nor
+                            with the purchase message, which says the same and more. */}
+                        {sessionExpired && !error && !purchaseReturn && (
                             <p className="sid-alert sid-alert--info sid-session-expired">
                                 Votre session a expiré. Veuillez vous reconnecter pour continuer.
                             </p>

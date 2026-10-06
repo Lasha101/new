@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, UNIT_PAYMENT_LINK, unitCheckoutUrl, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, UNIT_PAYMENT_LINK, unitCheckoutUrl, UNIT_PURCHASE_RETURN_URL, isUnitPurchaseReturn, withoutPurchaseReturn, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
 
 test('the four packs and their HT prices match the Stripe sheet', () => {
     assert.deepEqual(Object.keys(PACKS), ['100', '1000', '3000', '5000']);
@@ -39,6 +39,16 @@ test('« à la carte » from the app: the site\'s link, tied to the account by i
         + '?client_reference_id=0f3c9a1e2b4d4c6f8a0b1c2d3e4f5a6b&locked_prefilled_email=Marie.Dupont%2Bagence%40exemple.fr');
     const url = new URL(unitCheckoutUrl(user));
     assert.deepEqual([...url.searchParams], [['client_reference_id', user.id], ['locked_prefilled_email', user.email]]);
+});
+
+test('back from the unit link: the address Stripe redirects to, recognised once, then removed', () => {
+    const back = new URL(UNIT_PURCHASE_RETURN_URL);
+    assert.equal(back.origin + back.pathname, 'https://scanid.fr/app/');
+    assert.equal(isUnitPurchaseReturn(back.search), true);
+    for (const other of ['', '?achat=pack', '?achat=UNITE', '?achats=unite', '?pack=100']) assert.equal(isUnitPurchaseReturn(other), false);
+    assert.equal(withoutPurchaseReturn({ pathname: '/app/', search: '?achat=unite', hash: '' }), '/app/');
+    assert.equal(withoutPurchaseReturn({ pathname: '/app/', search: '?x=1&achat=unite', hash: '#top' }), '/app/?x=1#top');
+    assert.equal(withoutPurchaseReturn({ pathname: '/app/inscription', search: '?pack=100', hash: '' }), '/app/inscription?pack=100');
 });
 
 test('SIRET: 14 digits and a valid Luhn key, spaces allowed when typing', () => {

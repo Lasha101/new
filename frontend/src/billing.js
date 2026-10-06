@@ -35,6 +35,21 @@ export const UNIT_PAYMENT_LINK = 'https://buy.stripe.com/8x2eVc3DF4cQcQF2Elebu05
 export const unitCheckoutUrl = user =>
     `${UNIT_PAYMENT_LINK}?${new URLSearchParams({ client_reference_id: user.id, locked_prefilled_email: user.email })}`;
 
+/** Where the unit link sends the buyer once paid (Stripe, « After payment » →
+ * redirect; Alex, 06/10/2026): the app's login screen, which then says to look
+ * for the welcome e-mail. The marker is read once and leaves the address bar. */
+export const PURCHASE_RETURN_PARAM = 'achat';
+export const UNIT_PURCHASE_RETURN_URL = `https://scanid.fr/app/?${PURCHASE_RETURN_PARAM}=unite`;
+export const isUnitPurchaseReturn = search => new URLSearchParams(search).get(PURCHASE_RETURN_PARAM) === 'unite';
+
+/** The same address without the marker — any other parameter is kept. */
+export function withoutPurchaseReturn({ pathname, search, hash }) {
+    const params = new URLSearchParams(search);
+    params.delete(PURCHASE_RETURN_PARAM);
+    const rest = params.toString();
+    return `${pathname}${rest ? `?${rest}` : ''}${hash}`;
+}
+
 /** « 1 890,00 € » */
 export function formatEuros(cents) {
     const euros = Math.floor(cents / 100);
