@@ -228,6 +228,10 @@ Uncomment the `Strict-Transport-Security` line in
 it after a week. Only after HTTPS has been stable — browsers cache it and you
 cannot take it back.
 
+**2026-10-07 — enabled** (Alex's request): `max-age=86400`, no `includeSubDomains`,
+no `preload`; raise it to `max-age=31536000` after a week without trouble
+(SCANID-HANDOVER.md §M).
+
 ### 3.6 `PermitRootLogin no` — low value, do it last
 
 Gate: prove `lasha` can `ssh` in **and** run `sudo` from a second session first.

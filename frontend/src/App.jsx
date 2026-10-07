@@ -1945,8 +1945,8 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             const payload = { passport_ids: Array.from(selectedIds) };
             try {
                 const response = await fetch(`${API_URL}/passports/delete-multiple`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.ok) { fetchData(); } else { const errorData = await response.json(); alert(`Échec de la suppression multiple: ${errorData.detail}`); }
-            } catch (err) { alert(`Une erreur est survenue: ${err.message}`); }
+                if (response.ok) { fetchData(); } else { const errorData = await response.json(); alert(`Échec de la suppression multiple\u00A0: ${errorData.detail}`); }
+            } catch (err) { alert(`Une erreur est survenue\u00A0: ${err.message}`); }
         }
     };
 
@@ -1957,7 +1957,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
         const query = buildExportQuery({ exportFilters, tableFilters: filters, role: user.role, docTypeFilter, format, preview });
         try {
             const response = await fetch(`${API_URL}/export/data?${query}`, { credentials: 'include' });
-            if (!response.ok) { const err = await response.json(); alert(`Échec de la récupération des données: ${err.detail}`); return null; }
+            if (!response.ok) { const err = await response.json(); alert(`Échec de la récupération des données\u00A0: ${err.detail}`); return null; }
             return response;
         } catch (error) { alert('Une erreur est survenue lors de la récupération des données.'); return null; }
     };
@@ -1974,7 +1974,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
             // -- EXPORT SELECTION (file built server-side, CSV or Excel) --
             try {
                 const response = await fetch(`${API_URL}/export/data/selection?format=${format}`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passport_ids: Array.from(selectedIds) }) });
-                if (!response.ok) { const err = await response.json(); alert(`Échec de l'exportation: ${err.detail}`); return; }
+                if (!response.ok) { const err = await response.json(); alert(`Échec de l'exportation\u00A0: ${err.detail}`); return; }
                 const blob = await response.blob();
                 const url = trackObjectUrl(URL.createObjectURL(blob));
                 const link = document.createElement('a'); link.href = url; link.setAttribute('download', downloadFilename(response.headers.get('content-disposition'), 'selection_documents', format));

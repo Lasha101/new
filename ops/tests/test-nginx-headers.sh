@@ -20,7 +20,7 @@
 #   /app/   the application, which keeps the strict policy and must NOT inherit
 #           one byte of the site's.
 #
-# Both zones are checked for the SAME four headers and for EXACTLY ONE CSP each.
+# Both zones are checked for the SAME five headers and for EXACTLY ONE CSP each.
 # That last count is the point: the tempting fix — a second add_header in the
 # location — parses fine, sends two policies, and browsers enforce their
 # INTERSECTION, so the looser one silently does nothing.
@@ -142,9 +142,9 @@ APP_HEADERS=$(curl -sS -D - -o /dev/null "http://127.0.0.1:8087/app/" 2>&1)
 printf '   ZONE / (site)\n'; printf '%s\n' "$SITE_HEADERS" | sed 's/^/      /'
 printf '   ZONE /app/ (application)\n'; printf '%s\n' "$APP_HEADERS" | sed 's/^/      /'
 
-# The four headers must reach BOTH zones. This is the add_header inheritance
+# The five headers must reach BOTH zones. This is the add_header inheritance
 # trap made into a test: `location /` includes a snippet, and if that snippet
-# ever grew an add_header of its own, these three would silently vanish from
+# ever grew an add_header of its own, these four would silently vanish from
 # the site while still passing for the application.
 for zone in site app; do
     if [[ "$zone" == site ]]; then H="$SITE_HEADERS"; label="/"; else H="$APP_HEADERS"; label="/app/"; fi
@@ -152,8 +152,15 @@ for zone in site app; do
     assert_contains "$H" "X-Frame-Options: DENY" "${label} X-Frame-Options: DENY is sent"
     assert_contains "$H" "Referrer-Policy: strict-origin-when-cross-origin" "${label} Referrer-Policy is sent"
     assert_contains "$H" "Content-Security-Policy:" "${label} a CSP is sent"
-    # HSTS must be commented out: enabling it before HTTPS works is unrecoverable.
-    assert_absent "$H" "Strict-Transport-Security" "${label} HSTS is NOT sent (it ships commented out, by design)"
+    # HSTS exactly as Alex asked (2026-10-07): one day, no includeSubDomains, no
+    # preload. The whole value is compared, so a longer max-age or an added token
+    # fails too — see the box at the top of the snippet before changing it.
+    hsts_count=$(grep -ci '^Strict-Transport-Security:' <<<"$H")
+    if [[ "$hsts_count" == "1" ]]; then ok "${label} exactly one Strict-Transport-Security header"
+    else bad "${label} sends ${hsts_count} Strict-Transport-Security headers, expected exactly 1"; fi
+    hsts_value=$(grep -i '^Strict-Transport-Security:' <<<"$H" | tr -d '\r' | sed 's/^[^:]*: *//')
+    if [[ "$hsts_value" == "max-age=86400" ]]; then ok "${label} HSTS is max-age=86400 (one day), no includeSubDomains, no preload"
+    else bad "${label} HSTS value is '${hsts_value}', expected 'max-age=86400'"; fi
 
     # EXACTLY ONE CSP. Two are enforced as their intersection, not as the last
     # one written, so a second add_header in a location would leave the looser
@@ -238,62 +245,6 @@ assert_absent "$CSP" "formspree.io"         "/app/ does NOT inherit the site's F
 APP_SCRIPT_SRC=$(grep -oE "script-src[^;]*" <<<"$CSP")
 assert_absent "$APP_SCRIPT_SRC" "'unsafe-inline'" "/app/ script-src still refuses inline script"
 assert_contains "$CSP" "'unsafe-eval'" "/app/ still carries 'unsafe-eval' (heic2any)"
-
-# ---------------------------------------------------------------------------
-# The HSTS line ships commented out, so "it is absent" is not enough: a typo in
-# a commented line is invisible until the day someone enables it on a live
-# site. Uncomment it in a COPY and prove it is a working directive.
-printf -- '\n--- the commented-out HSTS line, uncommented\n'
-sed 's|^# add_header Strict-Transport-Security|add_header Strict-Transport-Security|' \
-    "${WORKDIR}/conf/security-headers.conf" > "${WORKDIR}/conf/security-headers-hsts.conf"
-if ! grep -q '^add_header Strict-Transport-Security' "${WORKDIR}/conf/security-headers-hsts.conf"; then
-    bad "the snippet has no commented-out HSTS line to uncomment"
-else
-    ok "the snippet carries a commented-out HSTS line"
-    if [[ "$RUNNER" == local ]]; then
-        nginx -p "${WORKDIR}" -c "${WORKDIR}/conf/nginx.conf" -s quit 2>/dev/null || true
-        sleep 0.5
-        cp "${WORKDIR}/conf/site-csp.conf" "${WORKDIR}/etc/nginx/conf.d/"
-        cp "${WORKDIR}/conf/security-headers-hsts.conf" "${WORKDIR}/etc/nginx/conf.d/security-headers.conf"
-        htout=$(nginx -t -p "${WORKDIR}" -c "${WORKDIR}/conf/nginx.conf" 2>&1); hrc=$?
-    else
-        docker rm -f "$CONTAINER" >/dev/null 2>&1; CONTAINER=""
-        htout=$(docker run --rm \
-            -v "${WORKDIR}/conf/nginx.conf:/etc/nginx/nginx.conf:ro" \
-            -v "${WORKDIR}/conf/security-headers-hsts.conf:/etc/nginx/conf.d/security-headers.conf:ro" \
-            -v "${WORKDIR}/conf/site-csp.conf:/etc/nginx/conf.d/site-csp.conf:ro" \
-            nginx:alpine nginx -t 2>&1); hrc=$?
-    fi
-    if (( hrc == 0 )); then ok "it parses once uncommented (nginx -t exits 0)"; else bad "nginx -t exited ${hrc} with HSTS enabled: ${htout}"; fi
-
-    if [[ "$RUNNER" == docker ]]; then
-        CONTAINER=$(docker run -d -p 127.0.0.1:8088:8087 \
-            -v "${WORKDIR}/conf/nginx.conf:/etc/nginx/nginx.conf:ro" \
-            -v "${WORKDIR}/conf/security-headers-hsts.conf:/etc/nginx/conf.d/security-headers.conf:ro" \
-            -v "${WORKDIR}/conf/site-csp.conf:/etc/nginx/conf.d/site-csp.conf:ro" \
-            -v "${WORKDIR}/html:/usr/share/nginx/html:ro" \
-            nginx:alpine 2>/dev/null)
-        for _ in $(seq 1 40); do
-            curl -fsS -o /dev/null "http://127.0.0.1:8088/" 2>/dev/null && break
-            sleep 0.25
-        done
-        HSTS_HEADERS=$(curl -sS -D - -o /dev/null "http://127.0.0.1:8088/" 2>&1)
-        HSTS_APP_HEADERS=$(curl -sS -D - -o /dev/null "http://127.0.0.1:8088/app/" 2>&1)
-    else
-        nginx -p "${WORKDIR}" -c "${WORKDIR}/conf/nginx.conf" 2>/dev/null
-        sleep 1
-        HSTS_HEADERS=$(curl -sS -D - -o /dev/null "http://127.0.0.1:8087/" 2>&1)
-        HSTS_APP_HEADERS=$(curl -sS -D - -o /dev/null "http://127.0.0.1:8087/app/" 2>&1)
-        nginx -p "${WORKDIR}" -c "${WORKDIR}/conf/nginx.conf" -s quit 2>/dev/null || true
-    fi
-    # BOTH zones, for the same reason the other headers are checked twice: HSTS
-    # protects a hostname, not a path, so a zone that silently dropped it would
-    # leave the whole domain half-protected.
-    assert_contains "$HSTS_HEADERS" "Strict-Transport-Security: max-age=63072000; includeSubDomains" \
-        "/ sends a well-formed HSTS header once uncommented"
-    assert_contains "$HSTS_APP_HEADERS" "Strict-Transport-Security: max-age=63072000; includeSubDomains" \
-        "/app/ sends a well-formed HSTS header once uncommented"
-fi
 
 if [[ "$RUNNER" == local ]]; then
     nginx -p "${WORKDIR}" -c "${WORKDIR}/conf/nginx.conf" -s quit 2>/dev/null || true

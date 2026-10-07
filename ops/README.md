@@ -50,8 +50,9 @@ next deploy. Change these files in the repository, not on the VPS.
    `OFFSITE_DEST`. A backup that lives only on the machine it backs up does not
    survive the failure you are actually insuring against.
 2. **Where the age private key lives.** Not on the VPS. See below.
-3. **Whether HTTPS is working**, before you touch the HSTS line. It is commented
-   out for a reason, and the reason is that enabling it early is unrecoverable.
+3. **Whether HTTPS is working**, before you touch the HSTS line. It is on since
+   2026-10-07, one day first (the box in `nginx-security-headers.conf`), because
+   HSTS sent while HTTPS is broken is unrecoverable.
 
 ---
 
