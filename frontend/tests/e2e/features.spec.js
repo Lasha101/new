@@ -137,12 +137,29 @@ test.describe('Actions groupées', () => {
         await resultsTable(page).locator('tbody tr').nth(1).locator('input[type="checkbox"]').check();
 
         page.once('dialog', dialog => {
-            expect(dialog.message()).toContain('2 passeports');
+            expect(dialog.message()).toBe('Êtes-vous sûr de vouloir supprimer 2 documents ?');
             dialog.accept();
         });
         await page.getByRole('button', { name: 'Supprimer (2)' }).click();
 
         await expect.poll(() => countResultRows(page), { timeout: 10_000 }).toBe(before - 2);
+    });
+
+    test('pour une seule ligne, la question dit « 1 document », au singulier', async ({ page }) => {
+        await login(page);
+        const before = await countResultRows(page);
+        await resultsTable(page).locator('tbody tr').first().locator('input[type="checkbox"]').check();
+
+        // Answered « Annuler »: nothing is deleted, the selection stays.
+        const question = new Promise(resolve => page.once('dialog', dialog => {
+            resolve(dialog.message());
+            dialog.dismiss();
+        }));
+        await page.getByRole('button', { name: 'Supprimer (1)' }).click();
+
+        expect(await question).toBe('Êtes-vous sûr de vouloir supprimer 1 document ?');
+        await expect(page.getByRole('button', { name: 'Supprimer (1)' })).toBeVisible();
+        expect(await countResultRows(page)).toBe(before);
     });
 });
 

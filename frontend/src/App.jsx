@@ -1941,7 +1941,7 @@ function CrudManager({ title, endpoint, token, user, fetchUser, fields, filterCo
     const handleToggleSelect = (id) => { setSelectedIds(prev => { const newSet = new Set(prev); if (newSet.has(id)) { newSet.delete(id); } else { newSet.add(id); } return newSet; }); };
     const handleToggleSelectAll = () => { if (selectedIds.size === visibleItems.length) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(visibleItems.map(i => i.id))); } };
     const handleMultiDelete = async () => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedIds.size} passeports ?`)) {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedIds.size} document${selectedIds.size > 1 ? 's' : ''} ?`)) {
             const payload = { passport_ids: Array.from(selectedIds) };
             try {
                 const response = await fetch(`${API_URL}/passports/delete-multiple`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });

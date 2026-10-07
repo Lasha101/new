@@ -29,10 +29,14 @@ application tasks that followed it.
 >    https://scanid.fr/api/stripe/webhook` (expected 400); K9 live? → `B=$(curl -s https://scanid.fr/app/ | grep -o
 >    'assets/index-[^"]*\.js' | head -1); curl -s "https://scanid.fr/app/$B" | grep -c 'Paiement reçu, merci'` (1 = K9
 >    deployed, 0 = not yet). If the live state is ahead of the ticks, ask what was done, then tick.
-> 3a. **TASK M (Alex's « four small points »: the alert() colons, HSTS, two confirmations) IS THE CURRENT TASK since
->    2026-10-07 ≈ 17:20 UTC → go to §M.0 (just above §L) and continue at its first unticked stage.** Alex's PDF is in
->    `frontend/payment_scanid/` (« Lasha-Small-Points-2026-10-07.pdf »). Expected `git status --short` during task M:
->    §M.0. Task L's S4 and task K's N3–N6 stay open alongside.
+> 3a. **TASK P (Alex's « three website pages and four short points »: cgv / tarifs / faq replaced, the delete question
+>    « N documents », three confirmations, the HSTS raise from 14/10) IS THE CURRENT TASK since 2026-10-07 ≈ 20:20 UTC
+>    → go to §P.0 (just above §M) and continue at its first unticked stage** (P0–P7 ✅ locally at 20:53 UTC → §P.5 S1: the
+   user commits + pushes; `git log --oneline -1` newer than `fb8ad74` = done → S2). Alex's files are in
+>    `frontend/payment_scanid/` (« Lasha-Three-Pages-2026-10-07.pdf », the pages in `cgv-2026-10-07/`). Expected `git
+>    status --short` during task P: §P.0. (Letters N and O skipped: task K's steps are N1–N6.)
+> 3a′. TASK M (the alert() colons, HSTS, two confirmations) — ✅ LIVE `fb8ad74` (HSTS live 18:51:40 UTC); left: §M.5 S6
+>    (Alex's text) and LATER the one-year HSTS raise (= task P's §5). Task L's S4 and task K's N3–N6 stay open alongside.
 > 3b. TASK L (the CGV + export names) — ✅ LIVE `53ad965`; left: §L.5 S4 (send Alex the text). Alex's files are in
 >    `frontend/payment_scanid/` (cgv.html CRLF, « Lasha-CGV-Export-2026-10-03.pdf »). Task K's N2–N6 stay open
 >    alongside (« ▶ START HERE »; N1 ✅ — K9 is live as `b22ad9a`; N2 ✅).
@@ -143,10 +147,21 @@ locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
 - [ ] **N6 = item 9 — close task K** (mark ✅ here, §K.0, the resume protocol; the memory note).
 - The user's own, any time: delete any plain copy of the `rk_live_…` key. Later, read-only: the slow restart (B10 note).
 - [ ] **▶ TASK L — STARTED 2026-10-06 ≈ 21:22 UTC: Alex's `cgv.html` + « Lasha-CGV-Export-2026-10-03.pdf »
-  → §L (just above §K): ✅ LIVE `53ad965` (Deploy 21:40:26 UTC, live checked); left = §L.5 S4 (send Alex the text).** (The block below is the plan as written before the files came.)
-- [ ] **▶ TASK M — STARTED 2026-10-07 ≈ 17:20 UTC (THE CURRENT TASK): Alex's « Lasha-Small-Points-2026-10-07.pdf » → §M
+  → §L (just above §K): ✅ LIVE `53ad965` (Deploy 21:40:26 UTC, live checked); left = §L.5 S4 (send Alex the text) — SUPERSEDED
+  by task P's answer (§P.5: Alex rechecked the deployment himself and settled L's two remarks).** (The block below is the plan as written before the files came.)
+- [ ] **▶ TASK M — STARTED 2026-10-07 ≈ 17:20 UTC: Alex's « Lasha-Small-Points-2026-10-07.pdf » → §M
   (just above §L): the four alert() colons (U+00A0), HSTS `max-age=86400` (nginx), two confirmations (the sender
-  devis@; the export names « documents »).** State and next stage: §M.0.
+  devis@; the export names « documents »). ✅ LIVE `fb8ad74` (HSTS live 18:51:40 UTC); left: §M.5 S6 (Alex's text) — SUPERSEDED by task P's answer (§P.5) —, later the one-year raise (« ⏰ » below).** State: §M.0.
+- [ ] **▶ TASK P — STARTED 2026-10-07 ≈ 20:20 UTC (THE CURRENT TASK): Alex's « Lasha-Three-Pages-2026-10-07.pdf » → §P
+  (just above §M): cgv.html / tarifs.html / faq.html replaced byte for byte (credits valid 12 months « à l’unité comme
+  en pack »), the delete question « N documents » (singular « 1 document »), three confirmations (unit purchases dated
+  like packs; sender devis@; export names), the HSTS raise from 14/10. P0–P7 ✅ locally (all green, NOT committed) →
+  NEXT = §P.5 S1: the user commits + pushes (one command, given ≈ 20:53 UTC), then S2–S4.** State: §P.0.
+- [ ] **⏰ ON / AFTER 2026-10-14 (≈ 18:51 UTC) — HSTS one year** (Alex's PDF of 07/10 §5 = §M.5 LATER): if nothing
+  broke during the week — the user, one command per message: `sudo certbot renew --dry-run` (→ « Congratulations, all
+  simulated renewals succeeded »), then the reload-hook check (§M.5 LATER); then the code change
+  (`ops/nginx-security-headers.conf` `max-age=31536000`, `ops/tests/test-nginx-headers.sh`'s expected value, the box /
+  docs), ship, nginx reload (§M.5 S4 again), `curl -sI` check. Still no `includeSubDomains`, no `preload`.
 
 
 ### ▶ TASK L (PLANNED → NOW §L) — THE CGV: ALEX'S NEW `cgv.html` + AN INSTRUCTIONS PDF (announced 2026-10-06 ≈ 21:19 UTC)
@@ -464,8 +479,10 @@ B7 version below, only the « Update » sentence is sent):
   DEPENDENCIES_VALIDATED`, 2026-09-05) → prefix runs with `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`; refreshing the
   marker would mean writing outside the repository → only with the user's permission.
 
-Last updated: 2026-10-07 18:55 UTC — **TASK M (Alex's « four small points », §M): code + verification DONE locally, NOT
-committed; next = §M.5 S1 (the user commits + pushes), then S2–S6 (nginx reload by the user = S4).**
+Last updated: 2026-10-07 20:53 UTC — **TASK P (§P): P0–P7 ✅ locally (all green, NOT committed); next = §P.5 S1 (the
+user commits + pushes), then S2–S4. Task M's S6 and task L's S4 superseded by §P.5 C.**
+Before: 2026-10-07 18:52 UTC — **TASK M (§M) ✅ LIVE: `fb8ad74` deployed (18:46:51 UTC), alerts live, nginx
+reloaded by the user, HSTS `max-age=86400` live (18:51:40 UTC); left = §M.5 S6 (Alex's text), then close.**
 Before: 2026-10-06 21:41 UTC — **TASK L ✅ LIVE `53ad965` (cgv.html = Alex's, export names « documents »;
 CI + Deploy green, live checked); left = §L.5 S4: the user sends Alex the text. Task K: N1 ✅ (K9 live `b22ad9a`); next N2.**
 Before: 2026-10-06 ≈ 21:19 UTC (session closed by the user — resume in a new session; TASK L (CGV) planned) — **task K live (`4fd507c`), Stripe + server done (secret ≈ 19:22 UTC, signup ON
@@ -536,35 +553,331 @@ they applied to the previous one (v4).
 
 ---
 
+## P. TASK P (2026-10-07, evening) — ALEX'S « THREE WEBSITE PAGES AND FOUR SHORT POINTS » (PDF of 2026-10-07 22:05 Paris) — IN PROGRESS
+
+*(Letters N and O are skipped on purpose: task K's steps are already called N1–N6, and « O0 » reads like « 00 ». P =
+« pages ».)*
+
+### P.0 State and checklist — update after EVERY stage (the user's rule)
+
+**Where things stand (2026-10-07 20:53 UTC):** P0 ✅, P1 ✅ (this section), **P2 ✅ 20:27:37 UTC** (the three pages
+replaced), **P3 ✅ 20:31:47 UTC** (the delete question « N documents » / « 1 document » + 2 tests), **P4 ✅ 20:43:42 UTC**
+(the three confirmations proven again — no code change), **P5 ✅ 20:44 UTC** (HSTS: the dated step is in the tick list —
+nothing to change before 14/10), **P6 ✅ 20:51 UTC** (verify: all green), **P7 ✅ 20:53 UTC** (§P.5 written). **NEXT = §P.5 S1 — the user commits +
+pushes (one command, given ≈ 20:53 UTC); then the assistant: S2 (CI + Deploy), S3 (live checks); the user: S4 (Alex's
+text).** Task M's S6 and task L's S4 are SUPERSEDED by §P.5 C; task K's N3–N6 stay open (« ▶ START HERE »).
+
+**How a new session resumes task P (« Read SCANID-HANDOVER.md » alone is enough):** `cd /home/lasha/Public/new && git
+status --short` → compare with « Expected `git status --short` » below (a path already modified = its stage was at
+least started: check its sub-steps against `git diff`); `git log --oneline -1` (`fb8ad74` = task P not committed yet; a
+newer commit by the user = shipped → continue in §P.5 at the first unticked S-step); then continue at the first
+unticked stage below, and tick it here + add its record to §P.4 the moment it is done. **Alex's files** (all ignored by
+git): `frontend/payment_scanid/cgv-2026-10-07/{cgv,tarifs,faq}.html` (LF, = the PDF's SHA-256), and in
+`frontend/payment_scanid/`: `Lasha-Three-Pages-2026-10-07.pdf` (72 393 bytes, SHA-256 `6de2b07f…fac4`), its `.docx`
+and `cgv-2026-10-07.zip` (originals in `~/Downloads/`). **Times:** from `date -u` (the machine's clock; Paris = UTC + 2).
+**Trap (task M2):** the editing tools decode a typed backslash-u escape into the raw character → after any App.jsx edit,
+`grep -c` the two bytes C2 A0 in `frontend/src/App.jsx` → must stay **0** (this handover: **2**, both in Alex's site
+text, §E).
+
+- [x] **P0 Survey** (20:20–20:25 UTC) — §P.2. Alex's delivery found in `~/Downloads/` (downloaded 20:11–20:13 UTC),
+  copied with `cp -p` into the ignored `frontend/payment_scanid/` (the 3 pages into the sub-folder
+  `cgv-2026-10-07/`, so task L's `cgv.html` there is kept) → `sha256sum -c` **OK ×3**.
+- [x] **P1 This section written** (demand, findings, decisions, stages) before touching anything (§0.9) — 20:27 UTC.
+- [x] **P2 ✅ 20:27:37 UTC — PDF §1: the three pages** (record §P.4). `cp` the 3 files from `frontend/payment_scanid/cgv-2026-10-07/` over
+  `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/{cgv,tarifs,faq}.html` (the user's demand lifts the source's
+  read-only rule for these 3 files, as for cgv.html in L2 and tarifs.html in K2; nothing else in that folder is
+  written); mode **644** kept; `sha256sum -c` against the PDF's three values (§P.1); `git diff --numstat` = cgv **4 4**,
+  tarifs **1 1**, faq **2 2**; still 63 files in the folder.
+- [x] **P3 ✅ 20:31:47 UTC — PDF §3: the delete question** (record §P.4). `frontend/src/App.jsx` l. 1944: `Êtes-vous sûr de vouloir supprimer
+  ${selectedIds.size} passeports ?` → `… supprimer ${selectedIds.size} document${selectedIds.size > 1 ? 's' : ''} ?`
+  (plain space before « ? » kept — §P.3 d2). Tests: `frontend/tests/e2e/features.spec.js` l. 139–141
+  (`toContain('2 passeports')` → `toBe('Êtes-vous sûr de vouloir supprimer 2 documents ?')`) + a new test beside it:
+  one line selected → `toBe('Êtes-vous sûr de vouloir supprimer 1 document ?')`, the dialog DISMISSED → nothing
+  deleted (row count unchanged). Run `features.spec.js` (desktop, mobile-small, mobile-375) + a mutation (the old
+  App.jsx → both fail); eslint `src/App.jsx` = 11 problems (the baseline), 0 raw U+00A0.
+- [x] **P4 ✅ 20:43:42 UTC — PDF §2 + §4: three confirmations, no code change** (record §P.4) (§P.3 d3): run the evidence and record it — backend
+  `tests/test_unit_purchase.py` (l. 181: a unit purchase's `expires_at` = `add_months(paid_at, 12)`),
+  `tests/test_pack_purchase.py` (l. 243, l. 338–340), `tests/test_account_billing.py`, `tests/test_export.py` (the
+  names), `tests/test_account_foundation.py` (the 2 sender tests); e2e `account.spec.js` (« Mes achats », l. 80–81).
+- [x] **P5 ✅ 20:44 UTC — PDF §5: HSTS — nothing to change before 14/10** (written at P1 into the tick list: « ⏰ ON /
+  AFTER 2026-10-14 »; record §P.4) (§P.3 d4): the dated step written into « ▶ WHAT REMAINS
+  TO DO » (= §M.5 LATER: on/after **2026-10-14 ≈ 18:51 UTC**, first `sudo certbot renew --dry-run` + the reload hook
+  check, then `max-age=31536000` — line + test + docs, ship, nginx reload).
+- [x] **P6 ✅ 20:51 UTC — Verify** (record §P.4). Plan was: `VITE_API_URL=/api npm run build` + guard `node --test tests/build/no-google-fonts.test.js` (5/5);
+  `dist/{cgv,tarifs,faq}.html` SHA-256 = Alex's; `diff -rq nouveau-site dist` = no site difference; frontend unit
+  (91) + eslint; e2e: the WHOLE suite on desktop + mobile-small + mobile-375
+  (`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`); backend full suite (397 — backend unchanged); the three pages in a
+  real browser at 1280 and 375 px (the changed passages; screenshots looked at); `git status --short` = the expected
+  list = `git add --dry-run .`.
+- [x] **P7 ✅ 20:53 UTC — Record + ship steps + the answer for Alex** (§P.5 — written; the ship itself = §P.5 S1–S4): the user commits + pushes (§0.3); the assistant
+  watches CI + Deploy and checks live: the 3 pages' SHA-256 = Alex's, « 7 octobre 2026 » on /cgv.html, the note on
+  /tarifs.html ends « à l’unité comme en pack », the app bundle holds the new question. No nginx reload needed.
+
+**Expected `git status --short` after P2 + P3:** ` M SCANID-HANDOVER.md`, ` M
+frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html`, ` M
+frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/faq.html`, ` M
+frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/tarifs.html`, ` M frontend/src/App.jsx`, ` M
+frontend/tests/e2e/features.spec.js` — nothing else (`frontend/payment_scanid/` is ignored).
+
+### P.0.0 THIS SESSION (2026-10-07 ≈ 20:20 UTC →) — every prompt, what is done, what is left
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « CRUCUAL read SCANID-HANDOVER.md to see your permissions and restrictions! CRUCIAL implement what is demanded in attached pdf file stage-by-stage and after implementing each stage update SCANID-HANDOVER.md in such way that if current session is interrupted with a fresh session you could continue working on the current prompts seamlessly with only the command "Read SCANID-HANDOVER.md"! » + « Lasha-Three-Pages-2026-10-07.pdf » + `cgv.html`, `tarifs.html`, `faq.html` | Checks (20:20–20:22 UTC): `git status` = only the handover; HEAD = `origin/master` = `fb8ad74`; CI ✅ 18:47:43, Deploy ✅ 18:46:51 UTC; live `/cgv.html` `7c60619e…`, `/tarifs.html` `b5765cef…`, `/faq.html` `d7f7f948…` (= the source); `/api/config` `{"signup":true,"trial":true}`; webhook unsigned → 400; `strict-transport-security: max-age=86400`. **TASK P opened: P0 + P1 ✅; P2–P7 ✅ (20:27–20:53 UTC)** — three pages = Alex's; « N documents » / « 1 document »; three confirmations proven; HSTS raise dated 14/10; backend 397, unit 91, e2e 479 + 1 skip, build + guard 5/5, browser 1280 / 375 | §P.5 S1 (the user commits + pushes) → S2–S4 |
+| 2 | « All what must be added to the .gitignore is already in? » | **Answered (20:56 UTC): yes, nothing to add.** Untracked-not-ignored = none (`git ls-files --others --exclude-standard` empty); `git ls-files -ci --exclude-standard` empty; `git add --dry-run .` = exactly §P.0's 6 paths. The 177 files written in the repo since 20:15 UTC: 171 ignored — `frontend/dist/` 157 (`frontend/.gitignore:11`), `frontend/test-results/` 13 (`frontend/.gitignore:33`; the e2e and mutation runs), `backend/.pytest_cache` 1 (`.gitignore:15`) — and the 6 to commit. Alex's delivery (`frontend/payment_scanid/cgv-2026-10-07/`, the PDF, .docx, .zip) → `.gitignore:117`; `__pycache__/` → `.gitignore:3`; no `playwright-report/`; the scratchpad (screenshots, scripts, the P4 demo) is outside the repo. Added lines: no secret-like string; e-mail addresses only contact@ and devis@scanid.fr (public). | §P.5 S1 (the user commits + pushes) → S2–S4 |
+
+### P.1 The demand (user, 2026-10-07) and Alex's PDF in substance
+
+The user's message is row 1 above (the user's rule, §F.1: a demand of the current prompt wins over a restriction of
+this file). The PDF (2 pages, « SCANID · FOR LASHA = FOR You-Claude Code », « Three website pages and four short points »,
+« Prepared on 07/10/2026 (22:05, Paris time) by Claude for Alex. Your deployment of tonight (07/10, 20:46) was rechecked
+at 21:55: the 63 website files are identical to the delivery; the four error messages have their no-break space; the
+HSTS header is there on the site, the app and the API; signup and trial are open; the four pack pages and the five
+Stripe pages show the right prices. […] Alex has now settled the last open point of the terms of sale: three website
+files to replace. Four short points follow; none is blocking. »):
+
+**§1 Website — three files to replace.** Decision (Alex, 07/10): **every credit is valid twelve months from its
+purchase, whether bought per unit or in a pack**; the CGV now use the site's and the app's words « document », « achat
+», « pack ». Files (folder `cgv-2026-10-07`), « to put at the site root, on the server and in your deployment source »:
+
+| File | Size | SHA-256 |
+| --- | --- | --- |
+| cgv.html | 15 704 bytes | `947c157217838dc600a1d47cef6d64bfee8bc20cc11cefcc817174da7829b8fe` |
+| tarifs.html | 19 424 bytes | `f55a8f8ec2b90fdab7a00f0dcd548f171d5e012bed6296bad53d0496383f9e3a` |
+| faq.html | 26 740 bytes | `4692f3a84761f8bad147022ad1ecdbe1486a74b5d92823ed118a2ce21119c954` |
+
+What changes — six lines of text:
+
+| Where | Before | Now |
+| --- | --- | --- |
+| CGV · article 3 | « Scan : le traitement d’un document d’identité (lecture et extraction des données). » | « Document : une pièce d’identité traitée par le Service (lecture et extraction des données). » |
+| CGV · article 3 | « Crédits : le nombre de scans inclus dans une formule souscrite. » | « Crédits : le nombre de documents que le Client peut faire traiter, acquis à l’unité ou par pack ; chaque document traité consomme un crédit. » |
+| CGV · article 8 | « … les crédits des formules annuelles sont valables douze (12) mois à compter de la souscription. » | « … les crédits sont valables douze (12) mois à compter de leur achat. » |
+| CGV · last line | « Dernière mise à jour : 3 octobre 2026. » | « Dernière mise à jour : 7 octobre 2026. » |
+| Tarifs · note under the offers | « Crédits des packs valables 12 mois à compter de l’achat. » | « Crédits valables 12 mois à compter de l’achat, à l’unité comme en pack. » |
+| FAQ · « Les crédits expirent-ils ? » | « Les crédits des packs sont valables 12 mois à compter de l’achat. » | « Les crédits sont valables 12 mois à compter de l’achat, à l’unité comme en pack. » (visible answer and FAQPage structured data) |
+
+« Nothing else. Same asset version (`?v=202609302115`): no CSS or JS change. The other 60 files stay as they are. »
+**Test:** the last line of `/cgv.html` shows « 7 octobre 2026 »; the note under the offers on `/tarifs.html` ends with
+« à l’unité comme en pack ».
+
+**§2 App — unit purchases: the same twelve months.** « Please confirm. Does a unit purchase get the same validity as a
+pack: in « Mes achats », « Valable jusqu’au » = purchase date + 12 months? If it does not, please align it with the
+decision above, and tell Alex what the app did until now. »
+
+**§3 App — one word in the delete confirmation.** The question before deleting several lines: « Êtes-vous sûr de
+vouloir supprimer ${n} passeports ? » → « … supprimer ${n} documents ? » (the list also holds identity cards; the rest
+of the app says « documents »). « If it is simple, the singular for one line: « 1 document ». »
+
+**§4 Two confirmations still open** (from « Four small points » of 07/10 — « A yes or a no is enough »): **Sender
+address** — the notice after a payment names devis@scanid.fr: is the welcome e-mail really sent from it? **Export
+file** — do the server's file name (`Content-Disposition`) and the sheet name say « documents » too, for XLSX and CSV?
+
+**§5 Server — HSTS, next step.** Today `max-age=86400` on every response — thank you. Next: « If nothing breaks during
+a week, raise it to `max-age=31536000` on or after 14/10. Still no `includeSubDomains` and no `preload`, unless every
+subdomain of scanid.fr answers in HTTPS. »
+
+### P.2 Findings (P0, before touching anything — 2026-10-07 20:20–20:25 UTC)
+
+1. **The delivery:** `~/Downloads/cgv-2026-10-07/` (3 files) + `cgv-2026-10-07.zip` (the same 3 — `unzip -p | cmp`
+   identical) + the PDF (72 393 bytes; the attachment's text) + its `.docx` (open in LibreOffice: a `.~lock` file).
+2. **Byte-exact:** LF, **0 CR** this time (tasks K / L came CRLF); sizes and SHA-256 **= the PDF's**, all three.
+3. **`diff` against `nouveau-site/` = exactly the six rows:** cgv.html l. 72 + 73 (article 3), l. 85 (article 8), l.
+   113 (the date) → numstat 4 4; tarifs.html l. 144 (the note) → 1 1; faq.html l. 24 (the FAQPage JSON-LD) + l. 68 (the
+   visible answer) → 2 2 (word diff: only « des packs » removed and « , à l’unité comme en pack » added in each);
+   `?v=202609302115` everywhere (10×). The new CGV no longer uses « Scan(s) » as a term (grep).
+4. **Today source = `dist/` = live:** cgv `7c60619e…` (task L), tarifs `b5765cef…` (task K), faq `d7f7f948…`; mode
+   644 `lasha:lasha`; 63 files in the source folder. `sitemap.xml` `<lastmod>` not touched (« Nothing else », as in L).
+5. **The rest of the site agrees with the decision:** index.html « Crédits valables 12 mois, sans abonnement » and the
+   pack offers' « crédits valables 12 mois » (JSON-LD); after the replacement no page says « crédits des packs » or
+   « formules annuelles » (grep). **No test reads the replaced sentences** (grep `frontend/tests`, `frontend/src`,
+   `backend`).
+6. **§2 — YES, always: a unit purchase is dated like a pack.** `backend/billing.py` `_write_unit_purchase` (l. 352–353,
+   372): `paid_at = now`, `expires_at = add_months(now, config.CREDIT_VALIDITY_MONTHS)` (= 12, `config.py` l. 207) —
+   the same rule as the pack path (l. 270–272); every unit path goes there (the site's link, the in-app link with
+   `client_reference_id`, an account the purchase opens). « Mes achats » (`App.jsx` `MyPurchases`, l. 1280–1311; `GET
+   /users/me/purchases` = every PAID purchase): « Acheté le » = `paid_at`, « Valable jusqu'au » = `expires_at`, both
+   shown in Europe/Paris; a unit purchase is stored as pack 0 → « À la carte · N document(s) ». The confirmation and
+   welcome e-mails say « valable(s) jusqu'au <date> » (`emails.py` l. 144, 164). Since task F4 (`e9d527d`, live
+   2026-10-03); the first unit purchase actually credited = Alex's test of 06/10 ≈ 20:41 UTC → « 06/10/2026 » /
+   « 06/10/2027 ». Proven by `test_unit_purchase.py` l. 181, `test_pack_purchase.py` l. 243 + 338–340 (`add_months`:
+   14/09/2026 → 14/09/2027; 29/02/2028 → 28/02/2029), `test_account_billing.py` l. 68–77, e2e `account.spec.js` l. 80–81.
+   Edge, not raised (negligible, packs alike, in the customer's favour): `add_months` runs in UTC and the page shows Paris
+   time → a purchase in the hour before Paris midnight in the days between two years' DST changes can show one day
+   more.
+7. **A fact Alex should know (not asked, not changed — §P.3 d3): the app never removes unused credits when
+   `expires_at` passes.** `expires_at` is written (billing.py), e-mailed and shown — never read to debit; the balance is
+   one counter (`users.page_credits`); no job, timer or cron does it (grep `backend`, `ops`, `deploy`). Packs and units
+   alike.
+8. **§3 — `App.jsx` l. 1944 is the only place.** The « Supprimer (N) » button is shown only when `selectedIds.size > 0`
+   (l. 2112) → n ≥ 1; today one line reads « supprimer 1 passeports ? ». The success answer (`{"deleted_count": N}`) is
+   not shown (`response.ok` → `fetchData()`); the e2e mock's « N passeports supprimés. » (`frontend/tests/mock/api.js`
+   l. 495) is never displayed → left. Test: `features.spec.js` l. 139–141 `toContain('2 passeports')` → must change;
+   `alert-messages.spec.js` (task M) accepts the confirm and asserts only the alert (`messages.at(-1)`) → unaffected.
+   Alex's `.docx` holds « … supprimer ${n} documents ? » with a PLAIN space before « ? » (only the guillemets have
+   U+00A0) — like the app's other three `confirm()` (l. 1112, 1626, 1858).
+9. **§4 — both confirmations stand, as established in task M** (§M.2 f1 + f3, evidence §M.4 M4): From « ScanID
+   <devis@scanid.fr> » (`MAIL_FROM`, task J's `.env`, unchanged since — §M.2 f1), Reply-To contact@; the names
+   `selection_documents`, `documents_rapport_complet`, `documents_pour_<compte>` (`.xlsx` / `.csv`), sheet « Documents »
+   (`main.py`, live since `53ad965`; `fb8ad74` keeps them). Already written for Alex in §M.5 C (points 1 and 3) — the
+   user has not sent that text yet (§M.5 S6).
+10. **§5 — HSTS:** `max-age=86400` live since 2026-10-07 18:51:40 UTC (§M.5 S5); the raise = §M.5 LATER (from
+    2026-10-14 ≈ 18:51 UTC: first `sudo certbot renew --dry-run` and the reload-hook check; the certificate ends
+    2026-12-07 13:14 UTC). Today is 2026-10-07 → nothing to do now.
+
+### P.3 Decisions
+
+- **d1 — the three pages, byte for byte** (`cp`, LF already: the PDF's SHA = the files'); only these 3 files of the
+  source folder are written; `dist/` follows through the build.
+- **d2 — §3: Alex's sentence with the singular** — `document${selectedIds.size > 1 ? 's' : ''}`, the idiom of
+  `billing.js` `purchaseLabel`; the plain space before « ? » kept (his `.docx`, the app's other `confirm()`); `${n}` not
+  grouped (as he wrote it; the other texts stay — §0.2).
+- **d3 — §2 and §4: no code change** — the answers with their evidence; finding 7 told to Alex as a fact, his call
+  (enforcing expiry would be a separate feature: per-purchase balances).
+- **d4 — §5: nothing now** — a change in the tree would ship with task P's commit before 14/10; the dated step stays
+  in the tick list.
+
+### P.4 Stage records
+
+**P0 + P1 — DONE (2026-10-07 20:20–20:27 UTC):** §P.2 and §P.3 above; Alex's files copied into
+`frontend/payment_scanid/`.
+
+**P2 — DONE (20:27:37 UTC).** `cp frontend/payment_scanid/cgv-2026-10-07/<f>.html` over the three source files →
+`sha256sum -c` against the PDF's values **OK ×3**; sizes 15 704 / 19 424 / 26 740; mode **644** `lasha:lasha` kept;
+63 files in the folder; `git diff --numstat` = cgv **4 4**, faq **2 2**, tarifs **1 1** (= §P.2 f3). Every JSON-LD block
+of the 3 pages parses (cgv 1, tarifs 2, faq 2); the FAQPage answer « Les crédits expirent-ils ? » = the visible answer
+except « 12 mois » (U+00A0 in the visible HTML, a plain space in the JSON-LD — exactly as in the old file: Alex's
+convention, not a defect). `dist/` not rebuilt yet (P6).
+
+**P3 — DONE (20:28–20:31:47 UTC).** `frontend/src/App.jsx` l. 1944 (one line): `` `Êtes-vous sûr de vouloir supprimer
+${selectedIds.size} document${selectedIds.size > 1 ? 's' : ''} ?` `` — 0 raw U+00A0 in the file, task M's four escapes
+intact (4); eslint `src/App.jsx` **11 problems** (= the baseline). `frontend/tests/e2e/features.spec.js` (« Actions
+groupées »): l. 140 `toContain('2 passeports')` → `toBe('Êtes-vous sûr de vouloir supprimer 2 documents ?')`; NEW test
+« pour une seule ligne, la question dit « 1 document », au singulier » (one row checked → « Supprimer (1) » → the
+dialog's text kept and DISMISSED → `toBe('… supprimer 1 document ?')`, « Supprimer (1) » still shown, row count
+unchanged — safe on a live backend too); eslint clean. **`features.spec.js` on desktop + mobile-small + mobile-375 →
+81 passed (1.6 min).** **Mutations 2 / 2 killed** (App.jsx copied to the scratchpad first, restored with `cp -p`, `cmp`
+identical): the old « passeports » → **4 failed** (both tests × desktop + mobile-375; « Received: … supprimer 2
+passeports ? » / « … 1 passeports ? »); always plural « documents » → **only the singular test failed** (« Received:
+… supprimer 1 documents ? »), the 2-documents test passed.
+
+**P4 — DONE (20:32–20:43:42 UTC). No file of the repository changed.** Backend: `tests/test_unit_purchase.py` +
+`tests/test_pack_purchase.py` + `tests/test_account_billing.py` + `tests/test_export.py` + the 2 sender tests of
+`tests/test_account_foundation.py` → **147 passed** (among them
+`test_the_quantity_bought_is_credited_once_to_the_account_of_the_checkout_email` — l. 181 `expires_at == add_months(paid_at, 12)` for a unit purchase — and
+`test_add_months_keeps_the_calendar`). **Demonstration through the real path** (scratchpad file
+`test_p4_validity_demo.py`, run from `backend/` with `-p tests.conftest` — nothing written in the repo; lost with the
+session, not needed): ONE account buys 1 document à la carte (signed webhook, the unit link) and a Pack 100 (signed
+webhook, amount 9 900 / 11 880) → `GET /users/me/purchases` → both rows `expires_at == add_months(paid_at, 12)`, and
+formatted like the page (fr-FR, Europe/Paris): « À la carte · 1 document — Acheté le 07/10/2026 — Valable jusqu'au
+07/10/2027 » and « Pack 100 — 07/10/2026 — 07/10/2027 »; the unit e-mail: « Merci pour votre achat à la carte : 1
+document a été ajouté à votre espace ScanID ; il est valable jusqu'au 07/10/2027. » e2e `account.spec.js` (« Mes
+achats » rows « À la carte · 37 documents | 02/10/2026 | 02/10/2027 », « À la carte · 1 document | 20/09/2026 |
+20/09/2027 », « Pack 1 000 | 14/09/2026 | 14/09/2027 ») on desktop + mobile-small + mobile-375 → **21 passed**.
+**Answers:** §2 YES (always — since F4; nothing to align); §4 sender YES (From « ScanID <devis@scanid.fr> », task M
+M4's demonstration); §4 export names YES (`test_export.py` in the 147: sheet « Documents », the six
+`Content-Disposition` names).
+
+**P5 — DONE (20:44 UTC). No file of the repository changed.** The dated step « ⏰ ON / AFTER 2026-10-14 (≈ 18:51
+UTC) — HSTS one year » is in « ▶ WHAT REMAINS TO DO » (written at P1; = §M.5 LATER, which holds the commands). Not
+prepared in the tree: it would ship with task P's commit, a week early.
+
+**P6 — DONE (20:44–20:51 UTC). All green.** `VITE_API_URL=/api npm run build` ✅ (site → `dist/`, app → `dist/app/`,
+bundle **`index-y3ujDkAP.js`**: `` `Êtes-vous sûr de vouloir supprimer ${Y.size} document${Y.size>1?"s":""} ?` `` 1×,
+« supprimer … passeports » 0×, task M's U+00A0 before « : » intact) + guard `no-google-fonts` **5 / 5**;
+`dist/cgv.html` `947c1572…`, `dist/tarifs.html` `f55a8f8e…`, `dist/faq.html` `4692f3a8…` (= Alex's); `diff -rq
+nouveau-site dist` = no site difference. Backend full suite **397 passed** (= baseline; backend unchanged). Frontend
+unit **91 / 91**; eslint `src/App.jsx` + `tests/e2e/features.spec.js` = **11 problems** (the App.jsx baseline, none
+new). **The WHOLE e2e suite** (`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 npx playwright test --project=desktop
+--project=mobile-small --project=mobile-375 --reporter=line`, from `frontend/`): **480 tests in 22 files → 479 passed,
+1 skipped, 0 failed (4.3 min)** — the skip = the pre-existing `capture.spec.js:127` (WebKit); the new test ran 3×.
+**Real browser** (Chromium, `dist/` served on 127.0.0.1:8765, `reducedMotion: reduce`; script
+`p6-pages.mjs` in the session scratchpad): cgv / tarifs / faq at 1280 and 375 px → HTTP 200, horizontal overflow 0,
+Mona Sans loaded, 0 page errors; screenshots LOOKED AT: CGV « 3. Définitions » (Document / Crédits as Alex wrote
+them), « 8. Validité des crédits et durée », « DERNIÈRE MISE À JOUR : 7 OCTOBRE 2026. », the tarifs note (« 12 mois »
+kept together at 375 px), the FAQ answer opened — layout unchanged. The one console error on tarifs.html = `GET
+/api/config` 404 from the unchanged `core.js` (the static test server has no API; scanid.fr answers it) — unrelated.
+`git status --short` = exactly §P.0's 6 lines = `git add --dry-run .`; no untracked-not-ignored file; no secret-like
+string in the added lines; `frontend/dist/` = this build (ignored by git). (A `pkill -f` whose pattern matched its
+own shell ended one command early — the server was stopped anyway; use `pgrep -f "[h]ttp.server"`-style patterns.)
+
+### P.5 How to ship task P — and the answer for Alex (written at P7, 2026-10-07 ≈ 20:53 UTC)
+
+**What ships:** the 6 paths of §P.0's expected `git status` (`git add --dry-run .` from the repo root = exactly them,
+checked 20:51 UTC). No new dependency, migration, environment variable, `ops/` or `deploy/` change → **no nginx reload**.
+« Deploy » rebuilds the site + the app from the source and always restarts the backend → `/api` may answer 502 for up
+to ~1.5 min (B10 note) — wait, re-check. Expected live app bundle = the local P6 build **`index-y3ujDkAP.js`** (in L and
+M the live bundle had the local build's name).
+
+- [ ] **S1 — U: commit + push** (§0.3 — the assistant never commits). ONE command (the 6 paths checked at 20:51 UTC):
+  `cd /home/lasha/Public/new && git add . && git commit -m "Credits 12 months for units too; delete asks documents" &&
+  git push origin master` (the user may choose another message). **▶ NEXT — given ≈ 20:53 UTC.**
+- [ ] **S2 — C:** « CI » + « Deploy » green for the new commit (`curl -s
+  "https://api.github.com/repos/Lasha101/new/actions/runs?per_page=4"`).
+- [ ] **S3 — C, live:** `for f in cgv tarifs faq; do curl -s https://scanid.fr/$f.html | sha256sum; done` → `947c1572…`,
+  `f55a8f8e…`, `4692f3a8…` (Alex's); `/cgv.html` holds « 7 octobre 2026 » (grep the date only — the line has U+202F
+  before « : »); `/tarifs.html` holds « à l’unité comme en pack » (U+2019 apostrophe — compare with python, or grep
+  « unité comme en pack »); the app bundle (`B=$(curl -s https://scanid.fr/app/ | grep -o 'assets/index-[^"]*\.js' |
+  head -1)`) holds `supprimer ${…} document${…>1?"s":""} ?` and no « supprimer … passeports »; `/api/config`
+  `{"signup":true,"trial":true}`; webhook unsigned → 400; `strict-transport-security: max-age=86400` still on `/`;
+  `/`, `/app/`, `/faq.html`, `/essai.html` → 200.
+- [ ] **S4 — U → Alex:** the text C below (S3's time filled in, Paris = UTC + 2). Then close task P (ticks here and in
+  the resume protocol, the memory note `scanid-task-p-three-pages.md`).
+- **Task M's S6 and task L's S4 — SUPERSEDED by C below (no need to send them):** Alex's PDF of 07/10 22:05 says he
+  rechecked the deployment himself (the 63 files, incl. the CGV of task L; the four alerts' no-break space; HSTS on the
+  site, the app and the API), settled task L's two remarks himself (Article 8 → his new CGV; « passeports » → §3 here)
+  and asked task M's two confirmations again (§4 here). The user decides; the old texts stay in §L.5 / §M.5 as record.
+- **LATER — ⏰ on / after 2026-10-14 ≈ 18:51 UTC: the HSTS raise** (« ▶ WHAT REMAINS TO DO »; commands in §M.5 LATER).
+
+**C — the answer for Alex (English, like his PDF):**
+> Hi Alex — your note « Three website pages and four short points » (07/10, 22:05) is done.
+> 1. Website: cgv.html, tarifs.html and faq.html are your files byte for byte (the sizes and SHA-256 of your note), in
+> our deployment source and live since <S3: date, time Paris>. Same asset version; the other 60 files are unchanged.
+> /cgv.html ends with « Dernière mise à jour : 7 octobre 2026 », and the note under the offers on /tarifs.html ends with
+> « à l’unité comme en pack ».
+> 2. Yes. A unit purchase has always had the same validity as a pack: in « Mes achats », « Valable jusqu’au » is the
+> purchase date + 12 months (bought 07/10/2026 → valid until 07/10/2027), and the confirmation e-mail gives the same
+> date. Nothing to align. One thing to know, for packs and unit purchases alike: the app shows this date and sends it by
+> e-mail, but it does not remove unused credits automatically once the date has passed (the balance is a single
+> counter). If you want that, it is a separate change — just tell me.
+> 3. Done: « Êtes-vous sûr de vouloir supprimer 2 documents ? », and « Êtes-vous sûr de vouloir supprimer 1 document ? »
+> for a single line.
+> 4. Yes and yes. The welcome e-mail is sent from devis@scanid.fr (it shows as « ScanID <devis@scanid.fr> »; « Répondre »
+> goes to contact@scanid.fr). The server names the exports documents_… and selection_documents, .xlsx and .csv (in
+> Content-Disposition), and the XLSX sheet is « Documents » (a CSV has no sheet).
+> 5. Noted: on or after 14/10, if nothing breaks, I raise HSTS to max-age=31536000, after a dry run of the certificate
+> renewal — still without includeSubDomains or preload.
+
+---
+
 ## M. TASK M (2026-10-07) — ALEX'S « FOUR SMALL POINTS AFTER THE FINAL CHECK » (PDF of 2026-10-07 01:11 Paris) — IN PROGRESS
 
 ### M.0 State and checklist — update after EVERY stage (the user's rule)
 
-**Where things stand (2026-10-07 18:55 UTC):** M0–M5 done, M6 written — **the code stage of task M is COMPLETE; next = §M.5 S1: the user commits + pushes (one command)**, then S2–S3 (the assistant), S4 (the user reloads nginx, one command per message), S5 (the assistant, live HSTS), S6 (Alex's text). Later: the one-year raise (§M.5 LATER).
-Nothing of task M is committed. Task L's S4 and task K's N3–N6 stay open (« ▶ START HERE »).
+**Where things stand (2026-10-07 18:52 UTC):** M0–M6 ✅; shipped: S1 `fb8ad74` (18:45:58 UTC), S2 Deploy ✅ 18:46:51 / CI ✅ 18:47:43, S3 ✅ (alerts live), S4 ✅ nginx reloaded by the user, **S5 ✅ 18:51:40 UTC — HSTS live**. **Left: S6 — the user sends Alex §M.5 C (given 18:52 UTC); then close task M** (ticks, memory). Later (from 2026-10-14): the one-year raise (§M.5 LATER). Task L's S4 and task K's N3–N6 stay open (« ▶ START HERE »).
 
 **How a new session resumes task M (« Read SCANID-HANDOVER.md » alone is enough):** `cd /home/lasha/Public/new && git
 status --short` → compare with « Expected `git status --short` » below (a path already modified = its stage was at
-least started: check its sub-steps against `git diff`); `git log --oneline -1` (`53ad965` = task M not committed yet);
+least started: check its sub-steps against `git diff`); `git log --oneline -1` (`53ad965` = task M not committed yet; `fb8ad74` « Small changes after final check » = committed + pushed → continue in §M.5 at the first unticked S-step);
 then continue at the first unticked stage / sub-step below, and tick it here + add its record to §M.4 the moment it
 is done. **Trap (met in M2):** the editing tools DECODE a typed `\u00A0` into a raw U+00A0 (and `'\u2713'` into « ✓ ») —
 after any edit that should hold the escape, check `grep -c $'\xc2\xa0' <file>` (App.jsx and the spec: 0; this
-handover: 2, both in Alex's site text, §E) and fix with a byte-exact Python replace.
+handover: 2, both in Alex's site text, §E) and fix with a byte-exact Python replace. **Times:** take every time from `date -u` — the stage times first written here were estimates up to ~55 min ahead of the clock (corrected at 18:48 UTC from the files' `stat` times and the commit's).
 
 - [x] **M0 Survey** (17:20–17:42 UTC) — §M.2. Alex's PDF + .docx found in `~/Downloads/` (≈ 17:22 UTC), copied with
   `cp -p` into the ignored `frontend/payment_scanid/` (PDF 55 829 bytes, SHA-256 `78bf261d…7c23` = the attachment).
 - [x] **M1 This section written** (demand, findings, decisions, stages) before touching anything (§0.9).
-- [x] **M2 ✅ 17:58 UTC — Point 2 — the four alert() messages** (`frontend/src/App.jsx` l. 1948, 1949, 1960, 1977): « … : » with a
+- [x] **M2 ✅ ≈ 17:47 UTC — Point 2 — the four alert() messages** (`frontend/src/App.jsx` l. 1948, 1949, 1960, 1977): « … : » with a
   no-break space U+00A0 before the colon, written `\u00A0` in the template literals (the file's idiom for special
   characters — l. 357 `'\u2713'`); + `frontend/tests/e2e/alert-messages.spec.js` (each failure forced with
   `page.route`, the dialog's exact text asserted, the U+00A0 included). Record: §M.4.
-- [x] **M3 ✅ 18:27 UTC — Point 4 — HSTS** (`ops/nginx-security-headers.conf`): the commented two-year line (l. 57) → Alex's
+- [x] **M3 ✅ ≈ 17:53 UTC — Point 4 — HSTS** (`ops/nginx-security-headers.conf`): the commented two-year line (l. 57) → Alex's
   `add_header Strict-Transport-Security "max-age=86400" always;` at the same place (server level, beside the other four
   headers → the same responses); the file's box, `deploy/nginx-travelapp.conf` l. 113–114 (« HSTS ships commented out »),
   `ops/README.md` l. 53 and `PROGRESS.md` §3.5 brought in line (comments / docs only); `ops/tests/test-nginx-headers.sh`:
   HSTS asserted PRESENT on both zones, exactly `max-age=86400`, once, no `includeSubDomains`, no `preload`; its section
   « the commented-out HSTS line, uncommented » removed (nothing commented is left to prove). Run it (docker). Sub-steps:
-  - [x] M3.1 ✅ 18:12 UTC `ops/nginx-security-headers.conf` — the line + its box (the « DO NOT ENABLE » text rewritten as « enabled
+  - [x] M3.1 ✅ ≈ 17:50 UTC `ops/nginx-security-headers.conf` — the line + its box (the « DO NOT ENABLE » text rewritten as « enabled
     2026-10-07, one day; raise after a week; never includeSubDomains / preload unless … »). Done: l. 64 `add_header
     Strict-Transport-Security "max-age=86400" always;` (the commented two-year line is gone — one HSTS line in the file),
     its 2-line comment « One day for now; a year after a week without trouble »; the box (21 lines, every line 79 wide,
@@ -573,28 +886,28 @@ handover: 2, both in Alex's site text, §E) and fix with a byte-exact Python rep
     deploy hook) » (neither is on record: PROGRESS.md l. 87 says only « certbot.timer enabled — renewal is scheduled »;
     HANDOVER.md l. 545–553 proposed the reload hook). `git diff --stat` = 20 +, 13 −. Backup of the old file in the
     session scratchpad (not needed by a new session: `git diff` shows it).
-  - [x] M3.2 ✅ 18:16 UTC `ops/tests/test-nginx-headers.sh` — the header comment, the per-zone HSTS assertions, the obsolete section.
+  - [x] M3.2 ✅ ≈ 17:51 UTC `ops/tests/test-nginx-headers.sh` — the header comment, the per-zone HSTS assertions, the obsolete section.
     Done (byte-exact Python edit — the script holds `tr -d '\r'`): « the SAME five headers » (l. 23) and « The five headers
     must reach BOTH zones … these four would silently vanish » (l. 145–148); the `assert_absent … HSTS is NOT sent`
     replaced by `hsts_count` == 1 and `hsts_value` == `max-age=86400` exactly (so a longer max-age, `includeSubDomains` or
     `preload` fails); the 56-line section « the commented-out HSTS line, uncommented » removed (its copy-and-uncomment
     proof is now the main run itself). `bash -n` OK; `git diff --stat` = 12 +, 61 −; no leftover (`hsts.conf`, `8088`,
     `63072000`).
-  - [x] M3.3 ✅ 18:19 UTC the docs — `deploy/nginx-travelapp.conf` l. 113–114, `ops/README.md` l. 53, `PROGRESS.md` §3.5.
+  - [x] M3.3 ✅ ≈ 17:51 UTC the docs — `deploy/nginx-travelapp.conf` l. 113–114, `ops/README.md` l. 53, `PROGRESS.md` §3.5.
     Done (comments / docs only): the vhost — the header list « …, CSP, HSTS) » (l. 95) and « HSTS is sent from the
     snippet since 2026-10-07: one day first, a year after a week without trouble — see the box » (l. 113–114);
     `ops/README.md` l. 53–55 « It is on since 2026-10-07, one day first (the box …), because HSTS sent while HTTPS is
     broken is unrecoverable »; `PROGRESS.md` §3.5 + « **2026-10-07 — enabled** (Alex's request): `max-age=86400`, no
     `includeSubDomains`, no `preload`; raise it … after a week without trouble (SCANID-HANDOVER.md §M) ».
-  - [x] M3.4 ✅ 18:27 UTC run the header test (docker: `bash ops/tests/test-nginx-headers.sh` → « RESULTS: N passed, 0 failed ») +
+  - [x] M3.4 ✅ ≈ 17:53 UTC run the header test (docker: `bash ops/tests/test-nginx-headers.sh` → « RESULTS: N passed, 0 failed ») +
     a mutation (the line commented again → the HSTS assertions fail) + `git diff` of the 5 files read through. Record: §M.4.
-- [x] **M4 ✅ 18:35 UTC — Points 1 and 3 — confirmations, no code change** (§M.3 d1, d3): the evidence run again (backend
+- [x] **M4 ✅ ≈ 17:54 UTC — Points 1 and 3 — confirmations, no code change** (§M.3 d1, d3): the evidence run again (backend
   `test_export.py`; the SMTP sender test in `test_account_foundation.py`) and recorded.
-- [x] **M5 ✅ 18:55 UTC — Verify:** frontend unit + eslint `src/App.jsx` (baseline 11 problems) + `VITE_API_URL=/api npm run build` +
+- [x] **M5 ✅ ≈ 18:00 UTC — Verify:** frontend unit + eslint `src/App.jsx` (baseline 11 problems) + `VITE_API_URL=/api npm run build` +
   guard `no-google-fonts` 5/5; e2e: the new spec + `features` + `smoke` + `purchase-return` (desktop, mobile-small,
   mobile-375; `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`); backend full suite (397 expected — backend unchanged);
   the nginx header test (docker); `git diff` = only the planned lines; `git add --dry-run .` = the planned paths.
-- [x] **M6 ✅ 18:55 UTC (written; the ship itself = §M.5 S1–S6) — Record + ship steps + the answer for Alex** (§M.5): the user commits + pushes (§0.3); the assistant watches CI
+- [x] **M6 ✅ ≈ 18:00 UTC (written; the ship itself = §M.5 S1–S6) — Record + ship steps + the answer for Alex** (§M.5): the user commits + pushes (§0.3); the assistant watches CI
   + Deploy (the deploy cannot reload nginx — « NOTE: nginx not reloaded »); then **the user reloads nginx on the server,
   one command per message**; the assistant checks `curl -sI` on `/`, `/app/`, `/api/config` →
   `strict-transport-security: max-age=86400`. Later (≥ 7 days after the reload, without trouble): raise to
@@ -609,9 +922,10 @@ is ignored).
 
 | # | Prompt (verbatim, or in substance) | Done | Left |
 | --- | --- | --- | --- |
-| 1 | « Read SCANID-HANDOVER.md to see your restrictions ans permissions! CRUCIAL all the current functionalities must be preserved except what is demanded in the attached pdf file! » + « Lasha-Small-Points-2026-10-07.pdf » | Checks (17:30 UTC): `git status` = only the handover; HEAD = `origin/master` = `53ad965`; live headers read (§M.2 f6). **TASK M opened:** M0 + M1; **M2 ✅** (17:58 UTC) | M3 → M6 |
-| 2 | (mid-turn, ≈ 18:00 UTC) « Mark in SCANID-HANDOVER.md the tasks to do, Implement stage-by-stage and after iplementing each stage update SCANID-HANDOVER.md in such way that if i interrupt you on this session and open new session you could continue working seamlessly having only the command "Read SCANID-HANDOVER.md"! » | The tasks are marked (§M.0 stages + M3 sub-steps; the resume protocol item 3a points here; « How a new session resumes task M » added to §M.0); each stage ticked + recorded (§M.4) as it ends: **M3 ✅ 18:27, M4 ✅ 18:35, M5 ✅ + M6 written 18:55 UTC** | §M.5 S1 (the user) → S6 |
-| 3 | « All what must be added to .gitignore are already in? Can i use git add .? Provide a short git commit message! » | **Answered (checked 19:0x UTC): yes, nothing to add to `.gitignore`** — untracked-not-ignored = only the new `frontend/tests/e2e/alert-messages.spec.js` (it must be committed); `git ls-files -ci --exclude-standard` empty; ignored as they should be: Alex's PDF + .docx (`frontend/payment_scanid/`, `.gitignore:117`), `frontend/dist` (rebuilt in M5), `frontend/test-results/` (the e2e run); `playwright-report/` not present. **`git add .` from the repo root = exactly the 8 paths of §M.0** (`git add --dry-run .`). Message given: « Alerts: space before colon; HSTS one day » (= §M.5 S1) | §M.5 S1 (the user) → S6 |
+| 1 | « Read SCANID-HANDOVER.md to see your restrictions ans permissions! CRUCIAL all the current functionalities must be preserved except what is demanded in the attached pdf file! » + « Lasha-Small-Points-2026-10-07.pdf » | Checks (17:30 UTC): `git status` = only the handover; HEAD = `origin/master` = `53ad965`; live headers read (§M.2 f6). **TASK M opened:** M0 + M1; **M2 ✅** (≈ 17:47 UTC) | M3 → M6 |
+| 2 | (mid-turn, ≈ 17:47 UTC) « Mark in SCANID-HANDOVER.md the tasks to do, Implement stage-by-stage and after iplementing each stage update SCANID-HANDOVER.md in such way that if i interrupt you on this session and open new session you could continue working seamlessly having only the command "Read SCANID-HANDOVER.md"! » | The tasks are marked (§M.0 stages + M3 sub-steps; the resume protocol item 3a points here; « How a new session resumes task M » added to §M.0); each stage ticked + recorded (§M.4) as it ends: **M3 ✅ ≈ 17:53, M4 ✅ ≈ 17:54, M5 ✅ + M6 written ≈ 18:00 UTC** | §M.5 S1 (the user) → S6 |
+| 3 | « All what must be added to .gitignore are already in? Can i use git add .? Provide a short git commit message! » | **Answered (checked before the user's commit of 18:45:58 UTC): yes, nothing to add to `.gitignore`** — untracked-not-ignored = only the new `frontend/tests/e2e/alert-messages.spec.js` (it must be committed); `git ls-files -ci --exclude-standard` empty; ignored as they should be: Alex's PDF + .docx (`frontend/payment_scanid/`, `.gitignore:117`), `frontend/dist` (rebuilt in M5), `frontend/test-results/` (the e2e run); `playwright-report/` not present. **`git add .` from the repo root = exactly the 8 paths of §M.0** (`git add --dry-run .`). Message given: « Alerts: space before colon; HSTS one day » (= §M.5 S1) | §M.5 S1 (the user) → S6 |
+| 4 | The push output (`53ad965..fb8ad74`), then « what to do now? » (mid-turn), the ssh banner, the reload's tail « ALL CHECKS PASSED » | **S1 ✅** (`fb8ad74` « Small changes after final check », 8 paths); stage times corrected from `stat` (they ran ahead of the clock); **S2 ✅** Deploy 18:46:51 / CI 18:47:43; **S3 ✅** 18:48:38 (alerts live, bundle `index-CMIaCT34.js`); **S4 ✅** nginx reloaded; **S5 ✅** 18:51:40 UTC — HSTS live everywhere | S6 (Alex's text, given 18:52 UTC); close |
 
 ### M.1 The demand (user, 2026-10-07) and Alex's PDF in substance
 
@@ -705,9 +1019,9 @@ one is on the server. »):
 
 ### M.4 Stage records
 
-**M0 + M1 — DONE (2026-10-07 17:45 UTC):** §M.2 and §M.3 above; Alex's files copied into `frontend/payment_scanid/`.
+**M0 + M1 — DONE (2026-10-07 ≈ 17:43 UTC):** §M.2 and §M.3 above; Alex's files copied into `frontend/payment_scanid/`.
 
-**M2 — DONE (17:58 UTC).** `frontend/src/App.jsx`: 4 lines, each only `\u00A0` inserted before the colon —
+**M2 — DONE (≈ 17:47 UTC).** `frontend/src/App.jsx`: 4 lines, each only `\u00A0` inserted before the colon —
 `Échec de la suppression multiple\u00A0: ${errorData.detail}`, `Une erreur est survenue\u00A0: ${err.message}`,
 `Échec de la récupération des données\u00A0: ${err.detail}`, `Échec de l'exportation\u00A0: ${err.detail}`
 (`git diff --stat` = `4 insertions(+), 4 deletions(-)`). **Trap met and fixed:** the editing tool wrote a RAW U+00A0
@@ -720,7 +1034,7 @@ network abort, « Aperçu » refused, selection export refused; `page.route` ove
 (« Received: "Échec de l'exportation: Refus de test" » …); a plain space instead of U+00A0 → 4 / 4 failed; App.jsx
 restored, `cmp` = the M2 version.
 
-**M3 — DONE (18:27 UTC).** M3.1–M3.3 as ticked in §M.0 (5 files: `ops/nginx-security-headers.conf` 1 active line + its
+**M3 — DONE (≈ 17:53 UTC).** M3.1–M3.3 as ticked in §M.0 (5 files: `ops/nginx-security-headers.conf` 1 active line + its
 comment + the box; `ops/tests/test-nginx-headers.sh`; comments / docs in `deploy/nginx-travelapp.conf`, `ops/README.md`,
 `PROGRESS.md`). The box's sentence on recovery made precise after reading the diff (« unreachable … until HTTPS is
 repaired or max-age runs out, and the entry cannot be cleared sooner »). **M3.4 — the header test, docker runner
@@ -732,7 +1046,7 @@ isolation of the two policies) pass as before. **Mutations 2 / 2 killed** (scrat
 line commented again → 4 failed (« sends 0 Strict-Transport-Security headers », « HSTS value is '' »);
 `max-age=86400; includeSubDomains` → 2 failed. No temp dir, no container left.
 
-**M4 — DONE (18:35 UTC).** No file changed. **Point 3:** `backend/tests/test_export.py` → all passed (with the 2 sender
+**M4 — DONE (≈ 17:54 UTC).** No file changed. **Point 3:** `backend/tests/test_export.py` → all passed (with the 2 sender
 tests below: **61 passed**) — it asserts the sheet « Documents » (l. 40) and the exact headers `attachment;
 filename=documents_pour_alice.csv` (l. 115), `…documents_pour_alice.xlsx` (l. 217), `…selection_documents.xlsx` (l. 440),
 `…selection_documents.csv` (l. 450), `…documents_rapport_complet.xlsx` (l. 473), `…documents_pour_bob.xlsx` (l. 479);
@@ -745,7 +1059,7 @@ settings (`MAIL_FROM='ScanID <devis@scanid.fr>'`, `MAIL_REPLY_TO=contact@scanid.
 <devis@scanid.fr>**, **Reply-To: contact@scanid.fr**, Subject « Votre espace ScanID est ouvert — 1 document disponible »;
 the only address in its body is the signature « contact@scanid.fr · scanid.fr ».
 
-**M5 — DONE (18:37–18:55 UTC).** All green: backend full suite **397 passed** (= baseline); frontend unit
+**M5 — DONE (≈ 17:54–18:00 UTC; the e2e run ended 18:00:07).** All green: backend full suite **397 passed** (= baseline); frontend unit
 **91 / 91**; eslint `src/App.jsx` + the new spec = **11 problems** (the baseline, all pre-existing in App.jsx);
 `VITE_API_URL=/api npm run build` ✅ (bundle `dist/app/assets/index-CMIaCT34.js`: the 4 alerts carry U+00A0 before
 « : », 0 old form left; the only « données … admin: » hit is the `console.error` Alex said to leave) + guard
@@ -757,23 +1071,23 @@ the last comment edit → **55 passed, 0 failed**, no container left; `git statu
 skipped, 0 failed (4.2 min)** — the skip is the pre-existing `capture.spec.js:127` (`browserName === 'webkit'`); the
 12 new tests ran. `frontend/dist/` = this build (ignored by git).
 
-### M.5 How to ship task M — and the answer for Alex (written at M6, 2026-10-07 ≈ 18:45 UTC)
+### M.5 How to ship task M — and the answer for Alex (written at M6, 2026-10-07 ≈ 17:58 UTC)
 
 **What ships:** the 8 paths of §M.0's expected `git status` (`git add --dry-run .` from the repo root = exactly them,
-checked 18:40 UTC). No new dependency, migration or environment variable. « Deploy » always restarts the backend →
+checked ≈ 17:59 UTC). No new dependency, migration or environment variable. « Deploy » always restarts the backend →
 `/api` may answer 502 for up to ~1.5 min (B10 note) — wait, re-check. « Deploy » rsyncs `ops/` + `deploy/` but cannot
 reload nginx (« NOTE: nginx not reloaded … », Deploy stays green) → **HSTS is live only after S4** (the user's reload).
 The alert() texts are live as soon as « Deploy » is green (the app bundle).
 
-- [ ] **S1 — U (one command), from the laptop:** first `git status --short` = the 8 lines of §M.0; then `cd
+- [x] **S1 ✅ — pushed by the user: `fb8ad74` « Small changes after final check »** (the user's own message; commit 18:45:58 UTC; `origin/master` = `fb8ad74`; `git show --stat` = the 8 paths, 478 +, 112 −; working tree clean). Command was: first `git status --short` = the 8 lines of §M.0; then `cd
   /home/lasha/Public/new && git add . && git commit -m "Alerts: space before colon; HSTS one day" && git push origin
   master`
-- [ ] **S2 — C:** « CI » + « Deploy » green for the new commit (`curl -s
+- [x] **S2 ✅ — Deploy success 18:46:51 UTC, CI success 18:47:43 UTC** (both started 18:46:12). Plan: « CI » + « Deploy » green for the new commit (`curl -s
   "https://api.github.com/repos/Lasha101/new/actions/runs?per_page=4"`).
-- [ ] **S3 — C, live (before the reload):** the new app bundle (`B=$(curl -s https://scanid.fr/app/ | grep -o
+- [x] **S3 ✅ 18:48:38 UTC — live bundle `index-CMIaCT34.js` (= the local M5 build) holds each of the 4 messages with U+00A0 before « : » (1×) and 0 old form; K9's « Paiement reçu, merci » 1×, `selection_documents` 1×; `/api/config` `{"signup":true,"trial":true}`; webhook unsigned → 400; `/`, `/app/`, `/tarifs.html`, `/cgv.html`, `/essai.html` → 200; HSTS not yet (0 — nginx not reloaded, as expected). → POINT 2 IS LIVE.** Plan: **S3 — C, live (before the reload):** the new app bundle (`B=$(curl -s https://scanid.fr/app/ | grep -o
   'assets/index-[^"]*\.js' | head -1)`) holds the 4 messages with U+00A0 before « : » and no « exportation: »;
   `/api/config` `{"signup":true,"trial":true}`; webhook unsigned → 400; still no HSTS (nginx not reloaded yet).
-- [ ] **S4 — U, on the server, ONE command per message:**
+- [x] **S4 ✅ 18:51 UTC — nginx reloaded by the user: step 1 (ssh) ✅; step 2 → « ALL CHECKS PASSED — the site, the application and both policies are live. » (the chain is `&&`-joined, so the grep found l. 64, `nginx -t` passed and the reload ran; the user pasted the tail only); step 3 `exit` — told.**
   1. `ssh -o ServerAliveInterval=30 lasha@87.106.22.235`
   2. `grep -n '^add_header Strict-Transport-Security' /opt/travelapp/ops/nginx-security-headers.conf && sudo nginx -t &&
      sudo systemctl reload nginx && bash /opt/travelapp/ops/verify-front-end.sh` → expected `64:add_header
@@ -781,11 +1095,13 @@ The alert() texts are live as soon as « Deploy » is green (the app bundle).
      not: the chain stops, nothing is reloaded), « syntax is ok », « test is successful », « ALL CHECKS PASSED ». If
      `nginx -t` fails, nothing is reloaded and the site keeps running — paste the output.
   3. `exit`
-- [ ] **S5 — C, live:** `curl -sI` on `https://scanid.fr/`, `/app/`, `/api/config` (Alex's test) and
+- [x] **S5 ✅ 18:51:40 UTC — HSTS LIVE: `Strict-Transport-Security: max-age=86400` exactly once on `https://scanid.fr/` (200), `/app/` (200), `/api/config` (405 on HEAD — Alex's test), `https://www.scanid.fr/` (301) and a 404; on each, X-Content-Type-Options, X-Frame-Options, Referrer-Policy and one CSP unchanged; `http://scanid.fr/` → 301 without it (port 80 — correct); GET `/api/config` `{"signup":true,"trial":true}`. → POINT 4 IS LIVE.** Plan: **S5 — C, live:** `curl -sI` on `https://scanid.fr/`, `/app/`, `/api/config` (Alex's test) and
   `https://www.scanid.fr/` → `strict-transport-security: max-age=86400` once each, the four other headers unchanged;
   `http://scanid.fr/` → 301 without it (port 80 — correct, browsers ignore HSTS over HTTP).
-- [ ] **S6 — U → Alex:** the text C below (fill in the S5 time).
-- [ ] **LATER (≥ 7 days after S4 without trouble — from ≈ 2026-10-14):** the raise to `max-age=31536000`. Before it,
+- [ ] **S6 — U → Alex:** the text C below (S5 time filled in: 07/10 at 20:51 Paris = 18:51 UTC). (given 18:52 UTC) **—
+  SUPERSEDED 2026-10-07 ≈ 20:53 UTC by task P's answer (§P.5 C): Alex's PDF of 07/10 22:05 says he rechecked points 2
+  and 4 himself and asked points 1 and 3 again (task P §4).**
+- [ ] **LATER (≥ 7 days after S4 without trouble — from 2026-10-14 ≈ 18:51 UTC):** the raise to `max-age=31536000`. Before it,
   the user, read-only, one command per message: `sudo certbot renew --dry-run` (→ « Congratulations, all simulated
   renewals succeeded ») and `ls /etc/letsencrypt/renewal-hooks/deploy/; sudo grep -n hook
   /etc/letsencrypt/renewal/scanid.fr.conf` (a hook that reloads nginx? none → propose one: HANDOVER.md l. 545–553);
@@ -805,7 +1121,7 @@ The alert() texts are live as soon as « Deploy » is green (the app bundle).
 > documents_rapport_complet.xlsx / .csv and documents_pour_<compte>.xlsx / .csv (Content-Disposition), and the XLSX
 > sheet is « Documents ». A CSV has no sheet (Excel names its tab after the file, so « documents_… » too).
 > 4. Done: every response of the site, the app and the API now carries Strict-Transport-Security: max-age=86400 (checked
-> with curl -sI on /, /app/ and /api/config at <S5 time>), no includeSubDomains, no preload. I'll raise it to
+> with curl -sI on /, /app/ and /api/config on 07/10 at 20:51, Paris time), no includeSubDomains, no preload. I'll raise it to
 > max-age=31536000 after a week without trouble, once the certificate renewal is double-checked.
 
 ---
@@ -974,7 +1290,9 @@ checked 21:33 UTC). No new dependency, migration, environment variable or nginx 
   webhook unsigned → 400; the new app bundle holds `selection_documents` (and K9's « Paiement reçu, merci »).
   The export file names themselves need a login → U, optional: « Mes documents » → « Télécharger Excel » → the file is
   `documents_pour_<compte>.xlsx`, sheet « Documents ».
-- [ ] **S4 — U → Alex:** the text C below. **← NEXT (given 21:41 UTC).**
+- [ ] **S4 — U → Alex:** the text C below. (given 21:41 UTC) **— SUPERSEDED 2026-10-07 ≈ 20:53 UTC by task P's answer
+  (§P.5 C): Alex rechecked the deployed CGV himself and settled both remarks (Article 8 → his CGV of 07/10; the
+  « passeports » question → task P §3).**
 
 **C — the answer for Alex (English, like his PDF):**
 > Hi Alex — your « CGV page and export file » note is done and live. cgv.html is your file byte for byte (15 635 bytes,
