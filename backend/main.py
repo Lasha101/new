@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import asyncio
+import calendar
 import codecs
 import csv
 import io
@@ -15,7 +16,7 @@ import re
 import tempfile
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional, Dict, List, Any, Literal
 
 import pandas as pd
@@ -43,6 +44,7 @@ import crud, models, schemas, auth
 import emails
 import mailer
 import file_validation
+import invoicing
 import log_redaction
 import ocr_service
 import password_policy
@@ -843,6 +845,56 @@ def order_pack(payload: schemas.OrderRequest, db: Session = Depends(get_db), cur
     return {"checkout_url": billing.checkout_url(payload.pack, current_user["email"], current_user["id"]), "purchase_id": purchase["id"]}
 
 
+def _invoice_after_credit(db: Session, outcome: billing.CreditOutcome, session: Dict[str, Any]):
+    """The invoice of a purchase the webhook has just credited (invoicing.py),
+    and the e-mail telling Alex when none could be issued automatically.
+    Returns (invoice or None, (subject, body) for Alex or None). Never raises:
+    the credits are already committed, and Stripe must not deliver again."""
+    try:
+        result = invoicing.issue_invoice(db, outcome.purchase_id, session)
+    except Exception as exc:  # noqa: BLE001 — reported to Alex instead
+        logger.error("Stripe: facture non émise, erreur %s.", type(exc).__name__, exc_info=True)
+        result = invoicing.InvoiceOutcome(
+            "refused", reason=f"erreur inattendue à l'émission ({type(exc).__name__}) ; aucun numéro n'a été utilisé")
+    if result.status == "issued":
+        logger.info("Stripe: facture %s émise.", result.invoice.number)
+        return result.invoice, None
+    if result.status == "refused":
+        logger.error("Stripe: facture non émise automatiquement (%s).", result.reason)
+        return None, emails.invoice_not_issued(result.reason, outcome.user, outcome.pack,
+                                               outcome.credits or outcome.pack, session)
+    return None, None   # invoices not switched on (INVOICES_ENABLED)
+
+
+def _credit_note_after_refund(db: Session, charge: Dict[str, Any], event: Dict[str, Any]):
+    """charge.refunded (Alex, 08/10/2026): the credit note of what this refund
+    adds (invoicing.issue_credit_note), the client's e-mail carrying it, or the
+    e-mail telling Alex why there is none. Returns (status, [(to, subject, body,
+    kind, attachments)]). Never raises."""
+    created = event.get("created")
+    refunded_on = (invoicing.to_paris(datetime.fromtimestamp(created, timezone.utc)).date()
+                   if isinstance(created, int) and not isinstance(created, bool) else None)
+    try:
+        result = invoicing.issue_credit_note(db, charge, refunded_on)
+    except Exception as exc:  # noqa: BLE001 — reported to Alex instead
+        logger.error("Stripe: avoir non émis, erreur %s.", type(exc).__name__, exc_info=True)
+        result = invoicing.CreditNoteOutcome(
+            "refused", reason=f"erreur inattendue à l'émission de l'avoir ({type(exc).__name__}) ; aucun numéro n'a été utilisé")
+    if result.status == "issued":
+        note, invoice = result.credit_note, result.invoice
+        logger.info("Stripe: avoir %s émis sur la facture %s.", note.number, invoice.number)
+        user = crud.get_user(db, note.user_id) if note.user_id else None
+        to = (user or {}).get("email") or note.client_email
+        subject, body = emails.credit_note(user or {}, note.number, invoice.number, note.total_ttc_cents)
+        return result.status, [(to, subject, body, "credit_note",
+                                [(invoicing.filename(note), note.pdf, "application/pdf")])]
+    if result.status in ("refused", "unmatched"):
+        logger.error("Stripe: remboursement sans avoir automatique (%s).", result.reason)
+        subject, body = emails.refund_without_credit_note(result.reason, charge)
+        return result.status, [(config.mail_admin_to(), subject, body, "refund_without_credit_note", None)]
+    return result.status, []   # duplicate, or invoices not switched on
+
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """checkout.session.completed (and async_payment_succeeded, for bank
@@ -864,23 +916,37 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db
         session = (event.get("data") or {}).get("object") or {}
     except (ValueError, AttributeError):
         return JSONResponse(status_code=400, content={"detail": "Événement illisible."})
+    if event_type == billing.REFUND_EVENT:
+        status_text, messages = await asyncio.to_thread(_credit_note_after_refund, db, session, event)
+        for to, subject, text_body, kind, attachments in messages:
+            background_tasks.add_task(mailer.send, to, subject, text_body, kind, attachments=attachments)
+        return {"received": True, "result": status_text}
     if event_type not in billing.PAID_EVENTS:
         return {"received": True, "result": "ignored"}
 
     outcome = await asyncio.to_thread(billing.credit_checkout_session, db, session)
     if outcome.status == "credited":
+        # The invoice (Alex, 08/10/2026) goes with the purchase e-mail.
+        invoice, alex = await asyncio.to_thread(_invoice_after_credit, db, outcome, session)
+        number = invoice.number if invoice is not None else None
+        attachments = [(invoicing.filename(invoice), invoice.pdf, "application/pdf")] if invoice is not None else None
         kind = "purchase_confirmation"
         if outcome.pack == billing.UNIT_PACK and outcome.password_token:
             logger.info("Stripe: %s documents à la carte crédités, compte ouvert par l'achat (session traitée).", outcome.credits)
-            subject, text_body = emails.unit_purchase_welcome(outcome.user, outcome.password_token, outcome.credits, outcome.expires_at)
+            subject, text_body = emails.unit_purchase_welcome(outcome.user, outcome.password_token, outcome.credits,
+                                                              outcome.expires_at, invoice_number=number)
             kind = "purchase_welcome"
         elif outcome.pack == billing.UNIT_PACK:
             logger.info("Stripe: %s documents à la carte crédités (session traitée).", outcome.credits)
-            subject, text_body = emails.unit_purchase_confirmation(outcome.user, outcome.credits, outcome.expires_at)
+            subject, text_body = emails.unit_purchase_confirmation(outcome.user, outcome.credits, outcome.expires_at,
+                                                                   invoice_number=number)
         else:
             logger.info("Stripe: pack %s crédité (session traitée).", outcome.pack)
-            subject, text_body = emails.purchase_confirmation(outcome.user, outcome.pack, outcome.expires_at)
-        background_tasks.add_task(mailer.send, outcome.user["email"], subject, text_body, kind)
+            subject, text_body = emails.purchase_confirmation(outcome.user, outcome.pack, outcome.expires_at,
+                                                              invoice_number=number)
+        background_tasks.add_task(mailer.send, outcome.user["email"], subject, text_body, kind, attachments=attachments)
+        if alex is not None:
+            background_tasks.add_task(mailer.send, config.mail_admin_to(), alex[0], alex[1], "invoice_not_issued")
         await manager.send_update(outcome.user["id"], {"type": "credit_update"})
     elif outcome.status == "unmatched":
         logger.error("Stripe: paiement non crédité automatiquement (%s).", outcome.reason)
@@ -1098,8 +1164,87 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
 
 @app.get("/users/me/purchases", response_model=List[schemas.PurchaseOut])
 def read_my_purchases(db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
-    """« Mes achats »: pack, date, expiry of every paid purchase."""
-    return billing.paid_purchases(db, current_user["id"])
+    """« Mes achats »: pack, date, expiry of every paid purchase, and its
+    invoice and credit notes."""
+    purchases = billing.paid_purchases(db, current_user["id"])
+    documents = invoicing.documents_by_purchase(db, [purchase["id"] for purchase in purchases])
+    for purchase in purchases:
+        purchase["documents"] = documents.get(purchase["id"], [])
+    return purchases
+
+
+# --- Invoices and credit notes (Alex, 08/10/2026) ---
+INVOICE_NOT_FOUND = "Facture introuvable."
+_MONTH_RE = re.compile(r"^([0-9]{4})-(0[1-9]|1[0-2])$")
+INVOICE_CSV_HEADERS = ["Type", "Numéro", "Date", "Client", "SIREN", "Total HT", "TVA", "Total TTC",
+                       "Référence Stripe", "Facture d'origine"]
+
+
+def _month_bounds(month: Optional[str]):
+    """« 2026-10 » → (01/10/2026, 31/10/2026); None → None; anything else → 400."""
+    if month is None:
+        return None
+    match = _MONTH_RE.match(month)
+    if not match:
+        raise HTTPException(status_code=400, detail="Mois invalide : utilisez le format AAAA-MM.")
+    year, number = int(match.group(1)), int(match.group(2))
+    return date(year, number, 1), date(year, number, calendar.monthrange(year, number)[1])
+
+
+def _csv_amount(cents: int) -> str:
+    """« 1234,56 » / « -118,80 »: a number for French Excel (no grouping, no €)."""
+    whole, rest = divmod(abs(cents), 100)
+    return f"{'-' if cents < 0 else ''}{whole},{rest:02d}"
+
+
+def _invoices_csv(rows: List[models.Invoice]) -> bytes:
+    """The accountant's monthly file: one line per invoice or credit note, a
+    credit note's amounts negative. The app's CSV conventions (';', UTF-8 BOM,
+    CRLF); the client's name — typed by the customer — is neutralised like any
+    exported text."""
+    text = io.StringIO()
+    writer = csv.writer(text, delimiter=CSV_DELIMITER, lineterminator="\r\n")
+    writer.writerow(INVOICE_CSV_HEADERS)
+    for row in rows:
+        sign = -1 if row.kind == invoicing.KIND_CREDIT_NOTE else 1
+        writer.writerow([
+            "Avoir" if sign < 0 else "Facture", row.number, invoicing.date_fr(row.issue_date),
+            _csv_cell(row.client_name), row.client_siren or "",
+            _csv_amount(sign * row.total_ht_cents), _csv_amount(sign * row.total_vat_cents),
+            _csv_amount(sign * row.total_ttc_cents),
+            row.stripe_payment_intent or row.stripe_session_id or "", row.credited_invoice_number or "",
+        ])
+    return codecs.BOM_UTF8 + text.getvalue().encode("utf-8")
+
+
+@app.get("/invoices/{invoice_id}/pdf")
+def download_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Dict[str, Any] = Depends(auth.get_current_active_user)):
+    """The PDF of an invoice or credit note exactly as it was issued (the stored
+    file, never generated again) — for its client, or an admin."""
+    row = db.get(models.Invoice, invoice_id)
+    if row is None or (current_user.get("role") != "admin" and row.user_id != current_user["id"]):
+        raise HTTPException(status_code=404, detail=INVOICE_NOT_FOUND)
+    return Response(content=row.pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename={invoicing.filename(row)}"})
+
+
+@app.get("/admin/invoices", response_model=List[schemas.InvoiceOut], dependencies=[Depends(auth.require_admin)])
+def list_invoices(month: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    """« Factures »: every invoice and credit note, newest first (or one month's)."""
+    return invoicing.list_documents(db, _month_bounds(month))
+
+
+@app.get("/admin/invoices/export", dependencies=[Depends(auth.require_admin)])
+def export_invoices(month: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    """The month's CSV for the accountant (Alex's columns: number, date, client,
+    SIREN, HT, VAT, TTC, Stripe payment reference), in number order; Stripe
+    test-mode documents are left out."""
+    if month is None:
+        raise HTTPException(status_code=400, detail="Choisissez un mois (AAAA-MM).")
+    rows = invoicing.list_documents(db, _month_bounds(month), oldest_first=True, live_only=True)
+    response = Response(content=_invoices_csv(rows), media_type=CSV_MEDIA_TYPE)
+    response.headers["Content-Disposition"] = f"attachment; filename=factures_{month}.csv"
+    return response
 
 
 # --- Admin User Management Routes ---

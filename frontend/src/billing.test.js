@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, UNIT_PAYMENT_LINK, unitCheckoutUrl, UNIT_PURCHASE_RETURN_URL, isUnitPurchaseReturn, withoutPurchaseReturn, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { PACKS, packSummary, formatEuros, formatCount, purchaseLabel, UNIT_PACK, UNIT_PAYMENT_LINK, unitCheckoutUrl, UNIT_PURCHASE_RETURN_URL, isUnitPurchaseReturn, withoutPurchaseReturn, normalizeSiret, isValidSiret, normalizeVat, isValidVat, invoiceLabel, invoiceStem, parisMonth } from './billing.js';
 
 test('the four packs and their HT prices match the Stripe sheet', () => {
     assert.deepEqual(Object.keys(PACKS), ['100', '1000', '3000', '5000']);
@@ -65,4 +65,19 @@ test('VAT number structure', () => {
     assert.equal(isValidVat('FR1234'), false);
     assert.equal(isValidVat('BE0123456789'), true);
     assert.equal(isValidVat('US123456789'), false);
+});
+
+test('invoices (Alex, 08/10/2026): the link reads the number, a credit note says it is one', () => {
+    assert.equal(invoiceLabel({ kind: 'invoice', number: 'F-2026-00001' }), 'F-2026-00001');
+    assert.equal(invoiceLabel({ kind: 'credit_note', number: 'AV-2026-00001' }), 'Avoir AV-2026-00001');
+    assert.equal(invoiceStem({ kind: 'invoice', number: 'F-2026-00001' }), 'Facture-F-2026-00001');
+    assert.equal(invoiceStem({ kind: 'credit_note', number: 'AV-2026-00001' }), 'Avoir-AV-2026-00001');
+});
+
+test('the month proposed for the CSV is the current month in Paris', () => {
+    assert.equal(parisMonth(new Date('2026-10-08T16:10:00Z')), '2026-10');
+    assert.equal(parisMonth(new Date('2026-10-31T22:30:00Z')), '2026-10');   // 23:30 in Paris (winter time, UTC+1)
+    assert.equal(parisMonth(new Date('2026-10-31T23:30:00Z')), '2026-11');   // 00:30 on 01/11 in Paris
+    assert.equal(parisMonth(new Date('2026-12-31T22:59:00Z')), '2026-12');   // 23:59 in Paris
+    assert.equal(parisMonth(new Date('2026-12-31T23:00:00Z')), '2027-01');   // midnight in Paris
 });

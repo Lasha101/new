@@ -15,14 +15,18 @@ import smtplib
 import ssl
 import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
-from typing import List, Optional
+from typing import List, Optional, Sequence, Tuple
 
 import config
 
 logger = logging.getLogger(__name__)
+
+
+# (file name, content, MIME type) — an invoice: ("Facture-F-2026-00001.pdf", b"%PDF…", "application/pdf").
+Attachment = Tuple[str, bytes, str]
 
 
 @dataclass
@@ -32,6 +36,7 @@ class SentEmail:
     body: str
     kind: str
     reply_to: Optional[str] = None
+    attachments: List[Attachment] = field(default_factory=list)
 
 
 # The outbox backend's memory. Tests read it; nothing else should.
@@ -47,7 +52,8 @@ def is_configured() -> bool:
     return backend == "outbox"
 
 
-def _build(to: str, subject: str, body: str, reply_to: Optional[str]) -> EmailMessage:
+def _build(to: str, subject: str, body: str, reply_to: Optional[str],
+           attachments: Sequence[Attachment] = ()) -> EmailMessage:
     message = EmailMessage()
     message["From"] = config.mail_from()
     message["To"] = to
@@ -57,11 +63,16 @@ def _build(to: str, subject: str, body: str, reply_to: Optional[str]) -> EmailMe
     if reply_to:
         message["Reply-To"] = reply_to
     message.set_content(body)
+    for filename, data, mime_type in attachments:
+        maintype, _, subtype = mime_type.partition("/")
+        message.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
     return message
 
 
-def send(to: str, subject: str, body: str, kind: str, reply_to: Optional[str] = None) -> bool:
-    """Sends one plain-text email. Returns True when it was handed over.
+def send(to: str, subject: str, body: str, kind: str, reply_to: Optional[str] = None,
+         attachments: Optional[Sequence[Attachment]] = None) -> bool:
+    """Sends one plain-text email, with its attachments if any (an invoice's
+    PDF). Returns True when it was handed over.
 
     Never raises: callers run it after the HTTP response (BackgroundTasks), where
     an exception would only be swallowed less legibly.
@@ -69,17 +80,19 @@ def send(to: str, subject: str, body: str, kind: str, reply_to: Optional[str] = 
     backend = config.mail_backend()
     # The caller's reply_to wins (the trial notification: the requester).
     reply_to = reply_to or config.mail_reply_to() or None
+    attachments = list(attachments or [])
     try:
         if backend == "outbox":
             with _outbox_lock:
-                OUTBOX.append(SentEmail(to=to, subject=subject, body=body, kind=kind, reply_to=reply_to))
+                OUTBOX.append(SentEmail(to=to, subject=subject, body=body, kind=kind, reply_to=reply_to,
+                                        attachments=attachments))
             outbox_dir = os.getenv("MAIL_OUTBOX_DIR")
             if outbox_dir:
                 os.makedirs(outbox_dir, exist_ok=True)
                 path = os.path.join(outbox_dir, f"{kind}-{uuid.uuid4().hex}.eml")
                 fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
                 with os.fdopen(fd, "wb") as handle:
-                    handle.write(bytes(_build(to, subject, body, reply_to)))
+                    handle.write(bytes(_build(to, subject, body, reply_to, attachments)))
             logger.info("Email kept in the outbox: kind=%s", kind)
             return True
 
@@ -88,7 +101,7 @@ def send(to: str, subject: str, body: str, kind: str, reply_to: Optional[str] = 
             if not settings["host"]:
                 logger.error("Email not sent (SMTP_HOST missing): kind=%s", kind)
                 return False
-            message = _build(to, subject, body, reply_to)
+            message = _build(to, subject, body, reply_to, attachments)
             with smtplib.SMTP(settings["host"], settings["port"], timeout=settings["timeout"]) as smtp:
                 if settings["starttls"]:
                     smtp.starttls(context=ssl.create_default_context())

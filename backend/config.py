@@ -251,6 +251,15 @@ def stripe_api_key() -> str:
     return os.getenv("STRIPE_API_KEY", "").strip()
 
 
+# --- Invoices (Alex, 08/10/2026) -----------------------------------------
+def invoices_enabled() -> bool:
+    """INVOICES_ENABLED=1 makes the app issue the invoice of every purchase the
+    Stripe webhook credits (invoicing.py). Off by default: the line goes into the
+    server's .env once Alex's accountant has validated the sample invoice;
+    until then Alex invoices by hand and nothing here uses a number."""
+    return os.getenv("INVOICES_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 # --- Session lifetime ----------------------------------------------------
 # A session ends after this long WITHOUT USER ACTIVITY: the app renews it
 # (POST /session/refresh) only when the person actually uses the page, never

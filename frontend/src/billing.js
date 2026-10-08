@@ -96,3 +96,17 @@ export function isValidVat(vat) {
     if (vat.startsWith('FR')) return /^FR[0-9A-HJ-NP-Z]{2}\d{9}$/.test(vat);
     return /^(AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK|XI)[0-9A-Z+*]{2,12}$/.test(vat);
 }
+
+/** An invoice or credit note in « Mes achats » and « Factures » (Alex, 08/10/2026):
+ * the link reads the document's number, a credit note says it is one. */
+export const invoiceLabel = document => (document.kind === 'credit_note' ? `Avoir ${document.number}` : document.number);
+
+/** The file name the server gives the PDF (main.py download_invoice), without « .pdf ». */
+export const invoiceStem = document => `${document.kind === 'credit_note' ? 'Avoir' : 'Facture'}-${document.number}`;
+
+/** « 2026-10 »: the current month in Paris — what « Exporter le mois (CSV) » proposes first. */
+export function parisMonth(now = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit' }).formatToParts(now);
+    const part = type => parts.find(candidate => candidate.type === type).value;
+    return `${part('year')}-${part('month')}`;
+}

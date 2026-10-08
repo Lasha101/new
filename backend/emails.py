@@ -8,9 +8,10 @@ is the email, and a one-time link to choose the password replaces the
 provisional password (a password is never sent by email).
 """
 from datetime import datetime
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import config
+import invoicing
 
 SIGNATURE = (
     "Bien cordialement,\n"
@@ -32,6 +33,14 @@ def _date_fr(value: datetime) -> str:
 
 def _scans(count: int) -> str:
     return f"{count:,}".replace(",", " ")
+
+
+def _purchases_paragraph(invoice_number: Optional[str]) -> str:
+    """Where the purchase is detailed — and, once invoices are issued, that its
+    invoice is attached (Alex, 08/10/2026)."""
+    attached = f"Votre facture {invoice_number} est jointe à cet e-mail. " if invoice_number else ""
+    return (f"{attached}Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
+            "vous a été envoyé par Stripe.\n\n")
 
 
 def password_reset(user: Dict[str, Any], raw_token: str) -> Tuple[str, str]:
@@ -118,7 +127,8 @@ def trial_credits_added(user: Dict[str, Any]) -> Tuple[str, str]:
     return subject, body
 
 
-def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime) -> Tuple[str, str]:
+def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime,
+                          invoice_number: Optional[str] = None) -> Tuple[str, str]:
     subject = f"Vos {_scans(pack)} documents ScanID sont disponibles"
     body = (
         f"Bonjour {user.get('first_name') or ''},\n\n"
@@ -126,14 +136,14 @@ def purchase_confirmation(user: Dict[str, Any], pack: int, expires_at: datetime)
         f"votre espace ScanID ; ils sont valables jusqu'au {_date_fr(expires_at)}.\n\n"
         f"Votre espace : {config.app_public_url()}\n"
         f"Votre identifiant : {user.get('user_name')}\n\n"
-        "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
-        "vous a été envoyé par Stripe.\n\n"
+        f"{_purchases_paragraph(invoice_number)}"
         f"{SIGNATURE}\n"
     )
     return subject, body
 
 
-def unit_purchase_confirmation(user: Dict[str, Any], quantity: int, expires_at: datetime) -> Tuple[str, str]:
+def unit_purchase_confirmation(user: Dict[str, Any], quantity: int, expires_at: datetime,
+                               invoice_number: Optional[str] = None) -> Tuple[str, str]:
     """« À la carte »: documents bought one by one, 1 document = 1 credit."""
     many = quantity > 1
     documents = f"{_scans(quantity)} document{'s' if many else ''}"
@@ -144,14 +154,14 @@ def unit_purchase_confirmation(user: Dict[str, Any], quantity: int, expires_at: 
         f"votre espace ScanID ; {'ils sont valables' if many else 'il est valable'} jusqu'au {_date_fr(expires_at)}.\n\n"
         f"Votre espace : {config.app_public_url()}\n"
         f"Votre identifiant : {user.get('user_name')}\n\n"
-        "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
-        "vous a été envoyé par Stripe.\n\n"
+        f"{_purchases_paragraph(invoice_number)}"
         f"{SIGNATURE}\n"
     )
     return subject, body
 
 
-def unit_purchase_welcome(user: Dict[str, Any], raw_token: str, quantity: int, expires_at: datetime) -> Tuple[str, str]:
+def unit_purchase_welcome(user: Dict[str, Any], raw_token: str, quantity: int, expires_at: datetime,
+                          invoice_number: Optional[str] = None) -> Tuple[str, str]:
     """« À la carte » bought by an address whose account was not open yet (Alex,
     03/10/2026): the purchase opened it — the welcome, with the link to choose the
     password, and the documents bought. A password is never sent."""
@@ -173,8 +183,7 @@ def unit_purchase_welcome(user: Dict[str, Any], raw_token: str, quantity: int, e
         "photo fait toute la fiabilité de la lecture) : https://scanid.fr/guide-photo.html\n"
         "2. Importez-les dans votre espace, seuls ou par lot.\n"
         "3. Téléchargez votre fichier Excel/CSV.\n\n"
-        "Le détail de vos achats est dans « Mon compte » → « Mes achats ». Le reçu de paiement "
-        "vous a été envoyé par Stripe.\n\n"
+        f"{_purchases_paragraph(invoice_number)}"
         "Une question, un doute, un document qui résiste ? Répondez simplement à cet e-mail — "
         "c'est moi qui vous lis.\n\n"
         f"{SIGNATURE}\n"
@@ -195,5 +204,59 @@ def payment_anomaly(reason: str, session: Dict[str, Any]) -> Tuple[str, str]:
         f"Montant TTC (centimes) : {session.get('amount_total')} {session.get('currency') or ''}\n\n"
         "Aucun crédit n'a été ajouté. Vérifiez le paiement dans le tableau de bord Stripe et créditez "
         "le compte à la main depuis Administration.\n"
+    )
+    return subject, body
+
+
+def invoice_not_issued(reason: str, user: Dict[str, Any], pack: int, credits: int, session: Dict[str, Any]) -> Tuple[str, str]:
+    """To Alex: a purchase was credited but the app did not issue its invoice
+    (billing address outside France, a price that is not the app's, an error)."""
+    bought = f"Pack {_scans(pack)}" if pack else f"À la carte · {_scans(credits)} document{'s' if credits > 1 else ''}"
+    paid, currency = session.get("amount_total"), str(session.get("currency") or "").lower()
+    if not isinstance(paid, int) or isinstance(paid, bool):
+        paid_text = "—"
+    else:
+        paid_text = invoicing.euros(paid) if currency == "eur" else f"{paid} centimes ({currency.upper() or '?'})"
+    who = " ".join(v for v in (user.get("first_name"), user.get("last_name")) if v) or "—"
+    subject = "Facture non émise automatiquement — à établir à la main"
+    body = (
+        "Un achat a été payé et crédité, mais l'application n'a pas émis sa facture.\n\n"
+        f"Raison : {reason}\n\n"
+        f"Achat : {bought}\n"
+        f"Montant payé (TTC) : {paid_text}\n"
+        f"Client : {user.get('company') or '—'} — {who} — {user.get('email')}\n"
+        f"Session Stripe : {session.get('id')}\n"
+        f"Paiement Stripe : {session.get('payment_intent') or '—'}\n\n"
+        "Les crédits sont bien sur le compte du client. Établissez la facture à la main, dans votre propre série "
+        "de numéros (jamais la série F-… de l'application).\n"
+    )
+    return subject, body
+
+
+def credit_note(user: Dict[str, Any], note_number: str, invoice_number: str, ttc_cents: int) -> Tuple[str, str]:
+    """A refund's credit note (« avoir », Alex, 08/10/2026), attached."""
+    subject = f"Votre avoir {note_number} — remboursement ScanID"
+    body = (
+        f"Bonjour {user.get('first_name') or ''},\n\n"
+        f"Suite au remboursement de votre achat, voici l'avoir {note_number} sur la facture {invoice_number}, "
+        f"d'un montant de {invoicing.euros(ttc_cents)} TTC. Il est joint à cet e-mail ; vous le retrouvez aussi "
+        "dans « Mon compte » → « Mes achats ».\n\n"
+        f"{SIGNATURE}\n"
+    )
+    return subject, body
+
+
+def refund_without_credit_note(reason: str, charge: Dict[str, Any]) -> Tuple[str, str]:
+    """To Alex: a Stripe refund for which the app issued no credit note."""
+    refunded = charge.get("amount_refunded")
+    shown = invoicing.euros(refunded) if isinstance(refunded, int) and not isinstance(refunded, bool) else "—"
+    subject = "Remboursement Stripe sans avoir automatique — à traiter à la main"
+    body = (
+        "Un remboursement Stripe a été reçu, mais l'application n'a pas émis d'avoir.\n\n"
+        f"Raison : {reason}\n\n"
+        f"Paiement Stripe : {charge.get('payment_intent') or '—'}\n"
+        f"Opération Stripe : {charge.get('id') or '—'}\n"
+        f"Total remboursé sur ce paiement : {shown}\n\n"
+        "Établissez l'avoir à la main si nécessaire.\n"
     )
     return subject, body

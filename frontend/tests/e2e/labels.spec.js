@@ -70,7 +70,7 @@ test.describe('Libellés en casse de phrase (Alex, troisième contrôle)', () =>
         api.user.role = 'admin';
         await login(page);
 
-        await expect(tabs(page)).toHaveText(['Mes documents', 'Administration', "Demandes d'essai", 'Mon compte']);
+        await expect(tabs(page)).toHaveText(['Mes documents', 'Administration', "Demandes d'essai", 'Factures', 'Mon compte']);
         await expect(page.locator('input[name="user_filter"]')).toHaveAttribute('placeholder', 'Filtrer par utilisateur');
         await expect(page.locator('input[name="voyage_filter"]')).toHaveAttribute('placeholder', 'Filtrer par destination');
         expect(await oldLabelsIn(page)).toEqual([]);

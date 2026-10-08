@@ -46,6 +46,8 @@ import crud
 import models
 
 PAID_EVENTS = ("checkout.session.completed", "checkout.session.async_payment_succeeded")
+# A refund, full or partial (its credit note: invoicing.issue_credit_note).
+REFUND_EVENT = "charge.refunded"
 
 # An « à la carte » purchase has no pack: it is stored as pack 0, with the
 # number of documents bought in `credits`.
@@ -149,6 +151,7 @@ class CreditOutcome:
     # « à la carte »: the purchase opened the account — the raw one-time link to
     # choose its password, for the welcome e-mail only (never stored as is).
     password_token: Optional[str] = None
+    purchase_id: Optional[str] = None  # the paid purchase (its invoice: invoicing.py)
 
 
 class StripeApiError(Exception):
@@ -242,6 +245,14 @@ def checkout_identity(session: Dict[str, Any]) -> Dict[str, Any]:
             "phone_number": str(details.get("phone") or "").strip()}
 
 
+def payment_intent_id(session: Dict[str, Any]) -> Optional[str]:
+    """The session's PaymentIntent id (pi_…) — an id, or the object when expanded."""
+    value = session.get("payment_intent")
+    if isinstance(value, dict):
+        value = value.get("id")
+    return str(value) if value else None
+
+
 def already_processed(db: Session, session_id: str) -> bool:
     """The cheap check. The UNIQUE constraint below is the guarantee."""
     return db.query(models.Purchase).filter(models.Purchase.stripe_session_id == session_id).first() is not None
@@ -270,14 +281,15 @@ def credit_checkout_session(db: Session, session: Dict[str, Any]) -> CreditOutco
     now = datetime.now(timezone.utc)
     expires_at = add_months(now, config.CREDIT_VALIDITY_MONTHS)
     paid = {"status": "paid", "paid_at": now, "expires_at": expires_at, "stripe_session_id": session_id,
-            "amount_paid_cents": session.get("amount_total"), "currency": str(session.get("currency")).lower()}
+            "amount_paid_cents": session.get("amount_total"), "currency": str(session.get("currency")).lower(),
+            "stripe_payment_intent": payment_intent_id(session)}
     try:
         pending = (db.query(models.Purchase)
                    .filter(models.Purchase.user_id == user["id"], models.Purchase.pack == pack,
                            models.Purchase.status == "pending")
                    .order_by(models.Purchase.created_at.desc())
                    .first())
-        matched = 0
+        matched, purchase_id = 0, None
         if pending is not None:
             # Conditional: a delivery racing this one finds the row already paid
             # (rowcount 0) and falls through to the INSERT, which the UNIQUE
@@ -287,10 +299,13 @@ def credit_checkout_session(db: Session, session: Dict[str, Any]) -> CreditOutco
                 .where(models.Purchase.id == pending.id, models.Purchase.status == "pending")
                 .values(**paid)
             ).rowcount
+            purchase_id = pending.id
         if not matched:
-            db.add(models.Purchase(user_id=user["id"], pack=pack, credits=pack,
-                                   amount_ht_cents=config.PACK_PRICES_HT_CENTS[pack], created_at=now, **paid))
+            row = models.Purchase(user_id=user["id"], pack=pack, credits=pack,
+                                  amount_ht_cents=config.PACK_PRICES_HT_CENTS[pack], created_at=now, **paid)
+            db.add(row)
             db.flush()
+            purchase_id = row.id
         db.execute(
             sa_update(models.User)
             .where(models.User.id == user["id"])
@@ -300,7 +315,8 @@ def credit_checkout_session(db: Session, session: Dict[str, Any]) -> CreditOutco
     except IntegrityError:
         db.rollback()
         return CreditOutcome("duplicate")
-    return CreditOutcome("credited", user=crud.get_user(db, user["id"]), pack=pack, expires_at=expires_at)
+    return CreditOutcome("credited", user=crud.get_user(db, user["id"]), pack=pack, expires_at=expires_at,
+                         purchase_id=purchase_id)
 
 
 def _credit_unit_session(db: Session, session: Dict[str, Any]) -> CreditOutcome:
@@ -366,12 +382,14 @@ def _write_unit_purchase(db: Session, session: Dict[str, Any], user: Optional[Di
         user_id, opened = row.id, True
     else:
         user_id, opened = user["id"], False
-    db.add(models.Purchase(
+    purchase = models.Purchase(
         user_id=user_id, pack=UNIT_PACK, credits=quantity,
         amount_ht_cents=quantity * config.UNIT_PRICE_HT_CENTS, created_at=now,
         status="paid", paid_at=now, expires_at=expires_at, stripe_session_id=session["id"],
         amount_paid_cents=session.get("amount_total"), currency="eur",
-    ))
+        stripe_payment_intent=payment_intent_id(session),
+    )
+    db.add(purchase)
     db.flush()
     if user is not None:
         if user.get("status") in UNOPENED_STATUSES:
@@ -392,4 +410,5 @@ def _write_unit_purchase(db: Session, session: Dict[str, Any], user: Optional[Di
     token = account_tokens.add(db, user_id, account_tokens.PURPOSE_SET) if opened else None
     db.commit()
     return CreditOutcome("credited", user=crud.get_user(db, user_id), pack=UNIT_PACK,
-                         expires_at=expires_at, credits=quantity, password_token=token)
+                         expires_at=expires_at, credits=quantity, password_token=token,
+                         purchase_id=purchase.id)

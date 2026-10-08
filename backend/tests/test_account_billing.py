@@ -73,6 +73,8 @@ def test_mes_achats_lists_only_my_paid_purchases_newest_first(client, db_session
     assert client.get("/users/me/purchases").status_code == 401
     rows = client.get("/users/me/purchases", headers=auth_headers("acheteur")).json()
     assert [row["pack"] for row in rows] == [1000, 100]
-    assert set(rows[0]) == {"id", "pack", "credits", "amount_ht_cents", "paid_at", "expires_at"}
+    # « documents »: the purchase's invoice and credit notes (Alex, 08/10/2026) — none here.
+    assert set(rows[0]) == {"id", "pack", "credits", "amount_ht_cents", "paid_at", "expires_at", "documents"}
+    assert rows[0]["documents"] == [] and rows[1]["documents"] == []
     assert rows[0]["expires_at"][:4] == str((now - timedelta(days=2)).year + 1)
     assert client.get("/users/me/purchases", headers=auth_headers("voisin")).json()[0]["pack"] == 5000

@@ -1,5 +1,6 @@
 // « Mon compte » — billing identity fields and « Mes achats » (action list item 7).
 // Server-side validation and storage: backend/tests/test_account_billing.py.
+import { readFileSync } from 'node:fs';
 import { test, expect, LIVE } from './test-base.js';
 import { login, SELECTORS } from '../helpers/index.js';
 
@@ -62,8 +63,9 @@ test.describe('Mon compte — facturation et achats', () => {
         await openAccount(page);
         const rows = page.locator('.sid-purchases tbody tr');
         await expect(rows).toHaveCount(2);
-        await expect(rows.nth(0).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027']);
-        await expect(rows.nth(1).locator('td')).toHaveText(['Pack 100', '01/08/2026', '01/08/2027']);
+        // « Facture »: « — » for a purchase without an invoice (bought before invoices).
+        await expect(rows.nth(0).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027', '—']);
+        await expect(rows.nth(1).locator('td')).toHaveText(['Pack 100', '01/08/2026', '01/08/2027', '—']);
     });
 
     test('« Mes achats » nomme un achat à la carte par ses documents', async ({ page, api }) => {
@@ -77,9 +79,58 @@ test.describe('Mon compte — facturation et achats', () => {
         await openAccount(page);
         const rows = page.locator('.sid-purchases tbody tr');
         await expect(rows).toHaveCount(3);
-        await expect(rows.nth(0).locator('td')).toHaveText(['À la carte · 37 documents', '02/10/2026', '02/10/2027']);
-        await expect(rows.nth(1).locator('td')).toHaveText(['À la carte · 1 document', '20/09/2026', '20/09/2027']);
-        await expect(rows.nth(2).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027']);
+        await expect(rows.nth(0).locator('td')).toHaveText(['À la carte · 37 documents', '02/10/2026', '02/10/2027', '—']);
+        await expect(rows.nth(1).locator('td')).toHaveText(['À la carte · 1 document', '20/09/2026', '20/09/2027', '—']);
+        await expect(rows.nth(2).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027', '—']);
+    });
+
+    // Alex, 08/10/2026 (« Invoices issued by the app »): a link on each line,
+    // the invoice and then the credit notes of the purchase, each its PDF.
+    test('« Mes achats » : la facture et l’avoir de chaque achat se téléchargent', async ({ page, api }) => {
+        api.purchases = [
+            { id: 'pu-2', pack: 100, credits: 100, amount_ht_cents: 9900, paid_at: '2026-10-08T16:10:00Z', expires_at: '2027-10-08T16:10:00Z',
+                documents: [{ id: 'inv-2', kind: 'invoice', number: 'F-2026-00002' }, { id: 'cn-1', kind: 'credit_note', number: 'AV-2026-00001' }] },
+            { id: 'pu-1', pack: 0, credits: 3, amount_ht_cents: 450, paid_at: '2026-10-08T09:00:00Z', expires_at: '2027-10-08T09:00:00Z',
+                documents: [{ id: 'inv-1', kind: 'invoice', number: 'F-2026-00001' }] },
+            { id: 'pu-0', pack: 1000, credits: 1000, amount_ht_cents: 69000, paid_at: '2026-09-14T10:00:00Z', expires_at: '2027-09-14T10:00:00Z', documents: [] },
+        ];
+        api.invoicePdfs = {
+            'inv-2': { filename: 'Facture-F-2026-00002.pdf', body: Buffer.from('%PDF-1.7 facture 2') },
+            'cn-1': { filename: 'Avoir-AV-2026-00001.pdf', body: Buffer.from('%PDF-1.7 avoir 1') },
+            'inv-1': { filename: 'Facture-F-2026-00001.pdf', body: Buffer.from('%PDF-1.7 facture 1') },
+        };
+        await login(page);
+        await openAccount(page);
+        const rows = page.locator('.sid-purchases tbody tr');
+        await expect(page.locator('.sid-purchases thead th')).toHaveText(['Pack', 'Acheté le', "Valable jusqu'au", 'Facture']);
+        await expect(rows.nth(0).locator('td').nth(3).getByRole('button')).toHaveText(['F-2026-00002', 'Avoir AV-2026-00001']);
+        await expect(rows.nth(1).locator('td').nth(3).getByRole('button')).toHaveText(['F-2026-00001']);
+        await expect(rows.nth(2).locator('td').nth(3)).toHaveText('—');
+
+        for (const [name, filename, body] of [
+            ['Télécharger F-2026-00002 (PDF)', 'Facture-F-2026-00002.pdf', '%PDF-1.7 facture 2'],
+            ['Télécharger Avoir AV-2026-00001 (PDF)', 'Avoir-AV-2026-00001.pdf', '%PDF-1.7 avoir 1'],
+        ]) {
+            const downloadPromise = page.waitForEvent('download', { timeout: 30_000 });
+            await page.locator('.sid-purchases').getByRole('button', { name }).click();
+            const download = await downloadPromise;
+            expect(download.suggestedFilename()).toBe(filename);
+            const path = test.info().outputPath(filename);
+            await download.saveAs(path);
+            expect(readFileSync(path, 'utf8')).toBe(body);
+        }
+        expect(api.requests.filter(r => r.path.startsWith('/invoices/')).map(r => r.path))
+            .toEqual(['/invoices/inv-2/pdf', '/invoices/cn-1/pdf']);
+        await expect(page.locator('.sid-purchases .sid-alert--err')).toHaveCount(0);
+    });
+
+    test('« Mes achats » : un téléchargement en échec le dit en français', async ({ page, api }) => {
+        api.purchases = [{ id: 'pu-1', pack: 100, credits: 100, amount_ht_cents: 9900, paid_at: '2026-10-08T16:10:00Z',
+            expires_at: '2027-10-08T16:10:00Z', documents: [{ id: 'inv-perdue', kind: 'invoice', number: 'F-2026-00001' }] }];
+        await login(page);
+        await openAccount(page);
+        await page.locator('.sid-purchases').getByRole('button', { name: 'Télécharger F-2026-00001 (PDF)' }).click();
+        await expect(page.locator('.sid-purchases .sid-alert--err')).toHaveText('Le téléchargement a échoué. Réessayez dans un instant.');
     });
 
     // PDF § 4 « Optional, more robust »: Stripe sends client_reference_id back,

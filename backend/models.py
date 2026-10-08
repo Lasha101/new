@@ -1,7 +1,7 @@
 # /models.py
 import uuid
 
-from sqlalchemy import Column, Date, DateTime, Float, Integer, JSON, String, text
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, Index, Integer, JSON, LargeBinary, String, text
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -131,6 +131,105 @@ class Purchase(Base):
     stripe_session_id = Column(String, nullable=True, unique=True)
     amount_paid_cents = Column(Integer, nullable=True)
     currency = Column(String, nullable=True)
+    # Added 08/10/2026 (invoices): the session's PaymentIntent (pi_…), which a
+    # refund event (charge.refunded) names. NULL for purchases paid before.
+    stripe_payment_intent = Column(String, nullable=True)
+
+
+class Invoice(Base):
+    """An invoice, or a credit note (« avoir »), issued by the app for a Stripe
+    purchase (Alex, 08/10/2026). Kept as issued: no code path updates or deletes
+    a row, and `pdf` is the very file that was sent — never generated again.
+    Every mention is also stored in its own column, not only inside the PDF, for
+    the electronic invoicing of September 2027. The seller and client blocks are
+    copies taken when the document was issued: a later change of the account, or
+    its deletion, does not touch them."""
+    __tablename__ = "invoices"
+    __table_args__ = (
+        # One invoice per purchase; a purchase may get several credit notes.
+        Index("uq_invoices_one_invoice_per_purchase", "purchase_id", unique=True,
+              sqlite_where=text("kind = 'invoice'"), postgresql_where=text("kind = 'invoice'")),
+        # A refund already covered by a credit note is never credited twice.
+        Index("uq_invoices_one_credit_note_per_refund", "credited_invoice_id", "refunded_cumulative_cents", unique=True,
+              sqlite_where=text("kind = 'credit_note'"), postgresql_where=text("kind = 'credit_note'")),
+    )
+
+    id = Column(String(36), primary_key=True, default=_new_id)
+    # 'invoice' | 'credit_note'
+    kind = Column(String, nullable=False)
+    # « F-2026-00001 »: `series` (« F-2026 ») and its gapless `sequence`.
+    number = Column(String, nullable=False, unique=True)
+    series = Column(String, nullable=False)
+    sequence = Column(Integer, nullable=False)
+    # False: a Stripe test-mode payment, numbered in a TEST- series.
+    livemode = Column(Boolean, nullable=False)
+    issued_at = Column(DateTime(timezone=True), nullable=False)
+    # Calendar dates in Europe/Paris, as printed.
+    issue_date = Column(Date, nullable=False)
+    service_date = Column(Date, nullable=False)
+    payment_date = Column(Date, nullable=False)
+    purchase_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(String(36), nullable=True, index=True)
+    # A credit note: the invoice it credits.
+    credited_invoice_id = Column(String(36), nullable=True, index=True)
+    credited_invoice_number = Column(String, nullable=True)
+
+    seller_name = Column(String, nullable=False)
+    seller_legal_form = Column(String, nullable=False)
+    seller_share_capital = Column(String, nullable=False)
+    seller_street = Column(String, nullable=False)
+    seller_postal_code = Column(String, nullable=False)
+    seller_city = Column(String, nullable=False)
+    seller_country = Column(String, nullable=False)
+    seller_rcs = Column(String, nullable=False)
+    seller_siren = Column(String, nullable=False)
+    seller_vat_number = Column(String, nullable=False)
+    seller_email = Column(String, nullable=False)
+
+    client_name = Column(String, nullable=False)
+    client_attention = Column(String, nullable=True)
+    client_street = Column(String, nullable=True)
+    client_postal_code = Column(String, nullable=True)
+    client_city = Column(String, nullable=True)
+    # ISO 3166 code (« FR »).
+    client_country = Column(String, nullable=True)
+    client_siren = Column(String, nullable=True)
+    client_vat_number = Column(String, nullable=True)
+    client_email = Column(String, nullable=True)
+
+    line_description = Column(String, nullable=False)
+    line_quantity = Column(Integer, nullable=False)
+    line_unit_price_ht_cents = Column(Integer, nullable=False)
+    line_vat_rate_percent = Column(Integer, nullable=False)
+    line_total_ht_cents = Column(Integer, nullable=False)
+    total_ht_cents = Column(Integer, nullable=False)
+    total_vat_cents = Column(Integer, nullable=False)
+    total_ttc_cents = Column(Integer, nullable=False)
+    currency = Column(String, nullable=False)
+    # « Prestation de services ».
+    nature = Column(String, nullable=False)
+    # « carte bancaire (Stripe) ».
+    payment_method = Column(String, nullable=False)
+
+    stripe_session_id = Column(String, nullable=True)
+    stripe_payment_intent = Column(String, nullable=True)
+    # A credit note: the refunded Charge, and its cumulative refunded amount
+    # once this note is counted (what makes a replayed refund issue nothing).
+    stripe_charge_id = Column(String, nullable=True)
+    refunded_cumulative_cents = Column(Integer, nullable=True)
+
+    pdf = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class InvoiceCounter(Base):
+    """The last number used in each series (« F-2026 », « AV-2026 »,
+    « TEST-F-2026 »…). Raised in the same transaction as the document that
+    uses it, so a failure before the commit leaves no gap."""
+    __tablename__ = "invoice_counters"
+
+    series = Column(String, primary_key=True)
+    last_number = Column(Integer, nullable=False)
 
 
 class AuthToken(Base):

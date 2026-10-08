@@ -137,6 +137,13 @@ class OrderRequest(BaseModel):
     pack: int
 
 
+class InvoiceRef(BaseModel):
+    """An invoice or credit note of a purchase, as « Mes achats » links it."""
+    id: str
+    kind: Literal["invoice", "credit_note"]
+    number: str
+
+
 class PurchaseOut(BaseModel):
     id: str
     pack: int
@@ -144,6 +151,29 @@ class PurchaseOut(BaseModel):
     amount_ht_cents: int
     paid_at: datetime
     expires_at: Optional[datetime] = None
+    # Its invoice, then its credit notes (Alex, 08/10/2026); empty before invoices.
+    documents: List[InvoiceRef] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InvoiceOut(BaseModel):
+    """A row of the admin list « Factures » — never the PDF itself."""
+    id: str
+    kind: Literal["invoice", "credit_note"]
+    number: str
+    issue_date: date
+    livemode: bool
+    client_name: str
+    client_siren: Optional[str] = None
+    client_email: Optional[str] = None
+    total_ht_cents: int
+    total_vat_cents: int
+    total_ttc_cents: int
+    stripe_payment_intent: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    credited_invoice_number: Optional[str] = None
+    purchase_id: str
+    user_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, resultCellValue, isLowConfidence, LOW_CONFIDENCE_TITLE, DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
+import { getDocumentType, filterByDocumentType, buildExportQuery, downloadFilename, formatDateFR, resultCellValue, isLowConfidence, LOW_CONFIDENCE_TITLE, DOC_TYPE_FILTER_OPTIONS, DOC_TYPE_PASSPORT, PASSPORT_COLUMN_ORDER } from './resultsHelpers.js';
 import { prepareFileForUpload } from './upload/imagePrep.js';
 import { UploadQueue, RetriableUploadError, QUEUE_STATUS, QUEUE_STATUS_CHIP, QUEUE_STATUS_LABEL, JOB_FAILED_MESSAGE } from './upload/uploadQueue.js';
 import { useOnlineStatus, reportNetworkResult, setUploadBusy } from './pwa.js';
 import { PASSWORD_RULES, evaluatePassword, generateExamplePassword } from './passwordRules.js';
 import OfflineScreen from './OfflineScreen.jsx';
-import { packSummary, formatEuros, formatCount, purchaseLabel, unitCheckoutUrl, isUnitPurchaseReturn, withoutPurchaseReturn, normalizeSiret, isValidSiret, normalizeVat, isValidVat } from './billing.js';
+import { packSummary, formatEuros, formatCount, purchaseLabel, unitCheckoutUrl, isUnitPurchaseReturn, withoutPurchaseReturn, normalizeSiret, isValidSiret, normalizeVat, isValidVat, invoiceLabel, invoiceStem, parisMonth } from './billing.js';
 
 // Use the build-time environment variable if it exists,
 // otherwise fall back to '/api' for local development.
@@ -220,6 +220,12 @@ const GlobalStyles = () => (
         .sid-purchases__buy { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 1rem 0 0; }
         .sid-purchases__buy span { font-size: 0.88rem; color: var(--sid-muted-strong); }
         .sid-purchases__buy a:hover { text-decoration: none; }
+        /* Invoices (Alex, 08/10/2026): one link per document of a purchase, one
+           under the other; the admin list keeps names and Stripe ids as typed. */
+        .sid-doc-links { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; }
+        .sid-invoices .sid-table td { text-transform: none; }
+        .sid-invoices__export { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem 1rem; margin: 1rem 0; }
+        .sid-invoices__export .form-group { margin: 0; }
 
         /* /app/inscription */
         .sid-signup { max-width: 760px; margin: 0 auto; }
@@ -1039,6 +1045,7 @@ function Dashboard({ user, token, fetchUser }) {
                        />;
             case 'account': return <AccountEditor user={user} fetchUser={fetchUser} />;
             case 'trials': return user.role === 'admin' ? <TrialRequestsPage /> : null;
+            case 'invoices': return user.role === 'admin' ? <InvoicesPage /> : null;
             case 'admin_manage':
                 return <AdminManagementPage
                         token={token}
@@ -1064,6 +1071,9 @@ function Dashboard({ user, token, fetchUser }) {
                     )}
                     {user.role === 'admin' && (
                         <button onClick={() => setActiveTab('trials')} className={`nav-button ${activeTab === 'trials' ? 'active' : ''}`}>Demandes d'essai</button>
+                    )}
+                    {user.role === 'admin' && (
+                        <button onClick={() => setActiveTab('invoices')} className={`nav-button ${activeTab === 'invoices' ? 'active' : ''}`}>Factures</button>
                     )}
                     <button onClick={() => setActiveTab('account')} className={`nav-button ${activeTab === 'account' ? 'active' : ''}`}>Mon compte</button>
                 </div>
@@ -1163,6 +1173,89 @@ function TrialRequestsPage() {
                     ))}
                 </div>
             ))}
+        </div>
+    );
+}
+
+// An invoice's PDF or the month's CSV (Alex, 08/10/2026), fetched with the
+// session and saved under the name the server gives it. False when it failed.
+async function downloadFile(url, fallbackStem, format) {
+    try {
+        const response = await fetch(url, { credentials: 'include' });
+        if (!response.ok) return false;
+        const href = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = downloadFilename(response.headers.get('content-disposition'), fallbackStem, format);
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 1500);
+        return true;
+    } catch { return false; }
+}
+
+const DOWNLOAD_FAILED = 'Le téléchargement a échoué. Réessayez dans un instant.';
+
+// « Factures » (Alex, 08/10/2026): every invoice and credit note the app has
+// issued, newest first, and the month's CSV for the accountant.
+function InvoicesPage() {
+    const [documents, setDocuments] = useState(null);
+    const [month, setMonth] = useState(() => parisMonth());
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const response = await fetch(`${API_URL}/admin/invoices`, { credentials: 'include' });
+                if (response.ok) { setDocuments(await response.json()); } else { setError('Impossible de charger les factures.'); }
+            } catch { setError('Impossible de charger les factures.'); }
+        })();
+    }, []);
+
+    const exportMonth = async () => {
+        setError('');
+        if (!(await downloadFile(`${API_URL}/admin/invoices/export?month=${encodeURIComponent(month)}`, `factures_${month}`, 'csv'))) setError(DOWNLOAD_FAILED);
+    };
+    const download = async (doc) => {
+        setError('');
+        if (!(await downloadFile(`${API_URL}/invoices/${doc.id}/pdf`, invoiceStem(doc), 'pdf'))) setError(DOWNLOAD_FAILED);
+    };
+
+    return (
+        <div className="sid-invoices">
+            <h2>Factures</h2>
+            <p>Les factures et les avoirs émis par l'application, du plus récent au plus ancien. Un document émis n'est jamais modifié ni supprimé : un remboursement donne lieu à un avoir.</p>
+            <div className="sid-invoices__export">
+                <div className="form-group">
+                    <label className="sid-label" htmlFor="invoices-month">Mois à exporter</label>
+                    <input id="invoices-month" type="month" className="sid-input" value={month} onChange={(e) => setMonth(e.target.value)} />
+                </div>
+                <button type="button" className="sid-btn" onClick={exportMonth} disabled={!month}>Exporter le mois (CSV)</button>
+            </div>
+            {error && <p className="sid-alert sid-alert--err">{error}</p>}
+            {documents === null ? null : documents.length === 0 ? (
+                <div className="sid-empty">Aucune facture pour l'instant.</div>
+            ) : (
+                <div className="sid-table-wrap">
+                    <table className="sid-table">
+                        <thead><tr><th>Type</th><th>Numéro</th><th>Date</th><th>Client</th><th>SIREN</th><th>Total HT</th><th>TVA</th><th>Total TTC</th><th>Référence Stripe</th></tr></thead>
+                        <tbody>
+                            {documents.map(doc => (
+                                <tr key={doc.id}>
+                                    <td>{doc.kind === 'credit_note' ? 'Avoir' : 'Facture'}</td>
+                                    <td><button type="button" className="sid-linklike" aria-label={`Télécharger ${invoiceLabel(doc)} (PDF)`} onClick={() => download(doc)}>{doc.number}</button></td>
+                                    <td>{formatDateFR(doc.issue_date)}</td>
+                                    <td>{doc.client_name}</td>
+                                    <td>{doc.client_siren || '—'}</td>
+                                    <td>{formatEuros(doc.total_ht_cents)}</td>
+                                    <td>{formatEuros(doc.total_vat_cents)}</td>
+                                    <td>{formatEuros(doc.total_ttc_cents)}</td>
+                                    <td>{doc.stripe_payment_intent || doc.stripe_session_id || '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }
@@ -1277,10 +1370,12 @@ function AccountEditor({ user, fetchUser }) {
     );
 }
 
-// « Mes achats »: pack, date, expiry of each paid pack (invoice links later),
-// and for a customer the « à la carte » link tied to this account.
+// « Mes achats »: pack, date, expiry of each paid pack, its invoice and credit
+// notes (Alex, 08/10/2026), and for a customer the « à la carte » link tied to
+// this account.
 function MyPurchases({ user }) {
     const [purchases, setPurchases] = useState(null);
+    const [downloadError, setDownloadError] = useState('');
     useEffect(() => {
         (async () => {
             try {
@@ -1290,22 +1385,34 @@ function MyPurchases({ user }) {
         })();
     }, []);
     const day = value => (value ? new Date(value).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }) : '—');
+    const download = async (doc) => {
+        setDownloadError('');
+        if (!(await downloadFile(`${API_URL}/invoices/${doc.id}/pdf`, invoiceStem(doc), 'pdf'))) setDownloadError(DOWNLOAD_FAILED);
+    };
 
     return (
         <section className="sid-purchases mt-1">
             <h3>Mes achats</h3>
+            {downloadError && <p className="sid-alert sid-alert--err">{downloadError}</p>}
             {purchases === null ? null : purchases.length === 0 ? (
                 <div className="sid-empty">Aucun achat pour l'instant.</div>
             ) : (
                 <div className="sid-table-wrap">
                     <table className="sid-table">
-                        <thead><tr><th>Pack</th><th>Acheté le</th><th>Valable jusqu'au</th></tr></thead>
+                        <thead><tr><th>Pack</th><th>Acheté le</th><th>Valable jusqu'au</th><th>Facture</th></tr></thead>
                         <tbody>
                             {purchases.map(purchase => (
                                 <tr key={purchase.id}>
                                     <td>{purchaseLabel(purchase)}</td>
                                     <td>{day(purchase.paid_at)}</td>
                                     <td>{day(purchase.expires_at)}</td>
+                                    <td>{(purchase.documents || []).length === 0 ? '—' : (
+                                        <span className="sid-doc-links">
+                                            {purchase.documents.map(doc => (
+                                                <button key={doc.id} type="button" className="sid-linklike" aria-label={`Télécharger ${invoiceLabel(doc)} (PDF)`} onClick={() => download(doc)}>{invoiceLabel(doc)}</button>
+                                            ))}
+                                        </span>
+                                    )}</td>
                                 </tr>
                             ))}
                         </tbody>

@@ -24,6 +24,14 @@ TEMPLATES = {
     "unit_purchase_welcome": lambda: emails.unit_purchase_welcome(USER, "raw-token", 37, EXPIRY),
     "unit_purchase_welcome_one": lambda: emails.unit_purchase_welcome(USER, "raw-token", 1, EXPIRY),
     "payment_anomaly": lambda: emails.payment_anomaly("raison", SESSION),
+    # Invoices (Alex, 08/10/2026): the sentence when the invoice is attached, and Alex's notice.
+    "purchase_confirmation_invoice": lambda: emails.purchase_confirmation(USER, 1000, EXPIRY, invoice_number="F-2026-00001"),
+    "unit_purchase_confirmation_invoice": lambda: emails.unit_purchase_confirmation(USER, 37, EXPIRY, invoice_number="F-2026-00002"),
+    "unit_purchase_welcome_invoice": lambda: emails.unit_purchase_welcome(USER, "raw-token", 1, EXPIRY, invoice_number="F-2026-00003"),
+    "invoice_not_issued": lambda: emails.invoice_not_issued("raison", USER, 100, 100, SESSION),
+    "credit_note": lambda: emails.credit_note(USER, "AV-2026-00001", "F-2026-00001", 11_880),
+    "refund_without_credit_note": lambda: emails.refund_without_credit_note(
+        "raison", {"id": "ch_1", "payment_intent": "pi_1", "amount_refunded": 11_880}),
 }
 
 
@@ -50,3 +58,13 @@ def test_the_purchase_e_mails_name_the_tab_as_the_app_writes_it():
     assert line in emails.unit_purchase_welcome(USER, "raw-token", 37, EXPIRY)[1]
     for name, render in TEMPLATES.items():
         assert "Mon Compte" not in "\n".join(render()), name
+
+
+def test_the_attached_invoice_is_named_in_the_purchase_e_mails():
+    line = "Votre facture F-2026-00001 est jointe à cet e-mail. Le détail de vos achats est dans « Mon compte » → « Mes achats »."
+    assert line in emails.purchase_confirmation(USER, 1000, EXPIRY, invoice_number="F-2026-00001")[1]
+    assert line in emails.unit_purchase_confirmation(USER, 37, EXPIRY, invoice_number="F-2026-00001")[1]
+    assert line in emails.unit_purchase_welcome(USER, "raw-token", 37, EXPIRY, invoice_number="F-2026-00001")[1]
+    for render in (lambda: emails.purchase_confirmation(USER, 1000, EXPIRY),
+                   lambda: emails.unit_purchase_confirmation(USER, 37, EXPIRY)):
+        assert "facture" not in render()[1].lower()     # no invoice: the e-mail of before, word for word

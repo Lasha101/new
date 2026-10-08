@@ -90,6 +90,26 @@ const buildXlsxExport = rows => buildXlsx([
     ...rows.map(row => EXPORT_COLUMNS.map(column => String(exportCell(row, column)))),
 ]);
 
+// main.py INVOICE_CSV_HEADERS / _invoices_csv: the accountant's monthly file.
+const INVOICE_CSV_HEADERS = ['Type', 'Numéro', 'Date', 'Client', 'SIREN', 'Total HT', 'TVA', 'Total TTC',
+    'Référence Stripe', "Facture d'origine"];
+const csvAmount = (cents) => {
+    const whole = Math.floor(Math.abs(cents) / 100);
+    return `${cents < 0 ? '-' : ''}${whole},${String(Math.abs(cents) % 100).padStart(2, '0')}`;
+};
+function buildInvoicesCsv(documents) {
+    const line = cells => `${cells.join(';')}\r\n`;
+    let csv = line(INVOICE_CSV_HEADERS);
+    for (const doc of documents) {
+        const sign = doc.kind === 'credit_note' ? -1 : 1;
+        csv += line([sign < 0 ? 'Avoir' : 'Facture', doc.number, displayDate(doc.issue_date), doc.client_name,
+            doc.client_siren || '', csvAmount(sign * doc.total_ht_cents), csvAmount(sign * doc.total_vat_cents),
+            csvAmount(sign * doc.total_ttc_cents), doc.stripe_payment_intent || doc.stripe_session_id || '',
+            doc.credited_invoice_number || '']);
+    }
+    return Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(csv, 'utf8')]); // UTF-8 BOM
+}
+
 /** Path within the API, with the '/api' prefix stripped when it is used. */
 function apiPath(url) {
     const path = url.pathname.replace(/^\/api(?=\/|$)/, '');
@@ -99,7 +119,7 @@ function apiPath(url) {
 const API_PATHS = [
     '/token', '/logout', '/users/me', '/events', '/destinations', '/auth',
     '/admin/filterable-users', '/admin/users', '/admin/trial-requests', '/passports', '/ocr/jobs', '/export/data',
-    '/signup', '/orders', '/session',
+    '/signup', '/orders', '/session', '/invoices', '/admin/invoices',
 ];
 
 
@@ -341,6 +361,34 @@ export async function installMockApi(context, options = {}) {
                 : {};
             state.user = { ...state.user, ...safe, ...counters };
             return json(route, 200, state.user);
+        }
+
+        // --- Invoices (main.py download_invoice, list_invoices, export_invoices) ---
+        // state.invoicePdfs = { <id>: { filename, body } }: the PDFs this mock serves.
+        if (/^\/invoices\/[^/]+\/pdf$/.test(path) && method === 'GET') {
+            const pdf = (state.invoicePdfs || {})[path.split('/')[2]];
+            if (!pdf) return json(route, 404, { detail: 'Facture introuvable.' });
+            return route.fulfill({
+                status: 200,
+                headers: { ...corsHeaders(request), 'content-type': 'application/pdf',
+                    'content-disposition': `attachment; filename=${pdf.filename}` },
+                body: pdf.body,
+            });
+        }
+        if (path === '/admin/invoices' || path === '/admin/invoices/export') {
+            if (state.user.role !== 'admin') return json(route, 403, { detail: "Privilèges d'administrateur requis." });
+            const documents = state.invoices || [];
+            if (path === '/admin/invoices') return json(route, 200, documents);
+            const month = url.searchParams.get('month');
+            if (!month) return json(route, 400, { detail: 'Choisissez un mois (AAAA-MM).' });
+            if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return json(route, 400, { detail: 'Mois invalide : utilisez le format AAAA-MM.' });
+            const rows = documents.filter(doc => doc.livemode && doc.issue_date.startsWith(month)).reverse();
+            return route.fulfill({
+                status: 200,
+                headers: { ...corsHeaders(request), 'content-type': 'text/csv; charset=utf-8',
+                    'content-disposition': `attachment; filename=factures_${month}.csv` },
+                body: buildInvoicesCsv(rows),
+            });
         }
 
         // GET /users/me/purchases — « Mes achats » (main.py read_my_purchases).
