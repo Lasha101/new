@@ -151,6 +151,9 @@ class PurchaseOut(BaseModel):
     amount_ht_cents: int
     paid_at: datetime
     expires_at: Optional[datetime] = None
+    # When it was refunded in full, its credits taken back (Alex, 09/10/2026):
+    # « Remboursé le … » instead of its validity.
+    refunded_at: Optional[datetime] = None
     # Its invoice, then its credit notes (Alex, 08/10/2026); empty before invoices.
     documents: List[InvoiceRef] = []
     model_config = ConfigDict(from_attributes=True)

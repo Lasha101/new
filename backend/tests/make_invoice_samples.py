@@ -8,9 +8,12 @@ Not a test (pytest collects test_*.py only). Run from backend/:
 They come from the real path — /signup, a signed Stripe webhook for the Pack 100,
 then a signed charge.refunded for the whole amount — on a throwaway SQLite
 database, with the e-mails kept in memory: nothing is sent, nothing reaches
-PostgreSQL. The numbers are therefore the first of the real series
-(F-AAAA-00001, AV-AAAA-00001); the client is fictional, and each PDF carries a
-« SPÉCIMEN » banner."""
+PostgreSQL. Both events are Stripe test-mode ones (Alex, 09/10/2026: « made in
+test mode so that no real number is used »), so the PDFs are exactly what the
+app issues for a test-mode payment: numbered in the TEST- series
+(TEST-F-AAAA-00001, TEST-AV-AAAA-00001), with the test-mode « SPÉCIMEN »
+banner. A live document reads the same without « TEST- » and the banner. The
+client is fictional."""
 import hashlib
 import os
 import sys
@@ -39,7 +42,6 @@ from database import get_db  # noqa: E402
 from main import app  # noqa: E402
 from tests.test_invoices import luhn_siret, pack_event, refund_event, signed, signup, user_id_of  # noqa: E402
 
-BANNER = "SPÉCIMEN — exemple à valider, client fictif, sans valeur comptable"
 EMAIL = "camille.exemple@example.com"
 SIRET = luhn_siret("1234567820001")          # SIREN 123 456 782: fictional
 SIREN = SIRET[:9]
@@ -59,27 +61,27 @@ def main(out_dir: str) -> None:
             db.close()
 
     app.dependency_overrides[get_db] = throwaway_db
-    real_render = invoicing.render_pdf
-    invoicing.render_pdf = lambda document, banner=None: real_render(document, banner=BANNER)
     try:
         client = TestClient(app)
         signup(client, first_name="Camille", last_name="Exemple", company="Agence Exemple Voyages", email=EMAIL,
                billing_street="12 rue de l'Exemple", billing_postal_code="75011", billing_city="Paris",
                billing_country="France", siret=SIRET, vat_number=VAT)
         db = Session()
-        purchase = pack_event(user_id_of(db, EMAIL), session_id="cs_live_specimen", payment_intent="pi_specimen",
-                              details={"email": EMAIL})
+        purchase = pack_event(user_id_of(db, EMAIL), session_id="cs_test_specimen", payment_intent="pi_test_specimen",
+                              details={"email": EMAIL}, livemode=False)
         assert signed(client, purchase, secret=SECRET).json()["result"] == "credited"
-        refund = refund_event(11_880, payment_intent="pi_specimen", charge_id="ch_specimen", event_id="evt_specimen")
+        refund = refund_event(11_880, payment_intent="pi_test_specimen", charge_id="ch_test_specimen",
+                              event_id="evt_test_specimen", livemode=False)
         assert signed(client, refund, secret=SECRET).json()["result"] == "issued"
 
         documents = db.query(models.Invoice).order_by(models.Invoice.issued_at, models.Invoice.sequence).all()
         assert [d.kind for d in documents] == [invoicing.KIND_INVOICE, invoicing.KIND_CREDIT_NOTE]
+        assert [d.number.split("-")[:2] for d in documents] == [["TEST", "F"], ["TEST", "AV"]]   # no real number
+        assert not any(d.livemode for d in documents)
         sent = [a for mail in mailer.OUTBOX for a in (mail.attachments or [])]
         assert [(name, data) for name, data, _ in sent] == [(invoicing.filename(d), d.pdf) for d in documents]
         db.close()
     finally:
-        invoicing.render_pdf = real_render
         app.dependency_overrides.pop(get_db, None)
         engine.dispose()
 

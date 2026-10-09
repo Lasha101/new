@@ -84,6 +84,24 @@ test.describe('Mon compte — facturation et achats', () => {
         await expect(rows.nth(2).locator('td')).toHaveText(['Pack 1 000', '14/09/2026', '14/09/2027', '—']);
     });
 
+    // Alex, 09/10/2026: a purchase refunded in full has lost its credits — the
+    // line says « Remboursé le JJ/MM/AAAA » instead of a validity date.
+    test('« Mes achats » : un achat remboursé dit « Remboursé le … » au lieu de sa validité', async ({ page, api }) => {
+        api.purchases = [
+            { id: 'pu-2', pack: 100, credits: 100, amount_ht_cents: 9900, paid_at: '2026-10-08T16:10:00Z', expires_at: '2027-10-08T16:10:00Z',
+                refunded_at: '2026-10-09T22:30:00Z', documents: [] },
+            { id: 'pu-1', pack: 0, credits: 3, amount_ht_cents: 450, paid_at: '2026-10-08T09:00:00Z', expires_at: '2027-10-08T09:00:00Z',
+                refunded_at: null, documents: [] },
+        ];
+        await login(page);
+        await openAccount(page);
+        const rows = page.locator('.sid-purchases tbody tr');
+        await expect(rows).toHaveCount(2);
+        // 22:30 UTC on 09/10 is already 10/10 in Paris — the date its credit note prints.
+        await expect(rows.nth(0).locator('td')).toHaveText(['Pack 100', '08/10/2026', 'Remboursé le 10/10/2026', '—']);
+        await expect(rows.nth(1).locator('td')).toHaveText(['À la carte · 3 documents', '08/10/2026', '08/10/2027', '—']);
+    });
+
     // Alex, 08/10/2026 (« Invoices issued by the app »): a link on each line,
     // the invoice and then the credit notes of the purchase, each its PDF.
     test('« Mes achats » : la facture et l’avoir de chaque achat se téléchargent', async ({ page, api }) => {

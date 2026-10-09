@@ -3,9 +3,9 @@ one French PDF invoice for every purchase the Stripe webhook credits, numbered
 in one continuous series, kept as issued, and a credit note for every refund.
 
 Stripe cannot be reached from the suite: the webhooks are signed exactly as
-Stripe signs them, and the line items of an « à la carte » session come from a
-stand-in for billing.fetch_line_items. All identities and company numbers are
-fictional."""
+Stripe signs them, the line items of an « à la carte » session come from a
+stand-in for billing.fetch_line_items, and billing.session_for_payment_intent
+answers « no session ». All identities and company numbers are fictional."""
 import hashlib
 import hmac
 import json
@@ -44,6 +44,8 @@ def environment(monkeypatch):
     monkeypatch.delenv("INVOICES_ENABLED", raising=False)
     for pack in (100, 1000, 3000, 5000):
         monkeypatch.delenv(f"STRIPE_PAYMENT_LINK_{pack}", raising=False)
+    # A refund of an unknown payment asks Stripe for its session: here Stripe knows none.
+    monkeypatch.setattr(billing, "session_for_payment_intent", lambda payment_intent: None)
     mailer.OUTBOX.clear()
     yield
     mailer.OUTBOX.clear()
@@ -139,7 +141,8 @@ def test_migration_adds_the_payment_intent_to_an_existing_purchases_table():
     assert {"invoices", "invoice_counters"} <= set(inspect(engine).get_table_names())
     assert "stripe_payment_intent" not in {c["name"] for c in inspect(engine).get_columns("purchases")}
 
-    assert schema_migrations.add_missing_columns(engine) == ["purchases.stripe_payment_intent"]
+    assert schema_migrations.add_missing_columns(engine) == [
+        "purchases.stripe_payment_intent", "purchases.refunded_at", "purchases.credits_taken_back"]   # + 09/10/2026
 
     session = sessionmaker(bind=engine)()
     try:
@@ -412,6 +415,7 @@ def test_the_pdf_carries_every_mention_alex_listed(client, db_session, monkeypat
     ):
         assert mention in text, mention
     assert "SPÉCIMEN" not in text
+    assert "taux légal" not in text          # the CGV article 7 of 08/10/2026 says the BCE's rate, as here
 
     with fitz.open(stream=row.pdf, filetype="pdf") as document:
         assert document.page_count == 1
@@ -767,7 +771,8 @@ def test_a_full_refund_gets_one_credit_note_for_the_whole_invoice(client, db_ses
     mailer.OUTBOX.clear()
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     response = signed(client, refund_event(11_880, created=int(yesterday.timestamp())))
-    assert response.status_code == 200 and response.json() == {"received": True, "result": "issued"}
+    assert response.status_code == 200 and response.json() == {"received": True, "result": "issued",
+                                                                "credits": "taken_back"}
 
     [note] = _notes(db_session)
     assert (note.number, note.series, note.livemode) == (f"AV-{YEAR}-00001", f"AV-{YEAR}", True)
@@ -875,9 +880,13 @@ def test_a_refund_beyond_the_invoice_is_not_credited_automatically(client, db_se
     assert "le total remboursé (200,00 €) dépasse la facture" in plain(mailer.OUTBOX[0].body)
 
 
-def test_refunds_change_nothing_while_the_switch_is_off(client, db_session):
-    assert signed(client, refund_event(11_880)).json() == {"received": True, "result": "disabled"}
-    assert mailer.OUTBOX == []
+def test_no_credit_note_while_the_switch_is_off_but_the_credits_come_back(client, db_session):
+    signup(client)
+    assert signed(client, pack_event(user_id_of(db_session, CLAIRE))).json()["result"] == "credited"
+    mailer.OUTBOX.clear()
+    assert signed(client, refund_event(11_880)).json() == {"received": True, "result": "disabled",
+                                                           "credits": "taken_back"}
+    assert mailer.OUTBOX == [] and _notes(db_session) == [] and db_session.query(models.InvoiceCounter).count() == 0
 
 
 def test_a_test_mode_invoice_gets_a_test_mode_credit_note(client, db_session, monkeypatch):

@@ -866,14 +866,20 @@ def _invoice_after_credit(db: Session, outcome: billing.CreditOutcome, session: 
     return None, None   # invoices not switched on (INVOICES_ENABLED)
 
 
+def _event_time(event: Dict[str, Any]) -> Optional[datetime]:
+    """When Stripe created the event (`created`, Unix seconds): a refund's time."""
+    created = event.get("created")
+    return (datetime.fromtimestamp(created, timezone.utc)
+            if isinstance(created, int) and not isinstance(created, bool) else None)
+
+
 def _credit_note_after_refund(db: Session, charge: Dict[str, Any], event: Dict[str, Any]):
     """charge.refunded (Alex, 08/10/2026): the credit note of what this refund
     adds (invoicing.issue_credit_note), the client's e-mail carrying it, or the
     e-mail telling Alex why there is none. Returns (status, [(to, subject, body,
     kind, attachments)]). Never raises."""
-    created = event.get("created")
-    refunded_on = (invoicing.to_paris(datetime.fromtimestamp(created, timezone.utc)).date()
-                   if isinstance(created, int) and not isinstance(created, bool) else None)
+    refunded = _event_time(event)
+    refunded_on = invoicing.to_paris(refunded).date() if refunded is not None else None
     try:
         result = invoicing.issue_credit_note(db, charge, refunded_on)
     except Exception as exc:  # noqa: BLE001 — reported to Alex instead
@@ -895,15 +901,46 @@ def _credit_note_after_refund(db: Session, charge: Dict[str, Any], event: Dict[s
     return result.status, []   # duplicate, or invoices not switched on
 
 
+def _after_refund(db: Session, charge: Dict[str, Any], event: Dict[str, Any]):
+    """charge.refunded: the credits first (Alex, 09/10/2026 — a full refund
+    takes them back, billing.take_back_credits; a partial one is only told to
+    Alex), then the credit note, whose switch is its own. Returns (the credits'
+    outcome, the credit note's status, [(to, subject, body, kind,
+    attachments)]). Never raises."""
+    try:
+        credits = billing.take_back_credits(db, charge, _event_time(event) or datetime.now(timezone.utc))
+    except Exception as exc:  # noqa: BLE001 — reported to Alex instead
+        db.rollback()
+        logger.error("Stripe: crédits non retirés, erreur %s.", type(exc).__name__, exc_info=True)
+        credits = billing.RefundOutcome(
+            "error", reason=f"erreur inattendue ({type(exc).__name__}) ; aucun crédit n'a été retiré")
+    note_status, messages = _credit_note_after_refund(db, charge, event)
+    if credits.status == "taken_back":
+        logger.info("Stripe: remboursement total, %s crédits retirés.", credits.taken)
+    elif credits.status == "partial":
+        subject, body = emails.refund_partial(credits.purchase, credits.user, charge)
+        messages.append((config.mail_admin_to(), subject, body, "refund_partial", None))
+    elif credits.status in ("unmatched", "error"):
+        logger.error("Stripe: crédits non retirés (%s).", credits.reason)
+        # The same refund left without its credit note for the same cause: one e-mail says both.
+        both = credits.status == note_status == "unmatched"
+        if both:
+            messages = [m for m in messages if m[3] != "refund_without_credit_note"]
+        subject, body = emails.refund_not_taken_back(credits.reason, charge, no_credit_note=both)
+        messages.append((config.mail_admin_to(), subject, body, "refund_not_taken_back", None))
+    return credits, note_status, messages
+
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """checkout.session.completed (and async_payment_succeeded, for bank
     transfers) → credits the pack paid for — or, for the « à la carte » link,
     the quantity of documents bought, opening the buyer's account when it is
     not open yet (its welcome e-mail carries the link to choose the password) —
-    once. Signature verified with STRIPE_WEBHOOK_SECRET. Anything that cannot
-    be credited automatically is acknowledged (Stripe would otherwise retry for
-    days) and reported to Alex."""
+    once. charge.refunded → a full refund takes the purchase's credits back, and
+    the credit note is issued (_after_refund). Signature verified with
+    STRIPE_WEBHOOK_SECRET. Anything that cannot be credited automatically is
+    acknowledged (Stripe would otherwise retry for days) and reported to Alex."""
     secret = config.stripe_webhook_secret()
     if not secret:
         return JSONResponse(status_code=503, content={"detail": "Webhook Stripe non configuré."})
@@ -917,10 +954,12 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db
     except (ValueError, AttributeError):
         return JSONResponse(status_code=400, content={"detail": "Événement illisible."})
     if event_type == billing.REFUND_EVENT:
-        status_text, messages = await asyncio.to_thread(_credit_note_after_refund, db, session, event)
+        credits, status_text, messages = await asyncio.to_thread(_after_refund, db, session, event)
         for to, subject, text_body, kind, attachments in messages:
             background_tasks.add_task(mailer.send, to, subject, text_body, kind, attachments=attachments)
-        return {"received": True, "result": status_text}
+        if credits.status == "taken_back" and credits.user:
+            await manager.send_update(credits.user["id"], {"type": "credit_update"})
+        return {"received": True, "result": status_text, "credits": credits.status}
     if event_type not in billing.PAID_EVENTS:
         return {"received": True, "result": "ignored"}
 

@@ -29,13 +29,20 @@ application tasks that followed it.
 >    https://scanid.fr/api/stripe/webhook` (expected 400); K9 live? → `B=$(curl -s https://scanid.fr/app/ | grep -o
 >    'assets/index-[^"]*\.js' | head -1); curl -s "https://scanid.fr/app/$B" | grep -c 'Paiement reçu, merci'` (1 = K9
 >    deployed, 0 = not yet). If the live state is ahead of the ticks, ask what was done, then tick.
+> 3⁻. **TASK R (Alex's « After the deployment of 08/10 »: cgv.html replaced — article 7 + « 8 octobre 2026 »; a FULL
+>    refund takes the purchase's credits back, never below zero, « Remboursé le JJ/MM/AAAA » in « Mes achats », a partial
+>    refund only tells Alex (= task Q's Q7b); the two invoice samples remade in TEST mode; two yes/no checks; five DPA
+>    answers incl. « Accounts » (the user's fact); HSTS from 14/10) IS THE CURRENT TASK since 2026-10-09 ≈ 15:43 UTC →
+>    go to §R.0 (just above §Q) and continue at its first unticked stage.** State: §R.0's first paragraph. Alex's files:
+>    `frontend/payment_scanid/Lasha-After-Deployment-2026-10-09.{pdf,docx}` + `cgv-2026-10-08/cgv.html` (LF = his
+>    SHA-256). Expected `git status --short` during task R: §R.0.
 > 3⁰. **TASK Q (Alex's « Invoices issued by the app »: a PDF invoice per purchase, gapless numbering, « Mes achats »
 >    links, the admin list + monthly CSV, credit notes on refunds, structured data for 2027, samples for the accountant,
->    four DPA answers) IS THE CURRENT TASK since 2026-10-08 ≈ 17:20 UTC → go to §Q.0 (just above §P) and continue at its
->    first unticked stage.** State 2026-10-08 ≈ 19:00 UTC: Q2–Q9 ✅ (code + tests + samples + verification, NOT committed);
->    **NEXT = §Q.5 S1 (the user's commit + push, ONE command) → S2 → S3 → S4 (server, one read-only command per message)
->    → S5 (the text C for Alex + the 2 samples)**; Q7b (credits back on a refund) waits for the companion note. Alex's files: `frontend/payment_scanid/Lasha-Invoices-2026-10-08.{pdf,docx}`. The companion
->    note « After the real Pack 100 purchase » (refunds: credits back) was NOT received — §Q.2 f1. Expected `git status
+>    four DPA answers) was the current task from 2026-10-08 ≈ 17:20 UTC → §Q.0 (just above §P).** State 2026-10-08 ≈ 19:13 UTC: Q2–Q9 ✅, **LIVE as `c8e883c` (switched off) — §Q.5 S1–S3 ✅**;
+>    **§Q.5 S4 ✅ (server facts). S5 (Q's text C + the 2 live-format samples) was never sent → SUPERSEDED by task R's
+>    §R.5 C (+ test-mode samples); Q7b (credits back on a refund) = task R's R3 + R4** (Alex's PDF of 09/10 gives the
+>    rule). Left in task Q: the accountant's OK → G1–G3 (switch on). Alex's files: `frontend/payment_scanid/Lasha-Invoices-2026-10-08.{pdf,docx}`. The companion
+>    note « After the real Pack 100 purchase » was NEVER received — §Q.2 f1, §R.2 f1. Expected `git status
 >    --short` during task Q: §Q.0.
 > 3a. **TASK P (Alex's « three website pages and four short points »: cgv / tarifs / faq replaced, the delete question
 >    « N documents », three confirmations, the HSTS raise from 14/10) was the current task from 2026-10-07 ≈ 20:20 UTC
@@ -169,8 +176,16 @@ locally (5 files + 1 new), the user ships it, then sets the redirect in Stripe.
   (just above §P): the app issues a French PDF invoice for every purchase credited by the webhook (switch
   `INVOICES_ENABLED`, off until the accountant validates the samples), gapless `F-AAAA-NNNNN`, attached to the purchase
   e-mail and in « Mes achats », admin list + monthly CSV, credit notes `AV-…` on `charge.refunded`, structured data for
-  2027, samples, four DPA answers. Q0–Q6 ✅ (plan written 17:45 UTC); NEXT = Q7.** State: §Q.0.
-- [ ] **⏰ ON / AFTER 2026-10-14 (≈ 18:51 UTC) — HSTS one year** (Alex's PDF of 07/10 §5 = §M.5 LATER): if nothing
+  2027, samples, four DPA answers. Q0–Q9 ✅; LIVE `c8e883c` switched off (§Q.5 S1–S4 ✅); S5 superseded by §R.5 C; Q7b
+  = task R's R3 + R4; left: the accountant → G1–G3.** State: §Q.0.
+- [ ] **▶ TASK R — STARTED 2026-10-09 ≈ 15:43 UTC (THE CURRENT TASK): Alex's « Lasha-After-Deployment-2026-10-09.pdf »
+  → §R (just above §Q): cgv.html replaced (article 7 « Le prix est payable comptant », « 8 octobre 2026 »); a full refund
+  takes the credits back + « Remboursé le JJ/MM/AAAA » in « Mes achats », a partial refund tells Alex; the samples in
+  test mode; the owner check + the e-mail attachment (yes / yes); the DPA answers + « Accounts » (the user); HSTS from
+  14/10 (the ⏰ step below). R0–R7 ✅ (all green); §R.5 written; ▶ NEXT = §R.5 S1 (the user's commit) → S2–S6 (S5 =
+  Stripe: add `charge.refunded`); « Accounts » = the user's answer.** State: §R.0.
+- [ ] **⏰ ON / AFTER 2026-10-14 (≈ 18:51 UTC) — HSTS one year** (Alex's PDF of 07/10 §5 = §M.5 LATER; asked again in
+  his PDF of 09/10 §6 — task R — « on the site, the app and the API … Claude rechecks it live afterwards »): if nothing
   broke during the week — the user, one command per message: `sudo certbot renew --dry-run` (→ « Congratulations, all
   simulated renewals succeeded »), then the reload-hook check (§M.5 LATER); then the code change
   (`ops/nginx-security-headers.conf` `max-age=31536000`, `ops/tests/test-nginx-headers.sh`'s expected value, the box /
@@ -570,6 +585,517 @@ they applied to the previous one (v4).
 
 ---
 
+## R. TASK R (2026-10-09) — ALEX'S « AFTER THE DEPLOYMENT OF 08/10 » (PDF of 2026-10-09 10:41 Paris) — IN PROGRESS
+
+*(R = the letter after Q. Task Q's §Q.5 S5 — its answer C was never sent: this PDF asks again what C answers — is
+SUPERSEDED by §R.5 C, which carries what still matters of it. Task Q's Q7b — credits taken back on a refund — is done
+here as R3 + R4: this PDF states the rule the missing companion note held.)*
+
+### R.0 State and checklist — update after EVERY stage (the user's rule)
+
+**Where things stand (2026-10-09 16:37 UTC): R0 ✅ (survey), R1 ✅ 16:06 (this section, written BEFORE any code — the
+user's « Firstly list in SCANID-HANDOVER.md what is demanded in attached pdf file »), R2 ✅ 16:07:30 UTC (cgv.html = Alex's;
+the invoice line checked), R3 ✅ 16:18 UTC (backend: a full refund takes the credits back; backend 488 passed; mutations
+8 / 8 killed), R4 ✅ 16:21 UTC (« Remboursé le … » in « Mes achats »; e2e account 30 / 30), R5 ✅ 16:22 UTC (the 2
+samples in test mode, looked at, every mention checked), R6 ✅ 16:23 UTC (owner check YES, e-mail attachment YES once
+switched on — tests + a mutation), R7 ✅ 16:33 UTC (all green: backend 488, unit 93, build + guard 5/5, e2e 500 + 1 skip,
+real stack on PostgreSQL 33 / 33 + browser 1280 / 375; Alex's six addresses → 401 live), R8 §R.5 written 16:35 UTC;
+**re-verified in a new session 16:40–16:44 UTC (§R.0.0 row 3: unchanged tree, 488 / 93 green, live still before task R).**
+▶ NEXT = §R.5 S1 (the user commits + pushes, ONE command — given 16:44 UTC) → S2–S6; C needs the user's answer to « Accounts ».** Task Q waits for the
+accountant (G1–G3); task K's N3–N6 and the ⏰ HSTS raise (from 2026-10-14) stay open alongside.
+
+**How a new session resumes task R (« Read SCANID-HANDOVER.md » alone is enough):** `cd /home/lasha/Public/new && git
+status --short` → compare with « Expected `git status --short` » below (a path already modified = its stage was at
+least started: check its sub-steps against `git diff`); `git log --oneline -1` (`c8e883c` = task R not committed yet;
+a newer commit by the user = shipped → continue in §R.5); then continue at the first unticked stage below, tick it here
+and add its record to §R.4 the moment it is done. **Alex's files** (ignored by git, `.gitignore:117`), copied at R0:
+`frontend/payment_scanid/Lasha-After-Deployment-2026-10-09.pdf` (65 546 bytes, SHA-256 `6e5613b3…6c49`), its `.docx`
+(11 671 bytes, `7e93804f…bf4f`), and `frontend/payment_scanid/cgv-2026-10-08/cgv.html` (**LF, 16 114 bytes, SHA-256
+`ce0e6dc3…67a8` = the PDF's**); originals in `~/Downloads/` (downloaded 2026-10-09 14:47–14:48 UTC; the cgv.html there
+is CRLF — 138 `\r` added in transit, 16 252 bytes, as in tasks K / L). **Times:** `date -u` (the machine's clock shows
++04:00; Paris = UTC + 2). **Python:** `/home/lasha/Public/new/newvenv/bin/python` (tests: `cd backend &&
+../newvenv/bin/python -m pytest -q`). **Traps:** after any App.jsx edit `grep -c $'\xc2\xa0' frontend/src/App.jsx` must
+stay **0** (task M2); eslint `src/App.jsx` baseline = **11 problems**; frontend unit tests = `cd frontend && npm run
+test:unit` (`node --test` — `npx vitest` finds only the Playwright files and « fails » 32); baselines before task R (= after task Q): backend
+**466** passed, frontend unit **93**, e2e **497 passed + 1 skip** (`capture.spec.js:127` WebKit), build guard 5/5.
+
+- [x] **R0 Survey** (2026-10-09 15:43–16:05 UTC) — §R.2; Alex's PDF, .docx and the LF cgv.html copied into
+  `frontend/payment_scanid/` (`sha256sum -c` OK). No repository file changed.
+- [x] **R1 This section written** (demand, findings, decisions, stages) + the resume protocol and the tick list point
+  here — before any code (§0.9) — 16:06 UTC.
+- [x] **R2 ✅ 16:07:30 UTC — PDF §2: the terms of sale** (d1, d2; record §R.4): `cp frontend/payment_scanid/cgv-2026-10-08/cgv.html` over
+  `frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html` (the user's demand lifts the source's read-only rule
+  for this ONE file, as in L2 / P2; nothing else in that folder is written; mode 644 kept) → `sha256sum` =
+  `ce0e6dc3…67a8`, `git diff --numstat` = **2 2** (l. 83 article 7, l. 113 the date). The invoice's late-payment line:
+  `backend/invoicing.py` `LATE_PAYMENT_TERMS` has no « taux légal » → its wording stays (Alex: « keeps the wording »);
+  only its comment (l. 70, « Waits for Alex's accountant: the CGV say « taux légal » ») is corrected (= the CGV article
+  7 of 08/10/2026); `backend/tests/test_invoices.py`: the invoice PDF's text holds no « taux légal ».
+- [x] **R3 ✅ 16:18 UTC — PDF §3, backend: a full refund takes the credits back (= task Q's Q7b)** (d3–d7; record §R.4): `models.Purchase` +
+  `refunded_at` (DateTime tz, nullable) + `credits_taken_back` (Integer, nullable) → `schema_migrations.ADDED_COLUMNS`
+  (+ its manual SQL lines + docstring); `billing.py`: `RefundOutcome`, `session_for_payment_intent(pi)` (`GET
+  /v1/checkout/sessions?payment_intent=…&limit=1`, errors as `fetch_line_items`), `take_back_credits(db, charge,
+  refunded_at)` (taken_back | partial | duplicate | unmatched); `main.py`: the `charge.refunded` branch = credits FIRST,
+  then the credit note (unchanged Q7a), Alex's e-mails (partial; unmatched — replacing the credit-note path's own
+  « unmatched » e-mail for the same refund; an unexpected error), SSE `credit_update`, response + `"credits"`;
+  `emails.py`: `refund_partial(…)`, `refund_unmatched(…)`; `schemas.PurchaseOut.refunded_at`. Tests (new
+  `backend/tests/test_refund_credits.py` + the 2 exact-body asserts of `test_invoices.py` l. 770 / 879 +
+  `test_account_billing.py`'s « Mes achats » key set + `test_email_wording.py`'s 2 new templates): full refund (pack /
+  unit; used credits → never below zero; another purchase's credits kept; balance already negative unchanged),
+  replays → duplicate, a late partial event after the full one → duplicate, partial → nothing written + Alex's e-mail,
+  partial then the rest → taken back once, works with INVOICES_ENABLED off AND on (credit note too), an old purchase
+  (no PaymentIntent) found through the Stripe lookup and its PaymentIntent stored, lookup empty / API error / no key →
+  unmatched + ONE e-mail to Alex, deleted account → marked, nothing taken, « Mes achats » gives `refunded_at`; mutations.
+- [x] **R4 ✅ 16:21 UTC — PDF §3, frontend: « Remboursé le JJ/MM/AAAA » in « Mes achats »** (d8; record §R.4): `App.jsx` `MyPurchases` — the
+  « Valable jusqu'au » cell of a purchase with `refunded_at` reads « Remboursé le <date, Paris> »; `tests/mock/api.js`
+  needs nothing (it serves `state.purchases` as given) unless found otherwise; e2e `account.spec.js`: a refunded row
+  (desktop + mobile-small + mobile-375); eslint baseline 11, 0 raw U+00A0.
+- [x] **R5 ✅ 16:22 UTC — PDF §4: the two samples, made in test mode** (d9; record §R.4): `backend/tests/make_invoice_samples.py` → signed events
+  with `livemode: false`, no banner override (the PDF exactly as test mode renders it: `TEST-F-2026-00001`,
+  `TEST-AV-2026-00001`, banner « SPÉCIMEN — paiement Stripe en mode test, sans valeur comptable »), docstring; run →
+  `frontend/payment_scanid/invoices-2026-10-09/`; both PDFs LOOKED AT (rendered to PNG) and every §2 mention checked in
+  their text (`pdftotext`), incl. the late-payment line.
+- [x] **R6 ✅ 16:23 UTC — PDF §4: the owner check and the e-mail attachment — evidence, no code change** (d10; record §R.4): run the Q4 / Q5 tests
+  that prove them (another client → 404 « Facture introuvable. », admin 200, anonymous 401; the purchase e-mail carries
+  `Facture-F-….pdf` = the stored bytes) and record the answers (YES / YES once switched on).
+- [x] **R7 ✅ 16:33 UTC — Verify** (record §R.4): backend full suite; frontend unit + eslint; `VITE_API_URL=/api npm run build` + guard 5/5 +
+  `dist/cgv.html` = Alex's SHA-256; the WHOLE e2e suite on desktop + mobile-small + mobile-375
+  (`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`); real stack on PostgreSQL (§Q.4 Q9's harness: the 2 new columns added
+  to an « old » `purchases` table at startup; signed webhooks: full refund → credits back + mark, partial → Alex's
+  e-mail, an old purchase found through the Stripe stand-in); « Mes achats » with « Remboursé le … » in a real browser at
+  1280 and 375 px (screenshots looked at); /cgv.html in the browser (article 7, the date); Alex's « six addresses →
+  401 » checked live; `git status --short` = the expected list = `git add --dry-run .`; no secret-like string added.
+- [ ] **R8 — Record + ship + Stripe + the answer for Alex** — **§R.5 WRITTEN 16:35 UTC (S1–S6 + C); ▶ NEXT = S1 (the
+  user's commit) — and the user's answer to « Accounts » for C.** Plan was (§R.5, written at R8): S1 the user commits + pushes (§0.3); S2
+  CI + Deploy; S3 live checks (cgv SHA-256, « Le prix est payable comptant », « 8 octobre 2026 », the app bundle holds
+  « Remboursé le »); S4 server, read-only (the 2 columns; how many paid purchases have no PaymentIntent); S5 Stripe —
+  add `charge.refunded` to the scanid.fr endpoint's events (guided, one step per message) = **what makes the credits
+  take-back live**; S6 the user sends Alex C (+ the 2 test-mode samples) — C needs the user's answer to « Accounts »
+  (§R.2 f11, asked at R1).
+
+**Expected `git status --short` when R2–R6 are done:** ` M SCANID-HANDOVER.md`, ` M
+backend/billing.py`, ` M backend/emails.py`, ` M backend/invoicing.py`, ` M backend/main.py`, ` M backend/models.py`,
+` M backend/schema_migrations.py`, ` M backend/schemas.py`, ` M backend/tests/make_invoice_samples.py`, ` M
+backend/tests/test_account_billing.py`, ` M backend/tests/test_email_wording.py`, ` M backend/tests/test_invoices.py`,
+` M frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html`, ` M frontend/src/App.jsx`, ` M
+frontend/tests/e2e/account.spec.js`, `?? backend/tests/test_refund_credits.py` = **16 paths** (`frontend/tests/mock/api.js`
+was not needed at R4) — `frontend/payment_scanid/` is ignored (Alex's files and the samples never get staged).
+
+### R.0.0 THIS SESSION (2026-10-09 ≈ 15:43 UTC →) — every prompt, what is done, what is left
+
+| # | Prompt (verbatim, or in substance) | Done | Left |
+| --- | --- | --- | --- |
+| 1 | « READ SCANID-HANDOVER.md to see your permissions and restrictions! Fristly list in SCANID-HANDOVER.md what is demanded in atached pdf file after you implement changes stage-by-stage and after each implementing each stage you update SCANID-HANDOVER.md file in such way that if i interrupt you on this current session and open a new session you could continue working on the prompts from pdf file seamlessly ony with only the command "Read SCANID-HANDOVER.md"! » + « Lasha-After-Deployment-2026-10-09.pdf » + `cgv.html` | Checks 15:43 UTC: `git status` = only the handover (task Q's S4 notes, uncommitted); HEAD = `origin/master` = `c8e883c`; CI ✅ 19:09:51, Deploy ✅ 19:10:19 UTC (08/10); live `/cgv.html` = `947c1572…` (task P's: « taux légal », « 7 octobre 2026 »); `/api/config` `{"signup":true,"trial":true}`; webhook unsigned → 400; HSTS `max-age=86400` on `/` and `/app/`. **TASK R opened: R0 + R1 ✅ (16:06); R2 ✅ 16:07 (cgv.html); R3 ✅ 16:18 (credits back on a full refund; 488 passed; 8 / 8 mutations); R4 ✅ 16:21 (« Remboursé le … »); R5 ✅ 16:22 (samples in test mode); R6 ✅ 16:23 (yes / yes); R7 ✅ 16:33 (all green; real stack 33 / 33); §R.5 written 16:35** | §R.5 S1 (the user commits + pushes) → S2–S6; « Accounts » (the user) |
+| 2 | (mid-turn, ≈ 16:36 UTC) « After finishing implementing this stage update SCANID-HANDOVER.md » | The rule already followed at every stage (R0–R7 each ticked + recorded here the moment it was done); R8's §R.5 recorded at 16:35, this row added | §R.5 S1 → S6 |
+| 3 | (new session, 16:40 UTC) « Read SCANID-HANDOVER.md and verify what is already made from atached pdf file's prompts and continue implementing remaining stages! » + the same PDF + cgv.html | **Re-verified 16:40–16:44 UTC, nothing changed:** `git status --short` = §R.0's 16 paths; HEAD = `origin/master` = `c8e883c` (not shipped); source / `dist/` / Alex's cgv.html all `ce0e6dc3…67a8`; the diff read against PDF §2–§4 (d1–d10 hold); backend **488 passed**, unit **93 / 93**, eslint baseline 11, 0 raw U+00A0 (e2e not re-run: no file changed since R7's 500 + 1 skip). Live still before task R: `/cgv.html` `947c1572…`, bundle `index-Db6pzn_F.js`, `/api/config` `{"signup":true,"trial":true}`, webhook 400, HSTS 86400. Edge checked: credit expiry is not enforced by any job (`expires_at` only stored) → a take-back never double-counts expired credits. **Every code stage of the PDF is done; what remains is the user's (§R.5 S1–S6).** S1 given | §R.5 S1 (the user's commit) → S2–S6; « Accounts » (the user) |
+| 4 | « All what must be in .gitignore is in? Can i run git add .? Provide a short git commit message! » | 16:47 UTC: `git add --dry-run .` = exactly the 16 paths; ignored as they must be: `frontend/payment_scanid/` (`.gitignore:117` — Alex's PDF / cgv copies, the TEST samples), `frontend/dist/`, `backend/.env`, `frontend/.env.local`, `newvenv/`, `node_modules/`, caches, bench files, the client PDFs at the root. → YES to `git add .`; message « Refunds take credits back; CGV of 8 October » (as §R.5 S1) | §R.5 S1 (the user runs it) → S2–S6 |
+
+### R.1 The demand (user, 2026-10-09) and Alex's PDF in substance
+
+The user's message is row 1 above (the user's rule, §F.1: a demand of the current prompt wins over a restriction of
+this file). The PDF (2 pages, « SCANID · FOR LASHA = FOR YOU – Claude Code », « After the deployment of 08/10 »,
+« Prepared on 09/10/2026 (10:41, Paris time) by Claude for Alex. Claude checked the site and the app online on 08/10
+at 23:00, and again this morning. Invoices are live — thank you. Below: one file to upload again, the refund step still
+open, and short questions. Nothing here blocks sales. » Attached: `cgv.html`). The `.docx` holds the same text.
+
+**§1 Confirmed online** (no action): « Mes achats » shows the « Facture » column, one PDF link per document; the admin
+menu « Factures » lists invoices and credit notes newest first, with the PDF and the monthly CSV export. Without a
+session, the invoice list, the export, the invoice PDFs, the purchases and the trial requests answer 401 (« six
+addresses tested »). Prices, the unit link, signup and trial unchanged; every site file = the validated version except
+cgv.html.
+
+**§2 To fix — the terms of sale.** *Online today:* the cgv.html of folder `cgv-2026-10-07` (article 7 « au taux légal »,
+« Dernière mise à jour : 7 octobre 2026 »). *To upload:* the attached cgv.html — « the same file as in folder
+cgv-2026-10-08 » — at the site root; only this file changes: **cgv.html, 16 114 bytes, SHA-256
+`ce0e6dc37bbab1bc50f95c99af438d1b2c198c225a9ea1f6120629dcdbc967a8`**. *Your source too:* « On 08/10 the whole site was
+deployed at once: every file is dated 21:08. Replace cgv.html in your deployment source as well, or the next deployment
+brings the old one back. Folders cgv-2026-10-03 and cgv-2026-10-07 are older versions: do not use them. » *Test:* on
+/cgv.html, article 7 begins with « Le prix est payable comptant » and the last line shows « 8 octobre 2026 » (« Claude
+rechecks it live once you tell Alex »). *Invoices:* « The late-payment line on the PDF keeps the wording of « Invoices
+issued by the app » (section 2, « Payment »): with this file, it matches article 7. If the PDF says « taux légal »,
+align it. »
+
+**§3 Still open — a refund takes the credits back.** *Request:* « As in « After the real Pack 100 purchase » (08/10,
+section 2): **on a full refund, remove the unused credits of that purchase, never below zero, and mark the line
+« Remboursé le JJ/MM/AAAA » in « Mes achats ». On a partial refund, change nothing automatically and tell Alex.** »
+*Credit note:* « The same Stripe event issues the credit note (« Invoices issued by the app », section 3). **Today, does
+a refund made in Stripe already issue it? A yes or a no.** » *When?* « Until it is live, Alex corrects the balance by
+hand after each refund. »
+
+**§4 Invoices — samples and two checks.** *Samples:* « As planned (« Invoices issued by the app », section 5): **one
+invoice for a pack and one credit note, as PDF, made in test mode so that no real number is used.** Alex's accountant
+validates them, and Claude checks every mention. » *Owner check:* « The PDFs are fetched by id (/api/invoices/{id}/pdf).
+**Does the server check that the document belongs to the logged-in client**, so that a client asking for another
+client's document gets 403 or 404? Only the admin sees all documents. A yes or a no. » *E-mail:* « **Is the PDF
+attached to the e-mail « Vos N documents ScanID sont disponibles »?** A yes or a no. »
+
+**§5 Questions for the data processing agreement** (« fields waiting for these answers; a short answer to each;
+skip any you have already sent »): *Backups* — how often, kept how long, where, encrypted? *Closed accounts* — when an
+account is closed, when are its result files deleted, backups included? *Logs* — what is logged (logins, sensitive
+operations), and for how long? *Access* — with the access used to deploy, could you technically read the result files
+or the database, even if you never do? A yes or a no. ***Accounts* (new)** — are the IONOS server and the Google Cloud
+project (Vision API) contracted and billed in the name of ScanID SASU, not a personal account?
+
+**§6 Server — HSTS, as planned.** « On or after 14/10. Raise Strict-Transport-Security from max-age=86400 to
+max-age=31536000 on the site, the app and the API. Still no includeSubDomains and no preload. Claude rechecks it live
+afterwards. » — « A few words per point is enough: reply to Alex, who passes it on to Claude. »
+
+### R.2 Findings (R0, before touching anything — 2026-10-09 15:43–16:05 UTC)
+
+1. **The delivery:** `~/Downloads/cgv.html` = 16 252 bytes, CRLF (138 `\r`, 138 `\n`) → without the `\r`: **16 114
+   bytes, SHA-256 `ce0e6dc3…67a8` = the PDF's** (the copy in `frontend/payment_scanid/cgv-2026-10-08/`). The `.docx`
+   text = the PDF's word for word. **Folder `cgv-2026-10-08` was never received** before today: it must have come with
+   the companion note « After the real Pack 100 purchase » (08/10), still missing (§Q.2 f1) — Alex says « upload
+   again ».
+2. **Live = source = `dist/`:** `/cgv.html` `947c1572…` (task P's file: article 7 « des pénalités au taux légal »,
+   « 7 octobre 2026 »); HEAD = `origin/master` = `c8e883c`. « Every file dated 21:08 »: the deploy of `c8e883c`
+   (started 19:08:13 UTC = 21:08 Paris) rebuilds the whole site from the repository — **the repository IS the
+   deployment source**: replacing cgv.html there is what makes it stick.
+3. **`diff` source → Alex's file = 2 lines:** l. 83 (article 7: « Le prix est payable comptant, à la commande, … Aucun
+   escompte n'est accordé pour paiement anticipé. Entre professionnels, tout retard de paiement entraîne de plein droit
+   … des pénalités de retard au taux d'intérêt appliqué par la Banque centrale européenne à son opération de
+   refinancement la plus récente, majoré de 10 points de pourcentage, ainsi qu'une indemnité forfaitaire pour frais de
+   recouvrement de 40 € (articles L441-10 et D441-5 du Code de commerce). ») and l. 113 (« 8 octobre 2026 »); asset
+   version `?v=202609302115` unchanged (3×).
+4. **The invoice's late-payment line** (`invoicing.LATE_PAYMENT_TERMS`): « Pénalités de retard : taux de la BCE majoré
+   de 10 points ; indemnité forfaitaire pour frais de recouvrement : 40 € (art. L441-10 du Code de commerce) » — **no
+   « taux légal »** → nothing to align; its comment (l. 70) still says the CGV say « taux légal » (stale from today).
+5. **§3 « Credit note — today? » = NO.** The webhook's `charge.refunded` branch only calls `_credit_note_after_refund`,
+   which answers `disabled` while `INVOICES_ENABLED` is absent (production: absent — §Q.5); and Stripe does not send
+   `charge.refunded` to the endpoint yet (only the two checkout events — §Q.5 G4). Today a refund in Stripe changes
+   nothing in the app and issues nothing.
+6. **Credits:** ONE counter `users.page_credits` (no per-purchase balance — §P.2 f7); the OCR job charges with one
+   atomic `UPDATE … page_credits - n` (`main.py` l. 305–315 — it can end below 0: the check `<= 0` is before a job);
+   purchases add with `coalesce(page_credits, 0) + n` (`billing.py`); Alex corrects a balance in « Gérer les
+   utilisateurs » → « Crédits pages » (admin form). A refund is matched by `purchases.stripe_payment_intent` — **NULL
+   for every purchase paid before `c8e883c`'s deploy (08/10 19:10 UTC)**, e.g. Alex's test of 06/10 and his real Pack
+   100 of 08/10 → their refunds could not be matched. Stripe can name the Checkout Session of a PaymentIntent: `GET
+   /v1/checkout/sessions?payment_intent=pi_…` — within the restricted key's only permission « Checkout Sessions: Read »
+   (§K B4a) — and the purchase has its `stripe_session_id` (UNIQUE).
+7. **« Mes achats »** (`App.jsx` `MyPurchases`): columns Pack / Acheté le / Valable jusqu'au / Facture; `.sid-table td`
+   = uppercase, centred, nowrap (`scanid-app.css` l. 193); dates through `day()` (fr-FR, Europe/Paris); `GET
+   /users/me/purchases` = paid purchases + `documents` (`schemas.PurchaseOut`); `test_account_billing.py` asserts the
+   row's exact key set; the e2e mock serves `state.purchases` as given.
+8. **Q7a's tests** (`test_invoices.py` l. 765–902) read `json()["result"]` except two exact bodies (l. 770, l. 879); the
+   « unmatched » one (l. 852–867) expects exactly 2 e-mails to Alex, the 2nd holding « Raison : aucun achat ScanID ne
+   correspond à ce paiement ».
+9. **Samples:** Q8's (`frontend/payment_scanid/invoices-2026-10-08/`) are live-format — `F-2026-00001` /
+   `AV-2026-00001`, throwaway SQLite, the generator's own banner « SPÉCIMEN — exemple à valider, client fictif, … » —
+   and were never sent (§Q.5 S5 open). Alex now asks « made in test mode so that no real number is used » → test mode =
+   events with `livemode: false` → `TEST-F-2026-00001` / `TEST-AV-2026-00001` + the app's test-mode banner
+   (`invoicing.TEST_MODE_BANNER`).
+10. **§4 checks — both YES from the record:** `GET /invoices/{id}/pdf` → the owner or the admin; anyone else **404
+    « Facture introuvable. »** (Q5 tests; Q9 real stack: « another client 404, anonymous 401 »); the purchase e-mail
+    carries `Facture-F-….pdf` = the stored bytes + « Votre facture F-… est jointe à cet e-mail. » (Q4; Q9 .eml) —
+    **once switched on**; today (off) no invoice exists, so none is attached.
+11. **§5 DPA:** Backups / Closed accounts / Logs / Access = §Q.5 C's answers (facts read on the server 08/10 19:17–19:24
+    UTC, §Q.5 S4) — never sent. **« Accounts » (new) is not on record:** the memory only notes that the gcloud CLI is
+    logged in with the user's personal Google account; who holds the GCP billing account and the IONOS contract
+    (ScanID SASU or a person) only the user knows → **asked** (never guessed).
+12. **§6 HSTS** = the dated step « ⏰ ON / AFTER 2026-10-14 » (tick list; §M.5 LATER) — nothing before then.
+
+### R.3 Decisions
+
+- **d1 — cgv.html byte for byte** (the LF copy = the PDF's SHA-256); only this file of the source folder is written;
+  `dist/` follows through the build; no other site file.
+- **d2 — The invoice's late-payment line stays as worded** (Alex: « keeps the wording »; it does not say « taux légal
+  »); its stale comment is corrected; a test asserts « taux légal » never appears on an invoice.
+- **d3 — « The unused credits of that purchase », with ONE balance counter = the purchase's credits removed from the
+  balance, never below zero:** new balance = max(0, balance − purchase credits) → taken = min(credits, max(balance,
+  0)). Bought 100, used 30 → 70 → 0; with 50 more from another purchase → 120 → 20. « Never below zero » is Alex's
+  rule; a balance already below 0 is left as it is (nothing taken). Told to Alex in one line.
+- **d4 — Full refund = Stripe's Charge `refunded: true`** (the whole payment refunded, at once or in several refunds: the
+  one that completes it counts). Once per purchase: one transaction — the purchase row locked, `refunded_at` = the
+  refund's time (the event's `created`, else now), `credits_taken_back` = the number removed (the record; not shown to
+  the client), the user row locked and debited. Already marked → `duplicate` (a replay, or a late partial event).
+- **d5 — Partial refund (`refunded` false) → nothing written;** Alex gets « Remboursement partiel — crédits non
+  modifiés » (purchase, client, paid, refunded so far, the client's balance, Stripe refs; « if the rest is refunded
+  later, the credits are taken back then »). Nothing is stored for a partial refund, so a Stripe re-delivery would
+  repeat that e-mail (rare, harmless).
+- **d6 — Matching:** the PaymentIntent; else (paid before 08/10 19:10 UTC) Stripe's Checkout Session of that
+  PaymentIntent → the purchase by `stripe_session_id`, whose PaymentIntent is then stored (the credit-note path finds it
+  too). Nothing found, an API error, no key → `unmatched` → Alex gets ONE e-mail « Remboursement Stripe à traiter à la
+  main » (credits not removed; « and no credit note » when invoices are on — it replaces the credit-note path's own
+  « unmatched » e-mail for the same refund; Q7a's « refused » e-mail, a different cause, stays).
+- **d7 — Independent of `INVOICES_ENABLED`:** the take-back works as soon as Stripe sends `charge.refunded` (§R.5 S5);
+  the credit note keeps its switch. In the webhook: credits FIRST, then the credit note (unchanged). Response
+  `{"received": true, "result": <credit note: issued|duplicate|refused|unmatched|disabled>, "credits":
+  taken_back|partial|duplicate|unmatched|error}` (readable in Stripe's delivery log). After a take-back the client's
+  open page is refreshed (SSE `credit_update`, as after a purchase). Never raises: an unexpected error is logged and
+  Alex is told (as Q7a).
+- **d8 — « Mes achats »:** a fully refunded purchase's « Valable jusqu'au » cell reads « Remboursé le JJ/MM/AAAA » (the
+  refund's date in Paris — the date the credit note prints in « Montant remboursé le ») instead of a validity date its
+  credits no longer have; partial refunds show nothing. No new CSS (the table's own style).
+- **d9 — Samples in test mode:** the generator sends `livemode: false` events and no longer overrides the banner → the
+  PDFs are exactly what the app produces in test mode; output `frontend/payment_scanid/invoices-2026-10-09/`; the 08/10
+  live-format samples stay where they are, unsent — not to be used.
+- **d10 — §4 checks and §6: no code change.** §5: §Q.5 C's four answers + « Accounts » as the user states it.
+- **d11 — The answer for Alex (§R.5 C) supersedes §Q.5 C** (never sent): this PDF's answers + what still matters of
+  Q's C, short; and one line: « After the real Pack 100 purchase » never reached us — resend it if it asked more than
+  its refund section and its cgv.html.
+
+### R.4 Stage records
+
+**R0 + R1 — DONE (2026-10-09 15:43–16:06 UTC):** §R.2 and §R.3 above; Alex's PDF, .docx and LF cgv.html copied into
+`frontend/payment_scanid/` (`sha256sum -c` OK). No repository file changed except this one.
+
+**R2 — DONE (16:06–16:07:30 UTC).** `cp frontend/payment_scanid/cgv-2026-10-08/cgv.html
+frontend/ScanID-nouveau-site-2026-09-30/nouveau-site/cgv.html` → `sha256sum -c` against `ce0e6dc3…67a8` **OK**; 16 114
+bytes, mode **644** `lasha:lasha` kept; `git diff --numstat` = **2 2** (l. 83 article 7, l. 113 the date); still 63 files
+in the folder; « Le prix est payable comptant » 1×, « Dernière mise à jour : 8 octobre 2026. », « taux légal » 0×.
+`dist/` not rebuilt yet (R7). `backend/invoicing.py` l. 70: the comment above `LATE_PAYMENT_TERMS` now reads « Alex's
+wording — the rate of the CGV article 7 (08/10/2026): the BCE's, plus 10 points; never « taux légal ». » (the constant
+itself unchanged — it never said « taux légal »). `backend/tests/test_invoices.py`
+`test_the_pdf_carries_every_mention_alex_listed`: + `assert "taux légal" not in text`. `tests/test_invoices.py` **62
+passed**. **Mutation killed:** « (taux légal) » appended to `DISCOUNT_TERMS` (the existing mention check still passes
+— substring) → the new assertion fails (« 'taux légal' is contained here »); file restored (`cp -p`, `cmp` identical).
+
+**R3 — DONE (16:08–16:18 UTC).** `backend/models.py`: `Purchase.refunded_at` (DateTime tz) + `credits_taken_back`
+(Integer), both nullable, with their comment. `backend/schema_migrations.py`: `("purchases", "refunded_at", "TIMESTAMP
+WITH TIME ZONE")`, `("purchases", "credits_taken_back", "INTEGER")` + their manual SQL lines + the docstring.
+`backend/billing.py` (+108 −1): module docstring + the `REFUND_EVENT` comment name the take-back;
+`session_for_payment_intent(pi)` (beside `fetch_line_items`, same key / timeout / error style: no key → « clé API Stripe
+non configurée (STRIPE_API_KEY) », HTTP error → « l'API Stripe a répondu N à la recherche de la session », unreachable /
+not JSON → « API Stripe injoignable, ou sa réponse est illisible », no `data` → « … ne contient pas les sessions »; `GET
+/v1/checkout/sessions?payment_intent=…&limit=1` → the first session's id or None); new section « Refunds »:
+`RefundOutcome` (taken_back | partial | duplicate | unmatched | error; purchase, user dicts; taken),
+`_refunded_purchase(db, pi)` (paid purchase by PaymentIntent; else Stripe's session → conditional UPDATE storing the
+PaymentIntent on the paid purchase of that session whose PaymentIntent is NULL → commit → looked up again by
+PaymentIntent — so a racing twin delivery finds it too; reasons « aucun achat ScanID ne correspond à ce paiement (Stripe
+n'a pas pu être interrogé : …) » / « … (payé hors de l'application, ou enregistré à la main) »), `take_back_credits(db,
+charge, refunded_at)` (no PaymentIntent → unmatched « le remboursement ne porte pas de paiement Stripe lisible »; the
+purchase row `with_for_update().populate_existing()` — populate_existing so a racing delivery re-reads `refunded_at`;
+already marked → duplicate; `refunded` not true → partial (nothing written; the purchase + the account returned for
+Alex's e-mail); else the user row locked the same way, taken = min(credits, max(balance, 0)), balance − taken,
+`refunded_at` + `credits_taken_back`, one commit; account deleted → marked, 0 taken). `backend/main.py`:
+`_event_time(event)` (the event's `created` as UTC, else None — `_credit_note_after_refund` now uses it, same dates);
+`_after_refund(db, charge, event)` = credits first (any exception → rollback, logged with traceback, `error` « erreur
+inattendue (X) ; aucun crédit n'a été retiré »), then `_credit_note_after_refund` unchanged; partial → Alex's
+`refund_partial`; unmatched / error → Alex's `refund_not_taken_back`, and when the credit note is « unmatched » too
+(same cause) its own « sans avoir » e-mail is dropped and this one says « et n'a pas émis d'avoir … et établissez
+l'avoir à la main »; the webhook's branch sends the messages, pushes SSE `credit_update` to the account after a
+take-back, answers `{"received", "result", "credits"}`; the webhook docstring names refunds. `backend/emails.py`:
+`_euros_or_dash`, `refund_partial(purchase, user, charge)` (« Remboursement partiel — crédits non modifiés »: no credit
+taken, correct by hand — Administration → Gérer les utilisateurs → Crédits pages; « Achat : Pack 100, payé le
+JJ/MM/AAAA » (Paris), paid TTC, refunded so far, client, the balance now, `pi_…`, `ch_…`; « Si le reste du paiement est
+remboursé plus tard, l'application retirera alors les crédits de cet achat, comme pour un remboursement total. »),
+`refund_not_taken_back(reason, charge, no_credit_note=False)` (« Remboursement Stripe à traiter à la main — crédits non
+retirés »: reason, `pi_…`, `ch_…`, refunded so far + « (remboursement total / partiel) », correct by hand). (f-strings
+without backslashes inside — CI is Python 3.12, but kept portable.) `backend/schemas.py`: `PurchaseOut.refunded_at:
+Optional[datetime] = None`. Tests: NEW `backend/tests/test_refund_credits.py` (**19**: full refund of a pack → 0
+credits, the purchase marked at the event's time, `credits_taken_back` 100, no e-mail, SSE push, « Mes achats »
+`refunded_at`; replays after new credits were bought → duplicate, the new credits stay; 30 used → 70 taken, balance 0; a
+balance of −5 left as it is; a unit purchase refunded → its 3 documents taken, the pack's 100 stay, only its row
+marked; a deleted account → marked, 0 taken, nothing pushed; partial 20,00 € → nothing written + Alex's e-mail line by
+line, then the rest → taken back, a late partial event → duplicate, nobody told; invoices on → the credit note AND the
+credits, one e-mail (the client's note); an old purchase (no PaymentIntent) found through its session, the PaymentIntent
+stored, the credit note then « refused » (no invoice), not « unmatched », replay → duplicate without asking Stripe
+again; an unknown payment → ONE e-mail to Alex (invoices off: no word of « avoir »; on: « et n'a pas émis d'avoir »);
+Stripe 401 / no PaymentIntent → the reasons; an unexpected error → `error`, the credit note still issued, Alex told; the
+Stripe question's URL, key, timeout, empty answer, 4 failures, no key → not asked; the migration on a table of 08/10 adds
+exactly the 2 columns, idempotent; the manual SQL listed). `tests/test_invoices.py`: the autouse fixture stubs
+`billing.session_for_payment_intent` (« Stripe cannot be reached from the suite »; docstring says so); the old-table
+migration now adds 3 columns; the full-refund body gains `"credits": "taken_back"`; `test_refunds_change_nothing_while_the_switch_is_off`
+→ `test_no_credit_note_while_the_switch_is_off_but_the_credits_come_back` (a pack first; `{"result": "disabled",
+"credits": "taken_back"}`, no e-mail, no note, no counter). `tests/test_account_billing.py`: the « Mes achats » key set +
+`refunded_at` (None). `tests/test_email_wording.py`: +3 templates. **Backend full suite: 488 passed** (466 + 19 + 3).
+**Mutations 8 / 8 killed** (scratchpad `r3mut/run.sh`; billing.py / main.py restored, `cmp` identical): M1 no once-only
+guard, M2 a balance below 0 not guarded, M3 partial taken as full, M4 the PaymentIntent of an old purchase not stored,
+M5 two e-mails for one unmatched refund, M6 used credits taken anyway, M7 no live update, M8 « no credit note » said
+when invoices are off.
+
+**R4 — DONE (16:19–16:21 UTC).** `frontend/src/App.jsx` (+5 −4; copy before: scratchpad `App.jsx.before-r4`):
+`MyPurchases`' third cell = `{purchase.refunded_at ? `Remboursé le ${day(purchase.refunded_at)}` :
+day(purchase.expires_at)}` (`day()` = fr-FR, Europe/Paris, as the other dates); the comment above the component names
+it. 0 raw U+00A0; eslint `src/App.jsx` = the same 11 messages as before (sorted rule + message lists diffed: identical).
+`frontend/tests/mock/api.js` unchanged (it serves `state.purchases` as given — `refunded_at` passes through).
+`frontend/tests/e2e/account.spec.js`: NEW « « Mes achats » : un achat remboursé dit « Remboursé le … » au lieu de sa
+validité » (a Pack 100 refunded `2026-10-09T22:30:00Z` → `['Pack 100', '08/10/2026', 'Remboursé le 10/10/2026', '—']` —
+22:30 UTC is already 10/10 in Paris, the date its credit note prints; an unrefunded unit purchase keeps
+`08/10/2027`); eslint clean. **`account.spec.js` on desktop + mobile-small + mobile-375: 30 passed** (27 + 3).
+**Mutation killed:** the App.jsx of before → the new test fails (« Expected … Received »); restored (`cmp` identical).
+
+**R5 — DONE (16:21–16:22 UTC).** `backend/tests/make_invoice_samples.py` (copy before: scratchpad
+`make_invoice_samples.py.before-r5`): docstring (test mode, Alex's words, TEST- series, the test-mode banner; « a live
+document reads the same without « TEST- » and the banner »); `BANNER` and the `render_pdf` override removed; the
+events are `livemode=False` (`cs_test_specimen`, `pi_test_specimen`, `ch_test_specimen`, `evt_test_specimen`); two
+more asserts (both numbers start `TEST-F` / `TEST-AV`, no document live). Run from `backend/`: `../newvenv/bin/python
+tests/make_invoice_samples.py` → `frontend/payment_scanid/invoices-2026-10-09/` (ignored, `.gitignore:117`):
+**`Facture-TEST-F-2026-00001.pdf` 51 207 bytes, SHA-256 `3ff71627…16c9`; `Avoir-TEST-AV-2026-00001.pdf` 50 934 bytes,
+`3f89d2d0…8fa3`** (both e-mail attachments = the stored bytes — the generator's own assert). **LOOKED AT** (110 dpi PNGs
+in the scratchpad): one A4 page each; banner « SPÉCIMEN — paiement Stripe en mode test, sans valeur comptable »;
+seller block; « FACTURE » N° TEST-F-2026-00001, Date de facture / de la prestation 09/10/2026; client box (Agence
+Exemple Voyages, À l'attention de Camille Exemple, 12 rue de l'Exemple, 75011 Paris, France, SIREN 123 456 782, TVA
+FR11123456782 — fictional); the Pack 100 line « … jusqu'au 09/10/2027 », 1 × 99,00 €, 20 %, 99,00 €; Total HT 99,00 € /
+TVA 20 % 19,80 € / Total TTC 118,80 €; nature, « Facture acquittée le 09/10/2026 par carte bancaire (Stripe) », escompte
+néant, the penalties line (BCE + 10 points, 40 €, art. L441-10); footer = Alex's seller line; « AVOIR » N°
+TEST-AV-2026-00001, Date de l'avoir 09/10/2026, « Avoir sur la facture TEST-F-2026-00001 », same blocks and amounts,
+« Montant remboursé le 09/10/2026 par carte bancaire (Stripe) ». Titles « Facture TEST-F-2026-00001 » / « Avoir
+TEST-AV-2026-00001 », author ScanID, only Nimbus Sans (Regular, Bold), embedded. **Text check:** invoice 36 mentions,
+credit note 34 — none missing; « taux légal » absent; no number of the real series (`F-2026-` / `AV-2026-` without
+`TEST-`) anywhere; the credit note has no « Facture acquittée » / penalties. The 08/10 live-format samples
+(`invoices-2026-10-08/`) stay, unsent — not to be used.
+
+**R6 — DONE (16:22–16:23 UTC). No repository file changed.** *Owner check:* `main.py` `download_invoice` (l. 1259–1267):
+`row = db.get(models.Invoice, invoice_id)`; `if row is None or (current_user.get("role") != "admin" and row.user_id !=
+current_user["id"])` → **404 « Facture introuvable. »** (the same answer as an unknown id: another client cannot even
+learn that the id exists); no session → 401 (`get_current_active_user`); the admin gets every document. *E-mail:* the
+purchase e-mail (« Vos 1 000 documents ScanID sont disponibles » for a Pack 1000) carries `Facture-F-AAAA-00001.pdf`
+= the stored bytes, `application/pdf`, and « Votre facture F-… est jointe à cet e-mail. » — **when invoices are
+switched on**; off (production today) no invoice exists, the e-mail is the one of before. Evidence run (5 passed):
+`test_only_its_client_or_an_admin_gets_an_invoice` (bob 404 + « Facture introuvable. », the admin 200, an unknown id
+404, no session 401), `test_the_pdf_is_downloaded_exactly_as_it_was_issued`, `test_a_pack_paid_gets_its_invoice_attached_to_the_purchase_e_mail`,
+`test_unit_purchases_get_theirs_too_also_when_the_purchase_opens_the_account`, `test_the_attachment_travels_in_the_real_message`
+(the real MIME message: text/plain + application/pdf with its file name and bytes). **Mutation killed:** the ownership
+condition removed (`if row is None:`) → `test_only_its_client_or_an_admin_gets_an_invoice` fails; `main.py` restored
+(`cmp` identical). Q9's real stack (PostgreSQL + nginx) had shown the same: « another client 404, anonymous 401 ».
+
+**R7 — DONE (16:24–16:33 UTC). All green.** (1) Backend full suite **488 passed**. (2) Frontend unit (`npm run
+test:unit` = `node --test` — NOT vitest, which only finds the Playwright files) **93 / 93**; eslint `src/App.jsx` +
+`tests/e2e/account.spec.js` = the baseline **11** (App.jsx's). (3) `VITE_API_URL=/api npm run build` ✅ — app bundle
+**`index-oGGqbtxc.js`** (holds « Remboursé le » 1×); guard **5 / 5**; `dist/cgv.html` SHA-256 **`ce0e6dc3…67a8`** (=
+Alex's); `diff -rq nouveau-site dist` = no site difference. (4) **Whole e2e** (desktop + mobile-small + mobile-375,
+`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`): **500 passed, 1 skipped (4.5 min, exit 0)** = 497 + the new test × 3;
+the skip = `capture.spec.js:127` WebKit; port 5173 free after. (5) `git status --short` = §R.0's expected list exactly
+(16 paths; `tests/mock/api.js` not needed) = `git add --dry-run .`; untracked-not-ignored = only
+`backend/tests/test_refund_credits.py`; no secret-like string in the added lines. (6) **Real stack** (scratchpad `r7/`,
+rebuilt from §F.5: PostgreSQL 16 on 55433; `fake_stripe.py` 12111 — line items + NEW `GET /v1/checkout/sessions?
+payment_intent=` from `sessions.json`, every request logged with « key ok »; the backend in production mode on 8001 via
+`run_backend.py` (`billing.STRIPE_API_BASE` = the stand-in), `MAIL_BACKEND=outbox`, `STRIPE_WEBHOOK_SECRET=whsec_local`,
+`STRIPE_API_KEY=rk_local_checkout_read`, `INVOICES_ENABLED=` (production's state) then `=1`; nginx 1.27 with the real
+vhost on 8081 / 8443, self-signed certificate; `check.py old|main|inv` through nginx with `Host: scanid.fr`, webhooks
+signed like Stripe, state read with psycopg2, e-mails parsed from the .eml files). **Phase old (2 / 2):** a Pack 100
+paid with no PaymentIntent (as production's purchases of before 08/10). **Then the deploy's migration:** backend
+stopped, `ALTER TABLE purchases DROP COLUMN refunded_at, DROP COLUMN credits_taken_back`, restart → both columns back
+(`timestamp with time zone`, `integer`), the old row's values NULL — nothing to run by hand in production. **Phase main
+(24 / 24):** `/api/config`, webhook unsigned 400; Claire: full refund an hour ago → `{"result": "disabled", "credits":
+"taken_back"}`, 100 → 0, `refunded_at` = the event's second, 100 recorded, no e-mail, replays ×2 → duplicate, « Mes
+achats » API gives `refunded_at` with its zone; Bruno (30 used → 70): partial 20,00 € → `partial`, 70 kept, not
+marked, ONE e-mail to Alex (« Remboursement partiel — crédits non modifiés », « Crédits du client à cet instant : 70 »,
+20,00 € / 118,80 €, `pi_…`), the rest → 70 taken, 0; Dora (the old purchase): `sessions.json` maps `pi_old_r7` → its
+session → `taken_back`, 0, Stripe asked ONCE with the restricted key at `/v1/checkout/sessions?payment_intent=pi_old_r7&limit=1`,
+the PaymentIntent then stored, replay → duplicate without asking Stripe again; unknown payment → `unmatched`, ONE
+e-mail « … crédits non retirés » (reason « … payé hors de l'application, ou enregistré à la main »), no word of « avoir
+»; **Eve (2 packs, 200): the same full refund delivered 6 times AT ONCE (threads) → 1 `taken_back` + 5 `duplicate`, 200
+→ 100, the other pack untouched** (PostgreSQL row locks); a unit purchase that opened its account (3) → refund → 0.
+**Browser** (Chromium → https://scanid.fr:8443 through nginx, 1280 and 375 px, service worker blocked; scratchpad
+`r7/browser/`, screenshots LOOKED AT): /cgv.html 200, article 7 = Alex's text word for word, « Dernière mise à jour : 8
+octobre 2026. », no horizontal overflow; Claire logged in: « Crédits : 0 », « Mes achats » header Pack / Acheté le /
+Valable jusqu'au / Facture, row `['Pack 100', '09/10/2026', 'Remboursé le 09/10/2026', '—']` (rendered « REMBOURSÉ LE
+09/10/2026 », uppercase like every cell of the table), no page overflow (at 375 px the table scrolls in its frame, as
+before — screenshot scrolled to the column); console: only the known pre-login session probe (`/api/users/me` 401).
+**Phase inv (7 / 7, restarted with `INVOICES_ENABLED=1`):** Fay's Pack 100 → `F-2026-…` + its PDF in the purchase
+e-mail; full refund → `{"result": "issued", "credits": "taken_back"}`, 0, the credit note credits her invoice, ONE
+e-mail (hers, `Avoir-….pdf`), Alex not told; unknown payment → `unmatched` / `unmatched` → ONE e-mail to Alex saying
+both (« … et n'a pas émis d'avoir. … et établissez l'avoir à la main. »). Backend log: only the expected ERROR lines
+(the unknown payments). **Stack stopped** 16:33 UTC: container removed, backend + stand-in killed, `pg_ctl stop`; ports
+8001 / 8081 / 8443 / 12111 / 55433 free, no harness process. **Alex's §1 « six addresses → 401 », live (16:33 UTC):**
+`/api/admin/invoices`, `…?month=2026-10`, `/api/admin/invoices/export?month=2026-10`, `/api/invoices/x/pdf`,
+`/api/users/me/purchases`, `/api/admin/trial-requests` → **401** each.
+
+### R.5 How to ship task R, the Stripe step, and the answer for Alex — written at R8 (2026-10-09 16:35 UTC)
+
+**What ships:** the 16 paths of §R.0's expected `git status` (`git add --dry-run .` = exactly them, checked at R7). No
+new dependency, no `ops/` or `deploy/` change → **no nginx reload**, no new server variable. **The database changes
+itself at the first start** (`add_missing_columns` → `purchases.refunded_at`, `purchases.credits_taken_back`; proven on
+PostgreSQL 16 at R7 — fallback SQL: `schema_migrations.py`'s docstring). `INVOICES_ENABLED` stays absent (invoices
+off). **After the deploy nothing changes for refunds yet: Stripe does not send `charge.refunded` to the endpoint —
+S5 switches the take-back on.** What people see change: `/cgv.html` (article 7, « 8 octobre 2026 »); « Mes achats »
+shows « Remboursé le … » only on a purchase refunded in full after S5. « Deploy » restarts the backend → `/api` may
+answer 502 for up to ~1.5 min — wait, re-check. Expected live app bundle = the local R7 build **`index-oGGqbtxc.js`**
+(live before: `index-Db6pzn_F.js`).
+
+- [ ] **S1 — U commits + pushes** (§0.3 — the assistant never commits). ONE command (the 16 paths checked at R7):
+  `cd /home/lasha/Public/new && git add . && git commit -m "Refunds take credits back; CGV of 8 October" && git push
+  origin master`. **▶ NEXT — given at R8.**
+- [ ] **S2 — C: « CI » + « Deploy » green** for the new commit (`curl -s "https://api.github.com/repos/Lasha101/new/actions/
+  runs?per_page=4"`). CI = `py_compile`, pytest (488), a PostgreSQL boot + smoke test, build, unit tests.
+- [ ] **S3 — C: live checks** (public, no server access): `curl -s https://scanid.fr/cgv.html | sha256sum` →
+  `ce0e6dc3…67a8`; it holds « Le prix est payable comptant » 1×, « 8 octobre 2026 » 1×, « taux légal » 0×; the app
+  bundle (`B=$(curl -s https://scanid.fr/app/ | grep -o 'assets/index-[^"]*\.js' | head -1)`) = `index-oGGqbtxc.js`,
+  `cmp` with `frontend/dist/app/assets/index-oGGqbtxc.js`, « Remboursé le » 1×; `/api/config`
+  `{"signup":true,"trial":true}`; webhook unsigned → 400; Alex's six addresses → 401; `/`, `/app/`, `/tarifs.html` →
+  200; `strict-transport-security: max-age=86400` (unchanged until 14/10). Fill C's « [S3] » with the Deploy time
+  (Paris).
+- [ ] **S4 — U on the server, ONE read-only command** (first `ssh -o ServerAliveInterval=30 lasha@<the server>` as in §Q.5
+  S4.1): `sudo -u postgres psql -d travelapp -tAc "SELECT (SELECT count(*) FROM information_schema.columns WHERE
+  table_name = 'purchases' AND column_name IN ('refunded_at', 'credits_taken_back')), (SELECT count(*) FROM purchases
+  WHERE status = 'paid'), (SELECT count(*) FROM purchases WHERE status = 'paid' AND stripe_payment_intent IS NULL)"` →
+  expected `2|N|M` (2 = the columns exist; M = paid purchases from before 08/10 — their refunds are found through
+  Stripe's session, d6). Nothing else to do on the server.
+- [ ] **S5 — U in Stripe (guided, ONE step per message, a screenshot each): add `charge.refunded` to the endpoint's
+  events — THIS is what makes the credits take-back live.** Stripe Dashboard → « Developers » / « Workbench » →
+  « Webhooks » → the destination `https://scanid.fr/api/stripe/webhook` → « Edit destination » (or « … » → « Update
+  details ») → « Select events » / events list → tick **`charge.refunded`**, KEEP `checkout.session.completed` and
+  `checkout.session.async_payment_succeeded` → save. The signing secret does not change (nothing on the server).
+  **Do NOT use « Send test event »** — a test event names an unknown payment: it would only send Alex an e-mail
+  « crédits non retirés ». Proof: the destination's page lists the 3 events; then, at the first real refund, the
+  event's delivery shows `200` and the body `{"received":true,"result":"disabled","credits":"taken_back"}` (or
+  `"partial"`). Fill C's « [S5] » with the time (Paris).
+- [ ] **S6 — U → Alex:** the text C below (S3 / S5 times and « Accounts » filled) + attach the 2 samples
+  `frontend/payment_scanid/invoices-2026-10-09/Facture-TEST-F-2026-00001.pdf` and `Avoir-TEST-AV-2026-00001.pdf`
+  (NOT the 08/10 ones). Then close task R (ticks here, in the resume protocol and the tick list; the memory note).
+  Task Q's G1–G3 (switch on) still wait for the accountant; ⏰ the HSTS raise from 14/10.
+- **Rollback (if ever):** undo S5 in Stripe (untick `charge.refunded`): refunds change nothing in the app again; the
+  marked purchases and the balances stay as they are.
+
+**C — the answer for Alex (English, like his PDF; « [S3] », « [S5] », « [Accounts] » to fill):**
+> Hi Alex — your note « After the deployment of 08/10 » (09/10, 10:41) is done.
+> 1. Noted, thank you.
+> 2. Terms of sale: cgv.html is your file byte for byte (16 114 bytes, SHA-256 ce0e6dc3…67a8), online since [S3]
+> (Paris time): article 7 begins « Le prix est payable comptant », the last line shows « 8 octobre 2026 ». It is
+> replaced in the deployment source itself — the repository every deployment is built from (each deployment rebuilds
+> the whole site, hence every file dated 21:08 on 08/10) — so no later deployment can bring the old one back. Folder
+> cgv-2026-10-08 never reached me: your note « After the real Pack 100 purchase » (08/10) did not arrive. This note
+> covers its refunds and its cgv.html; if it asked anything else, please send it again. Invoices: the PDF never said
+> « taux légal ». Its line stays « Pénalités de retard : taux de la BCE majoré de 10 points ; indemnité forfaitaire
+> pour frais de recouvrement : 40 € (art. L441-10 du Code de commerce) » — it matches article 7.
+> 3. Refunds: done. A full refund removes that purchase's credits from the balance, never below zero (the balance is
+> one counter: 100 bought, 30 used → the 70 left are removed), and « Mes achats » shows « Remboursé le JJ/MM/AAAA »
+> instead of the validity date. A partial refund changes nothing and sends you an e-mail « Remboursement partiel —
+> crédits non modifiés » (purchase, client, amounts, current balance); if the rest is refunded later, the credits are
+> removed then. A refund the app cannot match to a purchase also sends you an e-mail. Purchases made before 08/10 are
+> matched too (the app asks Stripe).
+> Credit note — today: no. Invoices are still switched off until your accountant's OK, and Stripe did not send
+> refunds to the app. Since [S5], every refund made in Stripe reaches the app and takes the credits back at once; once
+> invoices are switched on, the same event also issues the credit note.
+> When: live since [S5] (Paris time) — from then on, no more corrections by hand.
+> 4. Samples attached, made in Stripe test mode, so no real number is used: Facture-TEST-F-2026-00001.pdf (a Pack 100)
+> and Avoir-TEST-AV-2026-00001.pdf (its full refund); fictional client. A live document reads the same without
+> « TEST- » and without the red « SPÉCIMEN » banner: F-2026-00001, AV-2026-00001 — one continuous series per year,
+> restarting at 00001 on 1 January. For your accountant: (a) the numbering format; (b) « par carte bancaire (Stripe) »
+> — your unit link also accepts Apple Pay, Klarna, Link, Amazon Pay and Satispay, and the app cannot tell which was
+> used: « par paiement en ligne (Stripe) » would always be true; (c) the credit note prints its amounts positive under
+> « AVOIR » (the CSV export shows them negative); (d) a partial refund is one line « Remboursement partiel — … », HT =
+> TTC ÷ 1,2; (e) the client's SIREN is printed when known (SIRET at signup, or a French VAT number) — for a unit buyer
+> with neither, it is not (compulsory from 01/09/2027).
+> Owner check: yes. A client asking for another client's document gets 404, the same answer as for a document that does
+> not exist; only the admin gets every document; without a session, 401.
+> E-mail: yes — once invoices are switched on, the PDF is attached to « Vos N documents ScanID sont disponibles », with
+> « Votre facture F-… est jointe à cet e-mail. » (Today, switched off, no invoice is issued, so nothing is attached.)
+> 5. Data processing agreement:
+> - Backups: every night, a full copy of the database, encrypted on the server before it is written to disk (age,
+> X25519); the key that decrypts it is not on the server. Kept 14 days on the server (France) and copied to IONOS
+> Object Storage in Frankfurt (Germany), where each copy is write-protected for 30 days (Object Lock, compliance mode).
+> Off-site copies have no deletion rule today: kept without limit. If the agreement needs a limit, I set one (above 30
+> days, e.g. 90 days).
+> - Closed accounts: today, deleting an account deletes the account, not its results: the extracted data stays in the
+> database, invisible in the app, until deleted by hand; no retention period is enforced yet. Images are never stored
+> (deleted once read). I can make the deletion of an account delete its documents at once (invoices kept, as the law
+> requires); they would then leave the server's backups within 14 days, and the off-site copies once a limit is set.
+> Tell me if I do both.
+> - Logs: logins are not logged as such. The web server records every request — IP address, time, the address
+> requested (with any search typed in a filter: an account name or e-mail, a destination), status, size, browser; a
+> login is « POST /api/token » with its result — never the content sent (forms, files), a password or document data;
+> kept 14 days. The app's warnings and errors and the API's request lines go to the system journal, which has no time
+> limit today (trimmed only at 4 GB; it holds everything since 05/08/2026). SSH connections: the authentication log,
+> kept about one month. If the agreement needs one fixed period, I set it (the CNIL recommends 6 months to 1 year).
+> - Access: yes.
+> - Accounts: [Accounts].
+> 6. HSTS: noted — on or after 14/10, if nothing broke, max-age=31536000 on the site, the app and the API, still without
+> includeSubDomains or preload, after a dry run of the certificate renewal.
+
+---
+
 ## Q. TASK Q (2026-10-08) — ALEX'S « INVOICES ISSUED BY THE APP » (PDF of 2026-10-08 18:10 Paris) — IN PROGRESS
 
 ### Q.0 State and checklist — update after EVERY stage (the user's rule)
@@ -669,6 +1195,8 @@ paths = `git add --dry-run .` (`frontend/payment_scanid/` is ignored: the sample
 | 3 | NEW SESSION (2026-10-08 18:28 UTC): « Read SCANID-HANDOVER.md and continue working! In attached pdf file you will find the prompts that was given to you on the previous session! The part of instructions of pdf file are already implemented and you should continue implmenting only remainig instructions! » + the same « Lasha-Invoices-2026-10-08.pdf » | Checks 18:28 UTC: `git status` = the expected Q2–Q6 list; HEAD `5ab4cc1`; the companion note is STILL absent (`frontend/payment_scanid/`, `~/Downloads/` unchanged — only a new `.~lock` of the .docx). → continue at Q7a | Q7a → Q10; Q7b waits for the note |
 | 3 (cont.) | (same prompt — work continued) | **Q7a ✅ 18:31** (found written but unrecorded; +1 test after a surviving mutation; 466 passed), **Q8 ✅ 18:42** (2 samples looked at), **Q9 ✅ 18:55** (e2e 497 + 1 skip after fixing `labels.spec.js` for the new tab; PostgreSQL real stack 36 / 36 + browser 1280 / 375), **§Q.5 written ≈ 19:00** | S1 (the user's commit) → S5; G after the accountant; Q7b after the note |
 | 4 | « All what must be in .gitignore is in? Can i Use git add .? Provide a short commit message! » | Checked ≈ 19:06 UTC: HEAD = `origin/master` = `5ab4cc1` (nothing committed yet); `git add --dry-run .` = exactly the 22 expected paths; ignored as they must be: `backend/.env`, `frontend/.env.local`, the two real identity-document PDFs at the root, `frontend/payment_scanid/` (Alex's files + the samples), `newvenv/`, `node_modules/`, `dist/`, `test-results/`, `.pytest_cache/`, the fixtures, `site*.html`, the bench files; `.env.example` gains comments only (no value). → **yes, `git add .`**; message « Invoices and credit notes, off by default » (S1 updated) | S1 (the user) |
+| 5 | (screenshot: Deploy #29 ✅ 2m 6s, CI #34 ✅ 1m 38s, « Invoices and credit notes, off by default », `c8e883c`) « What's next? » | **S1 ✅ S2 ✅ S3 ✅** (19:11–19:12 UTC, facts in §Q.5): task Q's code is LIVE, switched off | S4.1 (the user, server, read-only) → S4.2–S4.4 → S5 |
+| 6 | (SSH, then the pasted outputs of S4.1–S4.4) | **S4 ✅** 19:17–19:24 UTC: tables + column in production, 0 invoices; journal = defaults, 712.8 MB since 05/08; nginx daily × 14, auth.log weekly × 4; bucket: no lifecycle rule, Object Lock COMPLIANCE 30 days → **C final** (§Q.5) | S5 (the user sends C + the 2 samples to Alex); the companion note (the user said « I'll provide the note ») → Q7b |
 
 ### Q.1 The demand (user, 2026-10-08) and Alex's PDF in substance
 
@@ -1085,30 +1613,50 @@ docstring). **`INVOICES_ENABLED` is absent → invoices OFF**: no number used, e
 the local Q9 build **`index-Db6pzn_F.js`** (live before: `index-y3ujDkAP.js`). Baselines taken 18:58 UTC: `/api/admin/
 invoices` and `/api/invoices/x/pdf` → **404** today (unknown routes) → **401** once live; `origin/master` = `5ab4cc1`.
 
-- [ ] **S1 — U commits + pushes** (§0.3 — the assistant never commits). ONE command (the 22 paths checked at Q9):
+- [x] **S1 ✅ — pushed by the user: `c8e883c` « Invoices and credit notes, off by default »** (22 files, 3 029 +, 69 −;
+  `origin/master` = `c8e883c`; working tree clean afterwards — the handover went in with it). Plan was: ONE command,
   `cd /home/lasha/Public/new && git add . && git commit -m "Invoices and credit notes, off by default" && git push
-  origin master` (short message asked by the user, row 4). **▶ NEXT — given ≈ 19:00 UTC.**
-- [ ] **S2 — C: « CI » + « Deploy » green** for the new commit (`curl -s "https://api.github.com/repos/Lasha101/new/actions/
-  runs?per_page=4"`). CI = `py_compile`, pytest (466), a PostgreSQL boot + smoke test, build, unit tests.
-- [ ] **S3 — C: live checks** (public, no server access): `/api/admin/invoices` and `/api/invoices/x/pdf` → 401; the app
-  bundle = `index-Db6pzn_F.js` (`B=$(curl -s https://scanid.fr/app/ | grep -o 'assets/index-[^"]*\.js' | head -1)`),
-  holding « Exporter le mois (CSV) » and « Avoir » ; `/api/config` `{"signup":true,"trial":true}`; webhook unsigned →
-  400; `/`, `/app/`, `/tarifs.html` → 200.
-- [ ] **S4 — U on the server, ONE read-only command per message — the migration and the facts for Alex's §6** (C checks
+  origin master`.
+- [x] **S2 ✅ — CI #34 success 19:09:51 UTC, Deploy #29 success 19:10:19 UTC** (both started 19:08:13; GitHub API = the
+  user's screenshot: Deploy 2m 6s, CI 1m 38s).
+- [x] **S3 ✅ 19:12 UTC — LIVE:** `/api/admin/invoices`, `/api/invoices/x/pdf`, `/api/admin/invoices/export?month=2026-10`
+  → **401** (404 before the deploy: the routes exist and ask for a login); the live app bundle = **`index-Db6pzn_F.js`,
+  byte-identical (`cmp`) to the local Q9 build** (« Exporter le mois (CSV) » 1×, « Mois à exporter » 1×, « Avoir » 1×,
+  K9's « Paiement reçu, merci » still 1×); `/api/config` `{"signup":true,"trial":true}`; webhook unsigned → 400; `/`,
+  `/app/`, `/tarifs.html`, `/cgv.html` → 200; `strict-transport-security: max-age=86400` (nginx untouched). The backend
+  answering also means the startup migration did not fail (a failure there is logged « 🔴 Database startup check failed »
+  and then stops the backend — §D.7.2); S4.1 checks the tables directly.
+- [x] **S4 ✅ 19:24 UTC (S4.1–S4.4) — U on the server, ONE read-only command per message — the migration and the facts for Alex's §6** (C checks
   each output, fills C below):
-  - **S4.1 the tables:** `sudo -u postgres psql -d travelapp -tAc "SELECT to_regclass('invoices'),
+  - [x] **S4.1 ✅ 19:17 UTC — `invoices|invoice_counters|1|0`** (the user's paste: both tables, the column, 0 invoices — the
+    startup migration ran in production; nothing issued, switch off). Plan was: **S4.1 the tables** (first `ssh -o ServerAliveInterval=30 lasha@87.106.22.235` from the laptop — the user's form — key login; `sudo` asks lasha's password): `sudo -u postgres psql -d travelapp -tAc "SELECT to_regclass('invoices'),
     to_regclass('invoice_counters'), (SELECT count(*) FROM information_schema.columns WHERE table_name = 'purchases'
     AND column_name = 'stripe_payment_intent'), (SELECT count(*) FROM invoices)"` → expected `invoices|invoice_counters|1|0`.
-  - **S4.2 the journal's retention:** `grep -hEv '^\s*(#|$)' /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf
+  - [x] **S4.2 ✅ 19:18 UTC — journal:** `journald.conf` = `[Journal]` only (Ubuntu's defaults: persistent, NO time limit
+    — `MaxRetentionSec` unset —, trimmed only at the size cap, 10 % of the disk, at most 4 GB); **712.8 MB; oldest line
+    2026-08-05T13:55:23Z** (the server's first boot — nothing ever trimmed). It holds the app's warnings / errors and
+    uvicorn's request lines (method, path, status, client address). Plan was: **S4.2 the journal's retention:** `grep -hEv '^\s*(#|$)' /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf
     2>/dev/null; sudo journalctl --disk-usage; sudo journalctl -q --no-pager -o short-iso | head -1` → the settings (only
     `[Journal]` = Ubuntu's defaults: kept until the size cap), the size, the OLDEST line's date.
-  - **S4.3 the log files' rotation:** `grep -HE '^/|daily|weekly|monthly|rotate' /etc/logrotate.d/nginx
+  - [x] **S4.3 ✅ 19:20 UTC — log files:** `/etc/logrotate.d/nginx`: `/var/log/nginx/*.log` `daily`, `rotate 14` (≈ 2
+    weeks); `/etc/logrotate.d/rsyslog`: syslog, mail, kern, **auth.log**, user, cron `weekly`, `rotate 4` (≈ 1 month).
+    Plan was: **S4.3 the log files' rotation:** `grep -HE '^/|daily|weekly|monthly|rotate' /etc/logrotate.d/nginx
     /etc/logrotate.d/rsyslog` → how long nginx's access log and `auth.log` are kept (Ubuntu's defaults: nginx daily ×
     14, rsyslog weekly × 4 — to be READ, not assumed).
-  - **S4.4 the off-site retention — U in the browser:** IONOS DCD → Object Storage → bucket `scanid-backups-de` →
+  - [x] **S4.4 ✅ 19:24 UTC — off-site:** `lifecycle= 404 NoSuchLifecycleConfiguration` (bucket `scanid-backups-de`: NO
+    lifecycle rule → the off-site dumps are never deleted, kept without limit); `object-lock= 200` Enabled, COMPLIANCE,
+    30 days (as PROGRESS.md §2.5). Checked in the code for C's « Logs »: nginx forwards the client IP (X-Forwarded-For)
+    → uvicorn's request lines in the journal carry real IPs; search filters travel in URLs (`name_filter`,
+    `user_filter`, `voyage_filter`, `destination_filter`) → logged; the app's `/events` sends the session cookie
+    (`withCredentials`), no token in any URL. Plan was: **S4.4 the off-site retention — U, ONE read-only command:**
+    `sudo python3 -c "exec(open('/usr/local/sbin/scanid-s3-undelete.py').read().split('# Main')[0]); [print(q,
+    *request('GET', '/'+BUCKET, q)) for q in ('lifecycle=', 'object-lock=')]"` — runs only the tool's configuration +
+    SigV4 part (the same root-only files, credentials never printed), then two GETs: the bucket's lifecycle rule (404
+    `NoSuchLifecycleConfiguration` = none → nothing ever deletes the off-site dumps) and its Object Lock default
+    (expected COMPLIANCE, 30 days). Fallback, in the browser: IONOS DCD → Object Storage → bucket `scanid-backups-de` →
     « Lifecycle » (or « Règles de cycle de vie »): is there a rule that deletes objects, after how many days? (`backup.sh`
     only `rclone copy`s one file per night and prunes the LOCAL copies after 14 days; nothing deletes the off-site ones.)
-- [ ] **S5 — U → Alex:** C below (the brackets filled from S4) + the two samples attached
+- [ ] **S5 — ▶ NEXT (given ≈ 19:25 UTC) — U → Alex:** C below (the brackets filled from S4) + the two samples attached
   (`frontend/payment_scanid/invoices-2026-10-08/Facture-F-2026-00001.pdf`, `Avoir-AV-2026-00001.pdf`). Then task Q
   waits for: the accountant (→ G1–G4), the companion note (→ Q7b).
 
@@ -1126,59 +1674,65 @@ invoices` and `/api/invoices/x/pdf` → **404** today (unknown routes) → **401
 - **Rollback of the switch:** delete the line, restart; issued documents stay (never deleted), numbering resumes where
   it stopped.
 
-**C — the answer for Alex (English, like his PDF; [brackets] = filled from S4):**
-> Hi Alex — your note « Invoices issued by the app » (08/10, 18:10) is built and tested; it goes online switched OFF, so
-> nothing is numbered before your accountant's OK.
+**C — the answer for Alex (English, like his PDF) — FINAL, all facts filled from S4 (≈ 19:25 UTC):**
+> Hi Alex — your note « Invoices issued by the app » (08/10, 18:10) is built, tested, and online since 08/10, 21:10
+> (Paris time) — switched off: nothing is numbered before your accountant's OK, and until then you invoice by hand.
+> (Clients now see a « Facture » column in « Mes achats », showing « — ».)
 > 1. What it does. When the Stripe webhook credits a paid purchase (pack or unit), the app issues the invoice at once:
 > a French PDF attached to the e-mail « Vos N documents ScanID sont disponibles » (« Votre facture F-… est jointe à cet
-> e-mail. »), and downloadable from « Mon compte » → « Mes achats » (a « Facture » column, one link per document). Every
-> mention of your §2 is on it; TTC must equal what Stripe received, otherwise nothing is issued and you get an e-mail
-> « Facture non émise automatiquement » with the reason — same when the billing country is not France. The client block
-> is the account's « Facturation » (company, address, SIREN = the first 9 digits of the SIRET, VAT number, « À
-> l'attention de »); for a unit buyer whose account the purchase opened, the address typed on Stripe's page.
-> 2. Numbering: one continuous series per year, F-2026-00001, F-2026-00002…, never reused and without gaps (the number
-> is taken in the same database transaction as the invoice; tested with simultaneous payments); credit notes AV-2026-00001…
-> Stripe test-mode payments are numbered TEST-F-… and never appear in the export. Your hand-made invoices (bank
-> transfers you record yourself) must use another prefix than F- / AV-. No « issue the invoice » admin button for now —
-> tell me if you want one.
-> 3. Refunds: a refund, full or partial, issues a credit note (AV-…) « Avoir sur la facture F-… », same seller and
-> client blocks, e-mailed with its PDF and listed in « Mes achats »; partial refunds add up exactly to the invoice. The
-> credits are not taken back yet: your note « After the real Pack 100 purchase » (the refund handling) never reached me
-> — could you send it again? I switch refunds on together with it.
+> e-mail. »), and downloadable from « Mon compte » → « Mes achats » (one link per document). Every mention of your §2
+> is on it. If the TTC computed from the app's prices is not the amount Stripe received, or the billing country is not
+> France, nothing is issued and you get an e-mail « Facture non émise automatiquement » with the reason. The client
+> block is the account's « Facturation » (company, address, SIREN = the first 9 digits of the SIRET, VAT number, « À
+> l'attention de »); for a unit buyer whose account the purchase opened, the name and address typed on Stripe's page.
+> 2. Numbering: one continuous series per year — F-2026-00001, F-2026-00002… — never reused, no gaps (the number is
+> taken in the same database transaction as the invoice; tested with simultaneous payments). Credit notes:
+> AV-2026-00001… Stripe test-mode payments are numbered TEST-F-… and never appear in the export. Invoices you make by
+> hand (bank transfers you record yourself) must use another prefix than F- / AV-. No « issue the invoice » admin
+> button for now — tell me if you want one.
+> 3. Refunds: a refund, full or partial, issues a credit note « Avoir sur la facture F-… » with the same seller and
+> client blocks, e-mailed with its PDF and listed in « Mes achats »; partial refunds always add up exactly to the
+> invoice. It is switched on together with the refund handling of your note « After the real Pack 100 purchase »
+> (credits taken back), which comes next.
 > 4. Admin: a « Factures » tab — every invoice and credit note, newest first, each PDF downloadable — and « Exporter le
 > mois (CSV) »: Type; Numéro; Date; Client; SIREN; Total HT; TVA; Total TTC; Référence Stripe (the payment, pi_…);
-> Facture d'origine; amounts as numbers for Excel, credit notes negative.
-> 5. Kept as issued: no route modifies or deletes an invoice; each PDF is generated once and stored with its data in
-> the database (France, Paris) and therefore in every nightly encrypted backup (Frankfurt, Germany); deleting a client's
-> account keeps its invoices. Nothing in the app ever deletes them (ten years and beyond).
+> Facture d'origine — amounts as numbers for Excel, credit notes negative.
+> 5. Kept as issued: no function modifies or deletes an invoice; each PDF is generated once and stored with its data in
+> the database (on the server, in France), so it is in every nightly encrypted backup (Frankfurt, Germany); deleting a
+> client's account keeps its invoices. Nothing in the app ever deletes them.
 > 6. 2027: every mention is also stored as data, one field each (seller, client, dates, line, totals, nature, payment,
 > Stripe references), so the platform step can be built from it. Factur-X: not now (optional in your note; a valid
-> PDF/A-3 needs validation tools I do not have here) — it can be produced from the stored data later.
-> 7. Samples attached (« SPÉCIMEN », fictional client, made by the real code): Facture-F-2026-00001.pdf (Pack 100) and
-> Avoir-AV-2026-00001.pdf (its full refund). For your accountant to validate: (a) the numbering format, restarting at
-> 00001 each 1 January; (b) « par carte bancaire (Stripe) » — your unit link also accepts Apple Pay, Klarna, Link, Amazon
-> Pay and Satispay, and the app cannot see which one was used: « par paiement en ligne (Stripe) » would always be true;
-> (c) the penalties sentence (your lawyer: the CGV say « taux légal »); (d) the credit note prints positive amounts
-> under « AVOIR » (the CSV shows them negative); (e) a partial refund is one line « Remboursement partiel — … », HT =
-> TTC ÷ 1,2; (f) the client's SIREN is printed when known (SIRET at signup, or a French VAT number) — for a unit buyer
-> without either, not printed (compulsory from 01/09/2027).
-> 8. How long: it is ready now. Once your accountant answers, any change of format or wording takes me minutes, and
-> switching on is one line on the server and a restart — the same day. Until then you invoice by hand.
+> PDF/A-3 needs validation tools) — it can be produced later from the stored data.
+> 7. Samples attached — made by the real code, marked « SPÉCIMEN », fictional client: Facture-F-2026-00001.pdf (Pack
+> 100) and Avoir-AV-2026-00001.pdf (its full refund). For your accountant: (a) the numbering format, restarting at
+> 00001 each 1 January; (b) « par carte bancaire (Stripe) » — your unit link also accepts Apple Pay, Klarna, Link,
+> Amazon Pay and Satispay, and the app cannot see which one was used: « par paiement en ligne (Stripe) » would always
+> be true; (c) the late-payment sentence (your lawyer: the CGV say « taux légal »); (d) the credit note prints positive
+> amounts under « AVOIR » (the CSV shows them negative); (e) a partial refund is one line « Remboursement partiel — … »,
+> HT = TTC ÷ 1,2; (f) the client's SIREN is printed when known (SIRET at signup, or a French VAT number) — for a unit
+> buyer with neither, it is not printed (compulsory from 01/09/2027).
+> 8. How long: it is ready now. When your accountant answers, any change of format or wording takes me minutes, and
+> switching on is one line on the server and a restart — the same day.
+>
 > Your four questions for the data processing agreement:
-> - Backups: every night, a full dump of the database, encrypted on the server before it is written (age, X25519); the
-> decryption key is not on the server (my laptop and a password manager only). Kept 14 days on the server (Paris,
-> France) and copied to IONOS Object Storage in Frankfurt (Germany), write-protected for 30 days (Object Lock,
-> compliance mode); off-site copies are kept [until … / without limit — S4.4].
-> - Closed accounts: today, deleting an account deletes the account itself, not its results: the extracted document data
-> stays in the database, invisible in the app, until deleted by hand — and no retention period is enforced yet. Images
-> are never stored (deleted once read). I can change it so that deleting an account deletes its documents immediately
-> (invoices kept, as the law requires); they then leave the backups within 14 days on the server and [… — S4.4]
-> off-site. Tell me if I do it.
-> - Logs: the app does not log logins as such; the web server records every request — IP address, time, method and
-> path, status, size, browser (a login is « POST /api/token » with its result) — never the content, a password or
-> document data; the app itself records warnings and errors only (e.g. an e-mail not sent, a payment anomaly); SSH
-> connections are in the system's authentication log. Kept [nginx: … days; system journal: …; auth log: … — S4.2,
-> S4.3].
+> - Backups: every night, a full copy of the database, encrypted on the server before it is written to disk (age,
+> X25519); the key that decrypts it is not on the server (only on my laptop and in a password manager). Kept 14 days on
+> the server (France), and copied to IONOS Object Storage in Frankfurt (Germany), where each copy is write-protected
+> for 30 days (Object Lock, compliance mode). There is no deletion rule off-site today: those copies are kept without
+> limit. If the agreement needs a limit, I add one (any period above 30 days, e.g. 90 days) — the invoices stay safe,
+> since every new nightly copy contains all of them.
+> - Closed accounts: today, deleting an account deletes the account itself, not its results: the extracted document
+> data stays in the database, invisible in the app, until deleted by hand — and no retention period is enforced yet.
+> Images are never stored (deleted once read). I can change it so that deleting an account deletes its documents at
+> once (invoices kept, as the law requires); they would then leave the server's backups within 14 days, and the
+> off-site copies once the limit above is set. Tell me if I do both.
+> - Logs: logins are not logged as such. The web server records every request — IP address, time, the address
+> requested (with any search typed in a filter: an account name or e-mail, a destination), status, size, browser; a
+> login is « POST /api/token » with its result — never the content sent (forms, files), a password or document data;
+> it keeps them 14 days. The app records warnings and errors, and the API server records the same request lines, in
+> the system journal, which has no time limit today (trimmed only at 4 GB; it still holds everything since the server
+> was installed on 05/08/2026). SSH connections are in the authentication log, kept about one month. If the agreement
+> needs one fixed period, I can set it (the CNIL recommends 6 months to 1 year for such logs).
 > - Access: yes.
 
 ---

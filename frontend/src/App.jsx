@@ -1370,9 +1370,10 @@ function AccountEditor({ user, fetchUser }) {
     );
 }
 
-// « Mes achats »: pack, date, expiry of each paid pack, its invoice and credit
-// notes (Alex, 08/10/2026), and for a customer the « à la carte » link tied to
-// this account.
+// « Mes achats »: pack, date, expiry of each paid pack — « Remboursé le … »
+// once refunded in full, its credits taken back (Alex, 09/10/2026) —, its
+// invoice and credit notes (Alex, 08/10/2026), and for a customer the « à la
+// carte » link tied to this account.
 function MyPurchases({ user }) {
     const [purchases, setPurchases] = useState(null);
     const [downloadError, setDownloadError] = useState('');
@@ -1405,7 +1406,7 @@ function MyPurchases({ user }) {
                                 <tr key={purchase.id}>
                                     <td>{purchaseLabel(purchase)}</td>
                                     <td>{day(purchase.paid_at)}</td>
-                                    <td>{day(purchase.expires_at)}</td>
+                                    <td>{purchase.refunded_at ? `Remboursé le ${day(purchase.refunded_at)}` : day(purchase.expires_at)}</td>
                                     <td>{(purchase.documents || []).length === 0 ? '—' : (
                                         <span className="sid-doc-links">
                                             {purchase.documents.map(doc => (

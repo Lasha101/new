@@ -260,3 +260,54 @@ def refund_without_credit_note(reason: str, charge: Dict[str, Any]) -> Tuple[str
         "Établissez l'avoir à la main si nécessaire.\n"
     )
     return subject, body
+
+
+def _euros_or_dash(cents: Any) -> str:
+    return invoicing.euros(cents) if isinstance(cents, int) and not isinstance(cents, bool) else "—"
+
+
+def refund_partial(purchase: Dict[str, Any], user: Optional[Dict[str, Any]], charge: Dict[str, Any]) -> Tuple[str, str]:
+    """To Alex: a partial refund — the app takes no credit back then (Alex,
+    09/10/2026); the balance is his call."""
+    user = user or {}
+    pack, credits = purchase.get("pack"), purchase.get("credits") or 0
+    bought = f"Pack {_scans(pack)}" if pack else f"À la carte · {_scans(credits)} document{'s' if credits > 1 else ''}"
+    paid_at = purchase.get("paid_at")
+    paid_on = invoicing.date_fr(invoicing.to_paris(paid_at).date()) if paid_at else "—"
+    who = " ".join(v for v in (user.get("first_name"), user.get("last_name")) if v) or "—"
+    balance = user.get("page_credits")
+    subject = "Remboursement partiel — crédits non modifiés"
+    body = (
+        "Un remboursement partiel a été fait dans Stripe. Dans ce cas, l'application ne retire aucun crédit : "
+        "corrigez le solde du client à la main si nécessaire (Administration → Gérer les utilisateurs → "
+        "Crédits pages).\n\n"
+        f"Achat : {bought}, payé le {paid_on}\n"
+        f"Montant payé (TTC) : {_euros_or_dash(charge.get('amount'))}\n"
+        f"Total remboursé sur ce paiement : {_euros_or_dash(charge.get('amount_refunded'))}\n"
+        f"Client : {user.get('company') or '—'} — {who} — {user.get('email') or '—'}\n"
+        f"Crédits du client à cet instant : {'—' if balance is None else _scans(balance)}\n"
+        f"Paiement Stripe : {charge.get('payment_intent') or '—'}\n"
+        f"Opération Stripe : {charge.get('id') or '—'}\n\n"
+        "Si le reste du paiement est remboursé plus tard, l'application retirera alors les crédits de cet achat, "
+        "comme pour un remboursement total.\n"
+    )
+    return subject, body
+
+
+def refund_not_taken_back(reason: str, charge: Dict[str, Any], no_credit_note: bool = False) -> Tuple[str, str]:
+    """To Alex: a Stripe refund whose credits the app did not take back — no
+    ScanID purchase for that payment, or an error (Alex, 09/10/2026). When the
+    same cause also left it without its credit note, this one e-mail says both."""
+    kind = "remboursement total" if charge.get("refunded") is True else "remboursement partiel"
+    not_issued, by_hand = (" et n'a pas émis d'avoir", ", et établissez l'avoir à la main") if no_credit_note else ("", "")
+    subject = "Remboursement Stripe à traiter à la main — crédits non retirés"
+    body = (
+        f"Un remboursement Stripe a été reçu, mais l'application n'a pas retiré les crédits de l'achat{not_issued}.\n\n"
+        f"Raison : {reason}\n\n"
+        f"Paiement Stripe : {charge.get('payment_intent') or '—'}\n"
+        f"Opération Stripe : {charge.get('id') or '—'}\n"
+        f"Total remboursé sur ce paiement : {_euros_or_dash(charge.get('amount_refunded'))} ({kind})\n\n"
+        "Corrigez le solde du client à la main si nécessaire (Administration → Gérer les utilisateurs → "
+        f"Crédits pages){by_hand}.\n"
+    )
+    return subject, body

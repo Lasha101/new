@@ -21,6 +21,11 @@ pack's price (66 documents = 99 € = Pack 100). Its sessions are recognised by
 their Payment Link instead, before any amount is looked at, and credited with
 the quantity bought — see _credit_unit_session. Its buyer needs no account
 beforehand (Alex, 03/10/2026): the purchase opens one when there is none yet.
+
+A refund (charge.refunded, Alex, 09/10/2026): when the whole payment is
+refunded, the purchase's credits are taken back — never below zero — and the
+purchase is marked refunded, once; a partial refund changes nothing. See
+take_back_credits.
 """
 import calendar
 import hashlib
@@ -46,7 +51,8 @@ import crud
 import models
 
 PAID_EVENTS = ("checkout.session.completed", "checkout.session.async_payment_succeeded")
-# A refund, full or partial (its credit note: invoicing.issue_credit_note).
+# A refund, full or partial (its credits: take_back_credits; its credit note:
+# invoicing.issue_credit_note).
 REFUND_EVENT = "charge.refunded"
 
 # An « à la carte » purchase has no pack: it is stored as pack 0, with the
@@ -188,6 +194,30 @@ def fetch_line_items(session_id: str) -> List[Dict[str, Any]]:
     if not isinstance(items, list):
         raise StripeApiError("la réponse de l'API Stripe ne contient pas les articles")
     return items
+
+
+def session_for_payment_intent(payment_intent: str) -> Optional[str]:
+    """GET /v1/checkout/sessions?payment_intent=… — the Checkout Session a
+    payment was made through (None when Stripe knows none). A purchase paid
+    before 08/10/2026 did not keep its PaymentIntent, so a refund, which names
+    only the PaymentIntent, finds it through its session."""
+    key = config.stripe_api_key()
+    if not key:
+        raise StripeApiError("clé API Stripe non configurée (STRIPE_API_KEY)")
+    url = f"{STRIPE_API_BASE}/v1/checkout/sessions?{urlencode({'payment_intent': payment_intent, 'limit': 1})}"
+    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.urlopen(request, timeout=STRIPE_API_TIMEOUT_SECONDS) as response:
+            body = json.load(response)
+    except urllib.error.HTTPError as exc:
+        raise StripeApiError(f"l'API Stripe a répondu {exc.code} à la recherche de la session") from None
+    except (OSError, ValueError):
+        raise StripeApiError("API Stripe injoignable, ou sa réponse est illisible") from None
+    sessions = body.get("data") if isinstance(body, dict) else None
+    if not isinstance(sessions, list):
+        raise StripeApiError("la réponse de l'API Stripe ne contient pas les sessions")
+    first = sessions[0] if sessions and isinstance(sessions[0], dict) else {}
+    return str(first["id"]) if first.get("id") else None
 
 
 def unit_quantity(items: List[Dict[str, Any]]) -> Optional[int]:
@@ -412,3 +442,80 @@ def _write_unit_purchase(db: Session, session: Dict[str, Any], user: Optional[Di
     return CreditOutcome("credited", user=crud.get_user(db, user_id), pack=UNIT_PACK,
                          expires_at=expires_at, credits=quantity, password_token=token,
                          purchase_id=purchase.id)
+
+
+# --- Refunds (charge.refunded, Alex, 09/10/2026) ---------------------------------
+
+@dataclass
+class RefundOutcome:
+    status: str                      # taken_back | partial | duplicate | unmatched | error
+    reason: str = ""
+    purchase: Optional[Dict[str, Any]] = None
+    user: Optional[Dict[str, Any]] = None   # the account (None once deleted)
+    taken: int = 0                          # the credits a full refund removed from its balance
+
+
+def _refunded_purchase(db: Session, payment_intent: str) -> Tuple[Optional[str], str]:
+    """The id of the paid purchase a refund's PaymentIntent belongs to, or None
+    and why. A purchase paid before 08/10/2026 is found through its Checkout
+    Session, and keeps the PaymentIntent from then on — the credit note of the
+    same refund finds it too."""
+    found = (db.query(models.Purchase.id)
+             .filter(models.Purchase.stripe_payment_intent == payment_intent, models.Purchase.status == "paid")
+             .first())
+    if found is not None:
+        return found.id, ""
+    unknown = "aucun achat ScanID ne correspond à ce paiement"
+    try:
+        session_id = session_for_payment_intent(payment_intent)
+    except StripeApiError as exc:
+        return None, f"{unknown} (Stripe n'a pas pu être interrogé : {exc})"
+    if session_id:
+        db.execute(
+            sa_update(models.Purchase)
+            .where(models.Purchase.stripe_session_id == session_id, models.Purchase.status == "paid",
+                   models.Purchase.stripe_payment_intent.is_(None))
+            .values(stripe_payment_intent=payment_intent)
+        )
+        db.commit()
+        found = (db.query(models.Purchase.id)
+                 .filter(models.Purchase.stripe_payment_intent == payment_intent, models.Purchase.status == "paid")
+                 .first())
+        if found is not None:
+            return found.id, ""
+    return None, f"{unknown} (payé hors de l'application, ou enregistré à la main)"
+
+
+def take_back_credits(db: Session, charge: Dict[str, Any], refunded_at: datetime) -> RefundOutcome:
+    """A FULL refund — Stripe's `refunded`: the whole payment, refunded at once
+    or by the refund that completes it — takes the purchase's credits back from
+    the balance. The balance is one counter, so it takes as many as are left,
+    never going below zero (100 bought, 30 used: the 70 left). The purchase is
+    marked refunded in the same transaction, which makes it happen once. A
+    partial refund changes nothing: the caller tells Alex."""
+    payment_intent = payment_intent_id(charge)
+    if not payment_intent:
+        return RefundOutcome("unmatched", reason="le remboursement ne porte pas de paiement Stripe lisible")
+    purchase_id, reason = _refunded_purchase(db, payment_intent)
+    if purchase_id is None:
+        return RefundOutcome("unmatched", reason=reason)
+    # Locked until the commit: the same refund delivered twice at once waits,
+    # then finds the purchase marked (populate_existing: read it again).
+    purchase = (db.query(models.Purchase).filter(models.Purchase.id == purchase_id)
+                .with_for_update().populate_existing().one())
+    if purchase.refunded_at is not None or charge.get("refunded") is not True:
+        row = crud._row_to_dict(purchase)
+        db.rollback()
+        if row["refunded_at"] is not None:
+            return RefundOutcome("duplicate", purchase=row)
+        return RefundOutcome("partial", purchase=row, user=crud.get_user(db, row["user_id"]))
+    user = (db.query(models.User).filter(models.User.id == purchase.user_id)
+            .with_for_update().populate_existing().first())
+    balance = (user.page_credits or 0) if user is not None else 0
+    taken = min(purchase.credits, max(balance, 0))
+    if taken:
+        user.page_credits = balance - taken   # the row is locked: the balance read is the balance
+    purchase.refunded_at, purchase.credits_taken_back = refunded_at, taken
+    db.commit()
+    return RefundOutcome("taken_back", purchase=crud._row_to_dict(purchase), user=crud._row_to_dict(user),
+                         taken=taken)

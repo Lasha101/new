@@ -67,7 +67,7 @@ SELLER = {
 NATURE = "Prestation de services"
 PAYMENT_METHOD = "carte bancaire (Stripe)"
 DISCOUNT_TERMS = f"Escompte pour paiement anticipé{NBSP}: néant"
-# Waits for Alex's accountant: the CGV say « taux légal » (Alex's lawyer checks).
+# Alex's wording — the rate of the CGV article 7 (08/10/2026): the BCE's, plus 10 points; never « taux légal ».
 LATE_PAYMENT_TERMS = (f"Pénalités de retard{NBSP}: taux de la BCE majoré de 10 points{NBSP}; indemnité forfaitaire "
                       f"pour frais de recouvrement{NBSP}: 40{NBSP}€ (art. L441-10 du Code de commerce)")
 TEST_MODE_BANNER = "SPÉCIMEN — paiement Stripe en mode test, sans valeur comptable"

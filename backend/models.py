@@ -134,6 +134,11 @@ class Purchase(Base):
     # Added 08/10/2026 (invoices): the session's PaymentIntent (pi_…), which a
     # refund event (charge.refunded) names. NULL for purchases paid before.
     stripe_payment_intent = Column(String, nullable=True)
+    # Added 09/10/2026 (refunds): when the purchase was refunded IN FULL —
+    # « Remboursé le … » in « Mes achats » — and how many credits that took
+    # back from the balance (billing.take_back_credits). NULL otherwise.
+    refunded_at = Column(DateTime(timezone=True), nullable=True)
+    credits_taken_back = Column(Integer, nullable=True)
 
 
 class Invoice(Base):

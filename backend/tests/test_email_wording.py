@@ -32,6 +32,14 @@ TEMPLATES = {
     "credit_note": lambda: emails.credit_note(USER, "AV-2026-00001", "F-2026-00001", 11_880),
     "refund_without_credit_note": lambda: emails.refund_without_credit_note(
         "raison", {"id": "ch_1", "payment_intent": "pi_1", "amount_refunded": 11_880}),
+    # Refunds and credits (Alex, 09/10/2026): Alex's two notices.
+    "refund_partial": lambda: emails.refund_partial(
+        {"pack": 100, "credits": 100, "paid_at": EXPIRY}, dict(USER, company="Agence Test", page_credits=100),
+        {"id": "ch_1", "payment_intent": "pi_1", "amount": 11_880, "amount_refunded": 2_000}),
+    "refund_not_taken_back": lambda: emails.refund_not_taken_back(
+        "raison", {"id": "ch_1", "payment_intent": "pi_1", "amount_refunded": 11_880, "refunded": True}),
+    "refund_not_taken_back_nor_credit_note": lambda: emails.refund_not_taken_back(
+        "raison", {"id": "ch_1", "payment_intent": "pi_1", "amount_refunded": 500}, no_credit_note=True),
 }
 
 
